@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { activeCheckpoint, altitudeAt, routeProgress, visibilityAt } from '../src/experience/progress'
 import { checkpoints } from '../src/data/expedition'
-import { CAMP_ANGLES, CAMP_HEIGHTS, createCameraRails, mountainGeometry, radiusAt, surfacePoint } from '../src/experience/terrain'
-import { PerspectiveCamera, Vector3 } from 'three'
+import { cameraPose, groundHeight, routeCurve, terrainGeometry } from '../src/experience/terrain'
+import { experienceConfig } from '../src/config/experience'
+import { Vector3 } from 'three'
 
 describe('expedition progression', () => {
   it('keeps navigation, altitude and camera rail aligned at every camp', () => {
@@ -32,41 +33,45 @@ describe('expedition progression', () => {
   })
 })
 
-describe('procedural landscape and camera clearance', () => {
-  for (const mobile of [false, true]) for (const reduced of [false, true]) {
-    it(`keeps a rising camera outside the mountain, mobile=${mobile}, reduced=${reduced}`, () => {
-      const rails = createCameraRails(mobile, reduced)
-      let lastHeight = 0
-      for (let i = 0; i <= 1000; i++) {
-        const point = rails.position.getPoint(i / 1000)
-        expect(point.y).toBeGreaterThanOrEqual(lastHeight)
-        expect(Math.hypot(point.x, point.z) - radiusAt(point.y, Math.atan2(point.x, point.z))).toBeGreaterThan(65)
-        lastHeight = point.y
+describe('first-person route', () => {
+  it('stays at eye height, moves forward and turns continuously through the terrain', () => {
+    const position = new Vector3(), target = new Vector3(), previous = new Vector3(), heading = new Vector3(), lastHeading = new Vector3()
+    expect(routeCurve.points.length).toBeGreaterThan(20)
+    let sideways = 0
+    for (let i = 0; i <= 2000; i++) {
+      cameraPose(i / 2000, position, target)
+      expect(position.y - groundHeight(position.x, position.z)).toBeCloseTo(experienceConfig.camera.eyeHeight)
+      expect(target.z).toBeLessThan(position.z)
+      expect(position.toArray().every(Number.isFinite)).toBe(true)
+      heading.copy(target).sub(position).normalize()
+      if (i) {
+        expect(position.z).toBeLessThan(previous.z)
+        expect(position.distanceTo(previous)).toBeLessThan(1)
+        expect(heading.angleTo(lastHeading)).toBeLessThan(0.035)
+        sideways += Math.abs(position.x - previous.x)
       }
-    })
-  }
-  it('places camp markers within the desktop field of view', () => {
-    const rails = createCameraRails(false)
-    const camera = new PerspectiveCamera(48, 1440 / 900, 1, 8000)
-    checkpoints.forEach((_, index) => {
-      camera.position.copy(rails.position.getPoint(index / 4))
-      camera.lookAt(rails.target.getPoint(index / 4))
-      camera.updateMatrixWorld()
-      const marker = surfacePoint(CAMP_HEIGHTS[index], CAMP_ANGLES[index], 8).add(new Vector3(0, 22, 0)).project(camera)
-      expect(Math.abs(marker.x)).toBeLessThan(0.9)
-      expect(Math.abs(marker.y)).toBeLessThan(0.9)
-      expect(marker.z).toBeLessThan(1)
-    })
-  })
-  it('generates finite, outward-facing, bounded geometry', () => {
-    const geometry = mountainGeometry(24)
-    const position = geometry.getAttribute('position')
-    const normal = geometry.getAttribute('normal')
-    for (let index = 0; index < position.count; index++) {
-      expect(Number.isFinite(position.getY(index))).toBe(true)
-      expect(normal.getX(index) * position.getX(index) + normal.getZ(index) * position.getZ(index)).toBeGreaterThanOrEqual(-0.01)
+      previous.copy(position); lastHeading.copy(heading)
     }
-    expect(geometry.boundingSphere?.radius).toBeLessThan(1100)
+    expect(sideways).toBeGreaterThan(250)
+    expect(position.y).toBeGreaterThan(300)
+  })
+  it('retraces the same physical pose when descending', () => {
+    const up = new Vector3(), upTarget = new Vector3(), down = new Vector3(), downTarget = new Vector3()
+    for (const t of [0, 0.12, 0.25, 0.49, 0.73, 0.9, 1]) {
+      cameraPose(routeProgress(t), up, upTarget)
+      cameraPose(1, down, downTarget)
+      cameraPose(routeProgress(t), down, downTarget)
+      expect(down.equals(up)).toBe(true)
+      expect(downTarget.equals(upTarget)).toBe(true)
+    }
+  })
+  it('builds a finite, upward-facing continuous terrain instead of an exterior cone', () => {
+    const geometry = terrainGeometry()
+    const positions = geometry.getAttribute('position'), normals = geometry.getAttribute('normal')
+    for (let i = 0; i < positions.count; i++) {
+      expect(Number.isFinite(positions.getY(i))).toBe(true)
+      expect(normals.getY(i)).toBeGreaterThan(0)
+    }
     geometry.dispose()
   })
 })

@@ -5,6 +5,7 @@ import { ScrollController, visibilityAt } from './progress'
 import { checkpoints } from '../data/expedition'
 import { CheckpointSections } from '../components/Sections'
 import { HUD } from '../components/HUD'
+import { experienceConfig } from '../config/experience'
 
 const routePositions = new Map<string, number>()
 
@@ -54,8 +55,7 @@ export function Expedition() {
         const offset = frame.progress - checkpoints[index].progress
         section.style.opacity = String(visibility)
         section.style.visibility = visibility < 0.01 ? 'hidden' : 'visible'
-        section.style.transform = frame.reducedMotion ? 'none' : `translate3d(${offset * -110}px, ${offset * -230}px, 0)`
-        section.style.filter = frame.reducedMotion || visibility > 0.95 ? 'none' : `blur(${(1 - visibility) * 3}px)`
+        section.style.transform = frame.reducedMotion ? 'none' : `translate3d(0, ${offset * -120}px, 0)`
         const interactive = frame.active === index && visibility > 0.1
         section.inert = !interactive
         section.setAttribute('aria-hidden', String(!interactive))
@@ -88,12 +88,12 @@ export function Expedition() {
     return () => window.removeEventListener('hashchange', hashChange)
   }, [controller, fallback])
 
-  return <main ref={root} className={`expedition ${fallback ? 'reading-mode' : ''}`}>
+  return <main ref={root} className={`expedition ${fallback ? 'reading-mode' : ''}`} style={fallback ? undefined : { height: `${experienceConfig.route.scrollScreens * 100}svh` }}>
     <a className="skip-link" href="#high-camp" onClick={event => { if (!fallback) { event.preventDefault(); controller.goTo(checkpoints[3].progress, true); requestAnimationFrame(() => document.getElementById('title-high-camp')?.focus({ preventScroll: true })) } }}>프로젝트로 바로 가요</a>
     {fallback ? <div className="static-landscape" aria-hidden="true"><div /><div /><div /></div> : <Scene controller={controller} onFallback={onFallback} />}
     <HUD controller={controller} fallback={fallback} onReadingMode={() => setFallback(value => !value)} />
     <CheckpointSections controller={controller} fallback={fallback} />
-    {!fallback && <div className="scroll-cue mono"><span className="scroll-line" /><span>SCROLL TO ASCEND<small>스크롤하며 올라가요</small></span><span>↑</span></div>}
+    {!fallback && <div className="scroll-cue mono"><span>SCROLL TO CLIMB<small>스크롤하며 올라가요</small></span><span className="scroll-line" /></div>}
     {fallback && <p className="fallback-note mono">{hasFailure.current ? '3D 화면을 사용할 수 없어 텍스트 경로를 열었어요.' : 'READING ROUTE / 모든 체크포인트를 순서대로 살펴봐요.'}</p>}
   </main>
 }

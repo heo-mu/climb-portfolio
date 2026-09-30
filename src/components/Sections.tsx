@@ -55,11 +55,10 @@ export function Contact({ controller, fallback }: { controller: ScrollController
 export function CheckpointSections({ controller, fallback }: { controller: ScrollController; fallback: boolean }) {
   const sections = [<About />, <AICapability />, <Tools />, <Projects />, <Contact controller={controller} fallback={fallback} />]
   return <div className="checkpoint-sections">{checkpoints.map((camp, index) => <section key={camp.id} id={camp.id} className={`checkpoint checkpoint-${index}`} aria-labelledby={`title-${camp.id}`} data-checkpoint={index}>
-    <div className="checkpoint-caption mono"><span>{camp.index} / {camp.name}</span><span>{camp.altitude.toLocaleString('en-US')} M</span></div>
+    <div className="checkpoint-caption mono">{camp.index}</div>
     <div className="checkpoint-inner">
-      <p className="eyebrow mono">{camp.eyebrow}</p>
-      <h1 id={`title-${camp.id}`} className="checkpoint-title" tabIndex={-1}>{camp.title}</h1>
-      <p className="checkpoint-subtitle">{camp.subtitle}</p>
+      <h1 id={`title-${camp.id}`} className="checkpoint-title" tabIndex={-1}>{camp.name}</h1>
+      <p className="checkpoint-subtitle mono">{camp.topic} <span>— {camp.eyebrow}</span></p>
       {sections[index]}
     </div>
   </section>)}</div>

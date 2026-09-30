@@ -71,7 +71,7 @@ export class ScrollController {
     const delta = this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.05) : 1 / 60
     this.lastTime = time
     const reducedMotion = this.media.matches
-    this.current += (this.target - this.current) * (reducedMotion ? 1 : 1 - Math.exp(-delta * 9))
+    this.current += (this.target - this.current) * (reducedMotion ? 1 : 1 - Math.exp(-delta * experienceConfig.route.damping))
     if (Math.abs(this.target - this.current) < 0.00001) this.current = this.target
     this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), delta, time: time / 1000, reducedMotion }
     this.listeners.forEach(listener => listener(this.frame))
