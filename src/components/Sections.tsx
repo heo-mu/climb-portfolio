@@ -6,11 +6,35 @@ import { Home } from './Home'
 
 function About() {
   return <>
-    <h1 className="portfolio-heading" id="title-about" tabIndex={-1}><span className="occupation">Product Designer</span>Changmu Heo<span className="name-korean">허창무</span></h1>
-    <div className="panel-body about-content">
-      <p className="intro">복잡한 문제를 정리하고,<br />명료한 경험으로 연결해요.</p>
-      <p className="body-copy">구조와 인터랙션을 함께 고민하는 프로덕트 디자이너예요. 좋은 질문에서 시작해 작동하는 경험까지 구체화해요.</p>
-      <dl className="profile-details"><div><dt>ROLE</dt><dd>Product Designer</dd></div><div><dt>FOCUS</dt><dd>UX · Interaction · Design Systems</dd></div></dl>
+    <h1 className="portfolio-heading about-heading" id="title-about" tabIndex={-1}>
+      <span>사용자가 다음 행동을</span>{' '}
+      <span>알 수 있는 구조를 설계해요.</span>
+    </h1>
+    <div className="about-content">
+      <ol className="career-timeline" aria-label="경력 흐름" role="list">
+        <li>
+          <div className="career-entry">
+            <h2 className="career-category">Agency</h2>
+            <p><strong>에이전시에서 시작했어요.</strong>{' '}17개 웹사이트를 구축하며 다양한 요구사항을 화면 구조와 서비스 흐름으로 정리했어요.</p>
+          </div>
+        </li>
+        <li>
+          <div className="career-entry">
+            <h2 className="career-category">In-house · B2B SaaS</h2>
+            <p><strong>인하우스 B2B SaaS에서는 UX 기획까지 맡았어요.</strong>{' '}정보 구조와 화면 정책을 설계하고, 프론트엔드 엔지니어와 컴포넌트·상태·반응형 기준을 디자인 시스템으로 만들었어요.</p>
+          </div>
+        </li>
+        <li aria-current="step">
+          <div className="career-entry">
+            <h2 className="career-category">SI · Solution <span className="career-current">현재</span></h2>
+            <p><strong>지금은 SI 솔루션 업체에서 일해요.</strong>{' '}여러 프로젝트의 복잡한 데이터와 업무 조건을 사용자가 이해하기 쉬운 정보와 행동 순서로 바꾸고 있어요.</p>
+          </div>
+        </li>
+      </ol>
+      <dl className="about-stats">
+        <div><dt>완수 프로젝트</dt><dd>27+</dd></div>
+        <div><dt>프로덕트 디자인 경험</dt><dd>4년차</dd></div>
+      </dl>
     </div>
   </>
 }
