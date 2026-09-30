@@ -30,7 +30,16 @@ export function activeCheckpoint(progress: number) {
 }
 
 export function visibilityAt(progress: number, checkpoint: number) {
-  const distance = Math.abs(progress - checkpoints[checkpoint].progress)
+  const camp = checkpoints[checkpoint]
+  // Home has no reading plateau: native scroll immediately starts the exit.
+  if (camp.id === 'base-camp') return 1 - clamp(progress / experienceConfig.home.exitRange)
+  // Reveal the world before the first content panel enters it.
+  if (camp.id === 'about' && progress < camp.progress) {
+    const start = experienceConfig.home.exitRange
+    const end = camp.progress - experienceConfig.content.readableRange
+    return smoothstep((progress - start) / (end - start))
+  }
+  const distance = Math.abs(progress - camp.progress)
   return 1 - smoothstep((distance - experienceConfig.content.readableRange) / experienceConfig.content.transitionRange)
 }
 

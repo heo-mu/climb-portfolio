@@ -63,6 +63,7 @@ export function Expedition() {
         section.style.setProperty('--panel-surface', String(smoothstep(reveal / 0.65)))
         section.style.setProperty('--panel-title', String(smoothstep((reveal - 0.08) / 0.78)))
         section.style.setProperty('--panel-body', String(smoothstep((reveal - 0.22) / 0.78)))
+        if (index === 0) section.style.setProperty('--home-exit', String(1 - desired))
         section.style.visibility = reveal < 0.005 ? 'hidden' : 'visible'
         section.dataset.phase = desired < previous ? 'exit' : reveal > 0.98 ? 'read' : 'enter'
         const interactive = frame.active === index && reveal > 0.45

@@ -1,6 +1,6 @@
 export const checkpoints = [
   { id: 'base-camp', index: '00', navigation: 'HOME', name: 'BASE CAMP', altitude: 1240, progress: 0, route: 0 },
-  { id: 'about', index: '01', navigation: 'ABOUT', name: 'APPROACH', altitude: 1576, progress: 0.12, route: 0.1 },
+  { id: 'about', index: '01', navigation: 'ABOUT', name: 'APPROACH', altitude: 1576, progress: 0.06, route: 0.1 },
   { id: 'camp-one', index: '02', navigation: 'AI', name: 'CAMP I', altitude: 2080, progress: 0.29, route: 0.25 },
   { id: 'camp-two', index: '03', navigation: 'TOOLS', name: 'CAMP II', altitude: 2840, progress: 0.52, route: 0.5 },
   { id: 'high-camp', index: '04', navigation: 'PROJECTS', name: 'HIGH CAMP', altitude: 3620, progress: 0.75, route: 0.75 },

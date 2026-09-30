@@ -12,8 +12,9 @@ export function Home({ onExplore }: HomeProps) {
       </div>
       <div className="home-support">
         <div className="home-identity"><p>Changmu Heo</p><span>Product Designer</span></div>
-        <p className="home-intro">복잡한 데이터와 흐름을 정리해 이해하기 쉬운 제품으로 바꿔요.</p>
-        <button type="button" className="home-explore" onClick={onExplore} aria-label="About으로 이동해요">
+        <p className="home-intro"><span>복잡한 데이터와 흐름을 정리해</span>{' '}<span>이해하기 쉬운 제품으로 바꿔요.</span></p>
+        <button type="button" className="home-explore" onClick={onExplore} aria-label="ASCEND — About으로 이동해요">
+          <span>ASCEND</span>
           <svg viewBox="0 0 32 40" fill="none" aria-hidden="true"><path d="M16 3v32M4 23l12 12 12-12" /></svg>
         </button>
       </div>

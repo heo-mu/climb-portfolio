@@ -6,6 +6,17 @@ import { experienceConfig } from '../src/config/experience'
 import { Vector3 } from 'three'
 
 describe('expedition progression', () => {
+  it('starts exiting Home on the first scroll and reveals About after the overlay clears', () => {
+    const exit = experienceConfig.home.exitRange
+    expect(visibilityAt(0, 0)).toBe(1)
+    expect(visibilityAt(0.00001, 0)).toBeLessThan(1)
+    expect(visibilityAt(exit / 2, 0)).toBeGreaterThan(0)
+    expect(visibilityAt(exit / 2, 0)).toBeLessThan(1)
+    expect(visibilityAt(exit, 0)).toBe(0)
+    expect(visibilityAt(exit, 1)).toBe(0)
+    expect(visibilityAt((exit + checkpoints[1].progress) / 2, 1)).toBeGreaterThan(0)
+    expect(visibilityAt(checkpoints[1].progress, 1)).toBe(1)
+  })
   it('keeps navigation, altitude and camera rail aligned at every camp', () => {
     checkpoints.forEach((camp, index) => {
       expect(routeProgress(camp.progress)).toBeCloseTo(camp.route)
