@@ -96,6 +96,7 @@ export class ScrollController {
     this.started = true
     this.measure()
     this.current = this.target = clamp(initialProgress)
+    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current) }
     window.scrollTo({ top: this.current * this.range, behavior: 'instant' })
     window.addEventListener('scroll', this.onScroll, { passive: true })
     window.addEventListener('resize', this.onResize)

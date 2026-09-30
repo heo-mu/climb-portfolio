@@ -1,6 +1,6 @@
 ﻿import * as THREE from 'three'
 import { cameraPose, seeded } from './terrain'
-import { createEnvironment } from './environment'
+import { environmentStages } from './environment'
 import type { ExpeditionFrame } from './progress'
 import { smoothstep } from './progress'
 import { experienceConfig as config } from '../config/experience'
@@ -31,6 +31,10 @@ export class MountainScene {
   private lastProgress = -1
   private resizeObserver: ResizeObserver
   private disposed = false
+  private wind = { value: 0 }
+  private stages: Generator<void, void, unknown>
+  private deferred = 0
+  private idle = false
 
   constructor(private options: SceneOptions) {
     const mobile = window.innerWidth < 768
@@ -39,10 +43,12 @@ export class MountainScene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = config.lighting.exposure
     this.scene.fog = this.fog
-    this.keyLight.position.set(-160, 350, -170)
+    this.keyLight.position.set(-180, 240, -90)
     const fill = new THREE.DirectionalLight('#afcbdc', config.lighting.fill)
     fill.position.set(200, 100, 150)
-    this.scene.add(this.keyLight, fill, this.ambient, createEnvironment())
+    this.scene.add(this.keyLight, fill, this.ambient)
+    this.stages = environmentStages(this.scene, this.wind)
+    this.stages.next()
     this.skyMaterial = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false,
       uniforms: { uSky: { value: new THREE.Color('#182b40') }, uHorizon: { value: new THREE.Color('#52687e') } },
@@ -53,11 +59,24 @@ export class MountainScene {
     sky.frustumCulled = false
     sky.onBeforeRender = () => { sky.position.copy(this.camera.position); sky.updateMatrixWorld() }
     this.scene.add(sky)
-    this.createSnow(mobile)
     options.canvas.addEventListener('webglcontextlost', this.onContextLost)
     this.resizeObserver = new ResizeObserver(this.resize)
     this.resizeObserver.observe(options.canvas.parentElement!)
     this.resize()
+    const advance = () => {
+      if (this.disposed) return
+      try {
+        const stage = this.stages.next()
+        this.lastProgress = -1
+        if (stage.done) { this.createSnow(mobile); this.resize(); return }
+        schedule()
+      } catch { this.options.onLost() }
+    }
+    const schedule = () => {
+      this.idle = typeof window.requestIdleCallback === 'function'
+      this.deferred = this.idle ? window.requestIdleCallback(advance, { timeout: 300 }) : window.setTimeout(advance, 32)
+    }
+    schedule()
   }
 
   private createSnow(mobile: boolean) {
@@ -113,6 +132,7 @@ export class MountainScene {
     if (!moving && frame.time - this.lastRender < 1 / 30) return
     this.lastRender = frame.time
     this.lastProgress = frame.progress
+    this.wind.value = frame.reducedMotion ? 0 : frame.time
     cameraPose(frame.route, this.position, this.target)
     this.camera.position.copy(this.position)
     this.camera.lookAt(this.target)
@@ -138,6 +158,9 @@ export class MountainScene {
 
   dispose() {
     this.disposed = true
+    if (this.idle) window.cancelIdleCallback(this.deferred)
+    else window.clearTimeout(this.deferred)
+    this.stages.return()
     this.resizeObserver.disconnect()
     this.options.canvas.removeEventListener('webglcontextlost', this.onContextLost)
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>()

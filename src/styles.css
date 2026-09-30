@@ -10,9 +10,9 @@ h1:focus { outline: none; }
 ::selection { background: var(--accent); color: #fff; }
 .mono, dt { font-family: inherit; font-size: 11px; font-weight: 500; letter-spacing: .06em; line-height: 1.5; }
 .expedition { position: relative; }
-.scene { position: fixed; inset: 0; pointer-events: none; overflow: hidden; background: #607c90; }
-.scene canvas { width: 100%; height: 100%; display: block; }
-.scene-shade { display: none; }
+.scene { position: fixed; inset: 0; pointer-events: none; overflow: hidden; background: linear-gradient(155deg, #263944, #3e5663 55%, #1b2b33); }
+.scene canvas { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity .65s ease; }
+.scene[data-ready=true] canvas { opacity: 1; }
 .scene-vignette { position: absolute; inset: 0; background: linear-gradient(0deg, rgb(13 29 41 / 12%), transparent 35%, transparent 80%, rgb(15 32 47 / 12%)); }
 .hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
 .hud::before { content: ''; position: absolute; inset: 0 0 0 auto; width: min(25vw, 360px); background: linear-gradient(90deg, transparent, rgb(17 37 52 / 43%)); pointer-events: none; }
@@ -24,15 +24,13 @@ h1:focus { outline: none; }
 .current-location > span:first-child { opacity: .65; font-variant-numeric: tabular-nums; }
 .current-location strong { font-weight: 500; }
 .current-rule { width: 22px; height: 1px; background: currentColor; opacity: .5; }
-.checkpoint-nav { position: absolute; right: var(--gutter); top: 31%; height: 40%; width: 130px; }
-.checkpoint-nav button { position: absolute; top: var(--stop); right: 0; transform: translateY(-50%); display: flex; align-items: center; gap: 10px; min-height: 44px; color: #d7e0e4; transition: color .18s; }
-.checkpoint-nav button:hover, .checkpoint-nav button[aria-current] { color: #fff; }
-.checkpoint-nav .nav-number { font-size: 9px; opacity: .5; font-variant-numeric: tabular-nums; }
-.checkpoint-nav .nav-label { font-size: 11px; font-weight: 500; letter-spacing: .035em; min-width: 64px; }
-.checkpoint-nav i { width: 6px; height: 1px; background: currentColor; margin-left: 5px; }
-.nav-track { position: absolute; top: 0; bottom: 0; right: 2px; width: 1px; background: rgb(233 243 247 / 20%); }
-.nav-track span { position: absolute; bottom: 0; width: 1px; height: calc(var(--progress, 0) * 100%); background: rgb(237 245 248 / 55%); }
-.nav-position { position: absolute; top: calc((1 - var(--progress, 0)) * 100%); right: -1px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); transform: translateY(-50%); }
+.checkpoint-nav { --accent: #d5ff40; position: absolute; right: var(--gutter); top: 50%; transform: translateY(-50%); width: 116px; display: grid; gap: 6px; }
+.checkpoint-nav button { display: grid; grid-template-columns: 1fr 6px; align-items: center; gap: 20px; min-height: 40px; text-align: right; color: #d2dadd; opacity: .56; transition: color .2s, opacity .2s; }
+.checkpoint-nav button:hover { opacity: 1; }
+.checkpoint-nav button[aria-current] { color: var(--accent); opacity: 1; }
+.checkpoint-nav .nav-label { font-size: 10px; font-weight: 500; letter-spacing: .075em; line-height: 16px; }
+.nav-dot { width: 4px; height: 4px; justify-self: center; border-radius: 50%; background: currentColor; opacity: .32; }
+.checkpoint-nav button[aria-current] .nav-dot { opacity: 1; }
 /* Progress drives every layer: entrance never blocks a new scroll input. */
 .checkpoint { position: fixed; z-index: 3; inset: 0 auto 0 0; width: 40vw; min-width: 430px; max-width: 660px; display: flex; align-items: center; padding: 126px 30px 64px var(--gutter); --panel-surface: 0; --panel-title: 0; --panel-body: 0; visibility: hidden; }
 .panel-surface { position: absolute; inset: 0 -100px 0 0; background: linear-gradient(90deg, rgb(16 32 44 / 94%) 0%, rgb(19 37 49 / 86%) 61%, rgb(22 41 52 / 36%) 82%, transparent 100%); opacity: var(--panel-surface); transform: translateX(calc((1 - var(--panel-surface)) * -20px)); pointer-events: none; }
@@ -119,10 +117,6 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 .email-address { font-size: clamp(22px, 2.1vw, 31px); letter-spacing: -.02em; }
 .contact-placeholder { display: block; font-size: 10px; color: #8fa7b6; margin-top: 11px; }
 .social-links { display: flex; gap: 26px; margin-top: 27px; font-size: 12px; }
-.route-loader { position: fixed; z-index: 30; inset: 0; background: #233c50; display: grid; align-content: center; justify-items: center; gap: 16px; }
-.route-loader > span:first-child { font-size: 13px; }
-.route-loader > span:nth-child(2) { font-size: 11px; color: #b6c8d3; }
-.route-loader > div { width: 130px; height: 1px; background: #93aebd; }
 .skip-link { position: fixed; left: var(--gutter); top: -80px; z-index: 50; background: #172936; padding: 13px 20px; font-size: 13px; }
 .skip-link:focus { top: 10px; }
 .reading-mode { height: auto; min-height: 100vh; }
@@ -165,11 +159,11 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
   .current-location { top: 33px; font-size: 10px; gap: 9px; }
   .current-rule { width: 15px; }
   .hud::before { inset: auto 0 0; width: 100%; height: 95px; background: linear-gradient(0deg, rgb(17 37 52 / 80%), transparent); }
-  .checkpoint-nav { top: auto; bottom: 22px; left: var(--gutter); right: var(--gutter); width: auto; height: 36px; display: flex; justify-content: space-between; gap: 8px; }
-  .checkpoint-nav button { position: static; transform: none; min-height: 36px; }
-  .checkpoint-nav .nav-number, .checkpoint-nav i, .nav-position, .nav-track { display: none; }
+  .checkpoint-nav { top: auto; bottom: 22px; left: var(--gutter); right: var(--gutter); width: auto; transform: none; display: flex; justify-content: space-between; gap: 8px; }
+  .checkpoint-nav button { min-height: 36px; display: flex; gap: 0; }
+  .checkpoint-nav .nav-dot { display: none; }
   .checkpoint-nav .nav-label { min-width: 0; font-size: 9px; }
-  .checkpoint-nav button[aria-current] { border-bottom: 2px solid var(--accent); }
+  .checkpoint-nav button[aria-current] { border-bottom: 1px solid var(--accent); }
   .checkpoint { width: 100%; max-width: none; min-width: 0; padding: 128px var(--gutter) 96px; align-items: flex-end; }
   .panel-content { max-height: calc(100svh - 230px); padding-right: 4px; }
   .panel-surface { inset: 0; background: linear-gradient(0deg, rgb(15 32 45 / 98%) 0%, rgb(17 34 47 / 86%) 50%, transparent 92%); }
@@ -257,7 +251,6 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 .home-explore svg { width: 26px; height: 33px; color: var(--accent); stroke: currentColor; stroke-width: 1.5; transition: transform .2s; }
 .home-explore:hover svg { transform: translateY(5px); }
 .hud[data-home=true] { visibility: hidden; }
-.checkpoint-nav button[aria-current] i { background: var(--accent); }
 .workflow li[data-active=true] .step-symbol { color: var(--accent); }
 .tool-arrow, .project-arrow, .project-open > span { color: var(--accent); }
 .reading-mode .home-hero { position: relative; width: calc(100vw - 2 * var(--gutter)); margin: -100px 0 60px; height: calc(100svh - 40px); visibility: visible; --panel-surface: 1; --panel-title: 1; --panel-body: 1; }

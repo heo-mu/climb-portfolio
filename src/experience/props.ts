@@ -5,70 +5,118 @@ import { noise2 } from './noise'
 export function rockGeometry(seed: number) {
   const source = new THREE.IcosahedronGeometry(1, 2)
   source.deleteAttribute('normal'); source.deleteAttribute('uv')
-  const g = mergeVertices(source)
+  const geometry = mergeVertices(source)
   source.dispose()
-  const p = g.getAttribute('position')
-  const colors: number[] = []
-  const stone = new THREE.Color('#66737a'), snow = new THREE.Color('#c8d8dc'), color = new THREE.Color()
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i)
-    const rough = noise2(x * 3 + seed * 11, z * 3 + y * 2) - 0.5
-    const scale = 1 + rough * 0.36
-    p.setXYZ(i, (x * scale + y * 0.12) * (1 + seed * 0.08), Math.min(0.77 + rough * 0.18, y * scale), z * scale)
-    color.copy(stone).lerp(snow, THREE.MathUtils.smoothstep(y + rough * 0.7, 0.35, 0.95) * 0.65).multiplyScalar(0.9 + rough * 0.2)
+  const positions = geometry.getAttribute('position'), colors: number[] = []
+  const rock = new THREE.Color('#43515b'), snow = new THREE.Color('#d7e1e2'), color = new THREE.Color()
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i)
+    const grain = noise2(x * 4 + seed * 13, z * 4 + y * 2) - .5
+    const split = Math.min(1 + grain * .32, .84 + Math.abs(x * .45 + z * .3))
+    const width = [1.1, .78, 1.35, .92, 1.18][seed % 5]
+    const height = [1, 1.3, .66, 1.1, .82][seed % 5]
+    const py = Math.max(-.62, Math.min(.78 + x * .18 - z * .13, y * split)) * height
+    positions.setXYZ(i, x * split * width + y * (.1 + seed * .045), py, z * split * (1 + seed * .05))
+    const cap = THREE.MathUtils.smoothstep(y + grain * .9 + x * .25, .24, .83)
+    color.copy(rock).lerp(snow, cap * .94).multiplyScalar(.9 + grain * .3)
     colors.push(color.r, color.g, color.b)
   }
-  g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-  g.computeVertexNormals()
-  return g
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+  geometry.computeVertexNormals()
+  return geometry
 }
 
 export function iceGeometry(seed: number) {
-  const corners = [[-0.7, -1], [0.6, -1], [1, -0.65], [1, 0.65], [0.6, 1], [-0.6, 1], [-1, 0.65], [-1, -0.65]]
-  const positions: number[] = [], indices: number[] = [], colors: number[] = []
-  const base = new THREE.Color('#85a8ba'), top = new THREE.Color('#d5e3e5'), color = new THREE.Color()
-  for (let ring = 0; ring < 4; ring++) {
-    for (let i = 0; i < 8; i++) {
-      const [x, z] = corners[i]
-      const uneven = noise2(i * 0.6 + seed * 9, ring * 0.8)
-      const taper = 1 - ring * (0.035 + seed * 0.015)
-      positions.push(x * taper + ring * 0.06, ring * 0.63 + (ring ? uneven * 0.24 : 0), z * taper + (uneven - 0.5) * 0.16)
-      color.copy(base).lerp(top, ring / 4 + uneven * 0.15)
+  const sides = 13, rings = 9
+  const positions: number[] = [], colors: number[] = [], indices: number[] = []
+  const blue = new THREE.Color('#739cae'), snow = new THREE.Color('#cbdde2'), deep = new THREE.Color('#416e85'), color = new THREE.Color()
+  for (let ring = 0; ring < rings; ring++) {
+    const v = ring / (rings - 1)
+    for (let i = 0; i < sides; i++) {
+      const angle = i / sides * Math.PI * 2
+      const n = noise2(i * .73 + seed * 17, v * 2.7)
+      const groove = Math.pow(.5 + .5 * Math.cos(angle * 3 + seed * 1.3), 12)
+      const taper = 1 - .28 * v - .22 * v * v
+      const radius = (.85 + n * .28 - groove * (.12 + v * .18)) * taper
+      const crown = 1.7 + noise2(i * .9 + seed * 5, 4) * .8 - groove * .43
+      positions.push(Math.cos(angle) * radius + v * v * (.18 + seed * .025), v * crown, Math.sin(angle) * radius * (.75 + seed * .065) - v * .16)
+      color.copy(blue).lerp(snow, v * v * .72 + n * .16).lerp(deep, groove * .42)
       colors.push(color.r, color.g, color.b)
-      if (ring < 3) { const a = ring * 8 + i, b = ring * 8 + (i + 1) % 8; indices.push(a, a + 8, b, b, a + 8, b + 8) }
+      if (ring < rings - 1) {
+        const a = ring * sides + i, b = ring * sides + (i + 1) % sides
+        indices.push(a, a + sides, b, b, a + sides, b + sides)
+      }
     }
   }
-  for (let i = 1; i < 7; i++) indices.push(24, 24 + i + 1, 24 + i)
-  const indexed = new THREE.BufferGeometry()
-  indexed.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); indexed.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); indexed.setIndex(indices)
-  const g = indexed.toNonIndexed(); indexed.dispose(); g.computeVertexNormals()
-  return g
+  const cap = positions.length / 3
+  positions.push(.16, 2.08, -.14); colors.push(snow.r, snow.g, snow.b)
+  for (let i = 0; i < sides; i++) indices.push(cap, (rings - 1) * sides + (i + 1) % sides, (rings - 1) * sides + i)
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+  geometry.setIndex(indices); geometry.computeVertexNormals()
+  return geometry
+}
+
+function tentPoint(angle: number, t: number, seam = false) {
+  const fullness = Math.pow(Math.sin(t * Math.PI), .65)
+  const width = 1.2 + fullness * .42
+  const height = 1.28 + fullness * .52
+  const tension = seam ? 0 : Math.sin(t * Math.PI * 4) ** 2 * Math.sin(angle) * .045
+  return new THREE.Vector3(Math.cos(angle) * (width - tension), .12 + Math.sin(angle) * (height - tension), (t - .5) * 3.7)
 }
 
 export function tentGeometry() {
-  const positions: number[] = [], indices: number[] = []
-  const segments = 12
-  for (let ring = 0; ring < 5; ring++) {
-    const end = ring === 0 || ring === 4
-    for (let i = 0; i <= segments; i++) {
-      const angle = i / segments * Math.PI
-      positions.push(Math.cos(angle) * 1.6 * (end ? 0.84 : 1), Math.sin(angle) * 1.8 * (end ? 0.83 : 1), -1.65 + ring * 0.825)
-      if (ring < 4 && i < segments) { const a = ring * (segments + 1) + i; indices.push(a, a + 1, a + segments + 1, a + 1, a + segments + 2, a + segments + 1) }
+  const positions: number[] = [], indices: number[] = [], colors: number[] = []
+  const sides = 24, rows = 16
+  for (let j = 0; j <= rows; j++) for (let i = 0; i <= sides; i++) {
+    const angle = i / sides * Math.PI, t = j / rows, p = tentPoint(angle, t)
+    positions.push(p.x, p.y, p.z)
+    const shade = .82 + Math.sin(angle) * .18 - Math.sin(t * Math.PI * 4) ** 2 * .025
+    colors.push(shade, shade, shade)
+    if (j < rows && i < sides) {
+      const a = j * (sides + 1) + i
+      indices.push(a, a + 1, a + sides + 1, a + 1, a + sides + 2, a + sides + 1)
     }
   }
-  const front = positions.length / 3
-  positions.push(0, 0, 1.65, 0, 0, -1.65)
-  for (let i = 0; i < segments; i++) { indices.push(front, 4 * (segments + 1) + i, 4 * (segments + 1) + i + 1); indices.push(front + 1, i + 1, i) }
-  const g = new THREE.BufferGeometry()
-  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); g.setIndex(indices); g.computeVertexNormals()
-  return g
+  // End panels close the fly; the vestibule and doorway are separate geometry.
+  for (const row of [0, rows]) {
+    const center = positions.length / 3
+    positions.push(0, .04, (row / rows - .5) * 3.7); colors.push(.8, .8, .8)
+    for (let i = 0; i < sides; i++) {
+      const a = row * (sides + 1) + i
+      if (row === 0) indices.push(center, a + 1, a)
+      else indices.push(center, a, a + 1)
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+  geometry.setIndex(indices); geometry.computeVertexNormals()
+  return geometry
 }
 
 export function tentSeams(material: THREE.Material) {
   const group = new THREE.Group()
-  for (const z of [-0.825, 0.825]) {
-    const points = Array.from({ length: 21 }, (_, i) => new THREE.Vector3(Math.cos(i / 20 * Math.PI) * 1.612, Math.sin(i / 20 * Math.PI) * 1.812, z))
-    group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 24, 0.018, 5, false), material))
+  for (const t of [.2, .5, .8]) {
+    const points = Array.from({ length: 33 }, (_, i) => tentPoint(i / 32 * Math.PI, t, true).add(new THREE.Vector3(0, .012, 0)))
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 32, .012, 5, false), material))
+  }
+  for (const angle of [.08, Math.PI - .08, Math.PI / 2]) {
+    const points = Array.from({ length: 25 }, (_, i) => tentPoint(angle, i / 24, true))
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 24, .008, 4, false), material))
   }
   return group
 }
+
+export function tentVestibule() {
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+    -1.2,.12,1.85, -.62,.05,2.65, 0,1.4,1.85,
+    0,1.4,1.85, .62,.05,2.65, 1.2,.12,1.85,
+    -1.2,.12,1.85, 0,1.4,1.85, 1.2,.12,1.85,
+  ], 3))
+  geometry.computeVertexNormals()
+  return geometry
+}
+
