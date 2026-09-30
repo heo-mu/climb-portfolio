@@ -1,5 +1,6 @@
 ﻿import * as THREE from 'three'
 import { experienceConfig } from '../config/experience'
+import { noise2, terrainNoise } from './noise'
 
 // 29 independent route controls: exit, ice approach, switchbacks, traverse,
 // sheltered camps, exposed ridge and final shoulder. World units are metres.
@@ -33,7 +34,9 @@ function surfaceHeight(offset: number, z: number, base: number) {
   const ridgeFall = -Math.pow(Math.max(0, d - ridgeWidth), 0.87) * 1.4
   const flank = THREE.MathUtils.lerp(valley, offset < 0 ? leftFall : valley * 1.3, traverse)
   const profile = THREE.MathUtils.lerp(flank, ridgeFall, ridge)
-  const rough = (Math.sin(offset * 0.39 + z * 0.23) * 0.1 + Math.sin(z * 0.069 + offset * 0.13) * 0.28) * ease(2.8, 12, d)
+  // Leave the walked corridor untouched; snow banks and eroded flanks carry detail.
+  const rough = ((terrainNoise(offset * 0.065, z * 0.045) - 0.5) * (1.3 + ease(12, 100, d) * 12)
+    + Math.pow(noise2(offset * 0.18, z * 0.013), 3) * ease(15, 60, d) * 3) * ease(2.8, 12, d)
   return base + profile + rough
 }
 
@@ -58,10 +61,11 @@ export function cameraPose(route: number, position: THREE.Vector3, target: THREE
 }
 
 export function terrainGeometry() {
-  const offsets = [-650, -500, -380, -280, -200, -145, -105, -78, -58, -44, -34, -27, -22, -18, -15, -12, -10, -8, -6, -4, -2, -1, 0, 1, 2, 4, 6, 8, 10, 12, 15, 18, 22, 27, 34, 44, 58, 78, 105, 145, 200, 280, 380, 500, 650]
+  const anchors = [-650, -500, -380, -280, -200, -145, -105, -78, -58, -44, -34, -27, -22, -18, -15, -12, -10, -8, -6, -4, -2, -1, 0, 1, 2, 4, 6, 8, 10, 12, 15, 18, 22, 27, 34, 44, 58, 78, 105, 145, 200, 280, 380, 500, 650]
+  const offsets = anchors.flatMap((a, i) => i === anchors.length - 1 ? [a] : Array.from({ length: Math.ceil((anchors[i + 1] - a) / 16) }, (_, n) => a + n * (anchors[i + 1] - a) / Math.ceil((anchors[i + 1] - a) / 16)))
   const positions: number[] = [], indices: number[] = [], colors: number[] = []
   const rows = 690, stride = offsets.length
-  const color = new THREE.Color(), snow = new THREE.Color('#a7b8c9'), ice = new THREE.Color('#6e879c'), rock = new THREE.Color('#465260')
+  const color = new THREE.Color(), snow = new THREE.Color('#c2d0d7'), ice = new THREE.Color('#91adbc'), rock = new THREE.Color('#677782')
   for (let row = 0; row <= rows; row++) {
     const z = 120 - row * 2.4
     const p = routePoint(-z / depth)
@@ -69,7 +73,7 @@ export function terrainGeometry() {
       const offset = offsets[col], x = p.x + offset, y = groundHeight(x, z)
       positions.push(x, y, z)
       const slope = Math.abs(groundHeight(x + 0.5, z) - groundHeight(x - 0.5, z))
-      const grain = Math.sin(x * 0.13 + z * 0.041) * Math.sin(x * 0.037 - z * 0.13)
+      const grain = terrainNoise(x * 0.085, z * 0.07) * 2 - 1
       color.copy(snow).lerp(ice, Math.min(0.65, slope * 0.28)).lerp(rock, ease(0.5, 0.72, -z / depth) * (1 - ease(0.73, 0.88, -z / depth)) * ease(1, 2.8, slope))
       color.multiplyScalar(0.92 + grain * 0.065)
       colors.push(color.r, color.g, color.b)

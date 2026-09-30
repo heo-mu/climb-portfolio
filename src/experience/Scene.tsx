@@ -29,6 +29,6 @@ export function Scene({ controller, onFallback }: { controller: ScrollController
 
   return <>
     <div className="scene" aria-hidden="true"><canvas ref={canvas} /><div className="scene-shade" /><div className="scene-vignette" /></div>
-    {loading && <div className="route-loader" role="status"><span className="mono">ASCENT / PREPARING ROUTE</span><span>등반 경로를 준비하고 있어요.</span><div /></div>}
+    {loading && <div className="route-loader" role="status"><span>포트폴리오를 불러오고 있어요.</span><div /></div>}
   </>
 }

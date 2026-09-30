@@ -14,13 +14,13 @@ export class MountainScene {
   private camera = new THREE.PerspectiveCamera(config.camera.desktopFov, 1, config.camera.near, config.camera.far)
   private fog = new THREE.FogExp2('#293e53', config.atmosphere.fogBase)
   private keyLight = new THREE.DirectionalLight('#d5e1ee', config.lighting.keyBase)
-  private ambient = new THREE.HemisphereLight('#9bb7d1', '#202a39', config.lighting.ambientBase)
+  private ambient = new THREE.HemisphereLight('#c0d5e3', '#536574', config.lighting.ambientBase)
   private snow: SnowLayer[] = []
   private position = new THREE.Vector3()
   private target = new THREE.Vector3()
   private sky = new THREE.Color()
-  private low = new THREE.Color('#182b40')
-  private middle = new THREE.Color('#718caa')
+  private low = new THREE.Color('#516f87')
+  private middle = new THREE.Color('#8babc1')
   private high = new THREE.Color('#b8ac9e')
   private snowFog = new THREE.Color('#a6b6c7')
   private horizon = new THREE.Color('#e4c4a1')
@@ -37,10 +37,12 @@ export class MountainScene {
     this.renderer = new THREE.WebGLRenderer({ canvas: options.canvas, antialias: !mobile, alpha: false, powerPreference: 'high-performance' })
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.0
+    this.renderer.toneMappingExposure = config.lighting.exposure
     this.scene.fog = this.fog
     this.keyLight.position.set(-160, 350, -170)
-    this.scene.add(this.keyLight, this.ambient, createEnvironment())
+    const fill = new THREE.DirectionalLight('#afcbdc', config.lighting.fill)
+    fill.position.set(200, 100, 150)
+    this.scene.add(this.keyLight, fill, this.ambient, createEnvironment())
     this.skyMaterial = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false,
       uniforms: { uSky: { value: new THREE.Color('#182b40') }, uHorizon: { value: new THREE.Color('#52687e') } },
@@ -68,14 +70,14 @@ export class MountainScene {
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
       const material = new THREE.ShaderMaterial({
         transparent: true, depthWrite: false,
-        uniforms: { uTime: { value: 0 }, uCamera: { value: this.camera.position }, uBox: { value: boxes[layer] }, uSize: { value: sizes[layer] }, uHeight: { value: 900 }, uOpacity: { value: 0.5 } },
-        vertexShader: `uniform float uTime, uBox, uSize, uHeight; uniform vec3 uCamera; varying float vAlpha;
+        uniforms: { uTime: { value: 0 }, uWind: { value: 1 }, uCamera: { value: this.camera.position }, uBox: { value: boxes[layer] }, uSize: { value: sizes[layer] }, uHeight: { value: 900 }, uOpacity: { value: 0.5 } },
+        vertexShader: `uniform float uTime, uWind, uBox, uSize, uHeight; uniform vec3 uCamera; varying float vAlpha;
           void main(){
-            vec3 wind = vec3(uTime * 0.7, -uTime * 1.1, uTime * 0.2);
+            vec3 wind = vec3(uTime * 0.65 + sin(uTime * 0.45 + position.y) * uWind, -uTime * 1.05, uTime * 0.22 + cos(uTime * 0.3 + position.x) * uWind * 0.4);
             vec3 p = mod(position + wind - uCamera + uBox * 0.5, uBox) - uBox * 0.5 + uCamera;
             vec4 mv = modelViewMatrix * vec4(p,1.0);
             gl_Position = projectionMatrix * mv;
-            gl_PointSize = clamp(uSize * uHeight / max(0.5,-mv.z), 1.0, 19.0);
+            gl_PointSize = clamp(uSize * (0.65 + fract(position.x * 1.7) * 0.7) * uHeight / max(0.5,-mv.z), 1.0, 23.0);
             vAlpha = smoothstep(0.3,2.0,-mv.z) * (1.0-smoothstep(uBox*0.35,uBox*0.66,length(p-uCamera)));
           }`,
         fragmentShader: `uniform float uOpacity; varying float vAlpha;
@@ -128,7 +130,8 @@ export class MountainScene {
     this.snow.forEach(layer => {
       layer.points.visible = !frame.reducedMotion
       layer.points.material.uniforms.uTime.value = frame.time * layer.speed
-      layer.points.material.uniforms.uOpacity.value = 0.7 + whiteout * 0.15 - summit * 0.35
+      layer.points.material.uniforms.uWind.value = 0.35 + Math.sin(frame.route * Math.PI) * 0.7 + whiteout * 1.4
+      layer.points.material.uniforms.uOpacity.value = 0.55 + whiteout * 0.2 - summit * 0.28
     })
     this.renderer.render(this.scene, this.camera)
   }

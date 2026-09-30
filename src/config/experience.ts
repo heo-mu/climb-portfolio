@@ -5,7 +5,7 @@ export const experienceConfig = {
   camera: { desktopFov: 64, mobileFov: 72, eyeHeight: 1.8, lookAhead: 15, lookLift: 0.45, near: 0.08, far: 2400 },
   route: { depth: 1120, damping: 9, scrollScreens: 18 },
   atmosphere: { fogBase: 0.0028, fogRouteVariation: 0.0012, whiteoutPeak: 0.019, summitRelief: 0.0015 },
-  lighting: { keyBase: 2.1, keySummit: 1.0, ambientBase: 1.25, ambientRoute: 0.35 },
+  lighting: { exposure: 1.08, keyBase: 2.25, keySummit: 0.4, ambientBase: 1.75, ambientRoute: 0.25, fill: 0.45 },
   content: { readableRange: 0.018, transitionRange: 0.037 },
   snow: { nearCount: 180, middleCount: 650, farCount: 1100 },
 }

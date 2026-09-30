@@ -1,21 +1,8 @@
 import * as THREE from 'three'
 import { groundHeight, routePoint, seeded, terrainGeometry } from './terrain'
+import { rockGeometry, iceGeometry, tentGeometry, tentSeams } from './props'
 
-const surface = (color: string) => new THREE.MeshStandardMaterial({ color, roughness: 0.96, flatShading: true })
-
-function tentGeometry() {
-  const g = new THREE.BufferGeometry()
-  g.setAttribute('position', new THREE.Float32BufferAttribute([
-    -1.6, 0, 1.6, 1.6, 0, 1.6, 0, 1.85, 1.1,
-    1.6, 0, -1.6, -1.6, 0, -1.6, 0, 1.85, -1.1,
-    -1.6, 0, -1.6, -1.6, 0, 1.6, 0, 1.85, 1.1,
-    -1.6, 0, -1.6, 0, 1.85, 1.1, 0, 1.85, -1.1,
-    1.6, 0, 1.6, 1.6, 0, -1.6, 0, 1.85, -1.1,
-    1.6, 0, 1.6, 0, 1.85, -1.1, 0, 1.85, 1.1,
-  ], 3))
-  g.computeVertexNormals()
-  return g
-}
+const surface = (color: string) => new THREE.MeshStandardMaterial({ color, roughness: 0.9 })
 
 function addFlags(scene: THREE.Group, start: THREE.Vector3, end: THREE.Vector3, poleMaterial: THREE.Material) {
   const pole = new THREE.CylinderGeometry(0.035, 0.045, 2.9, 5)
@@ -49,9 +36,9 @@ export function createEnvironment() {
   snowMaterial.onBeforeCompile = shader => {
     shader.vertexShader = 'varying vec3 vGround; varying float vSlope;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvGround = position; vSlope = normal.y;')
     shader.fragmentShader = 'varying vec3 vGround; varying float vSlope;\n' + shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
-      float ripple = sin(vGround.z * 6.0 + sin(vGround.x * 0.42) * 2.5 + sin(vGround.z * 0.7));
+      float ripple = sin(vGround.z * 2.1 + vGround.x * 0.6 + sin(vGround.z * 0.3 + vGround.x * 0.7) * 2.0) * sin(vGround.x * 1.1 - vGround.z * 0.21);
       float detailFade = (1.0 - smoothstep(25.0, 100.0, length(vGround - cameraPosition))) * smoothstep(0.65,0.95,vSlope);
-      diffuseColor.rgb *= 1.0 + ripple * 0.055 * detailFade;
+      diffuseColor.rgb *= 1.0 + ripple * 0.026 * detailFade;
     `)
   }
   world.add(new THREE.Mesh(terrainGeometry(), snowMaterial))
@@ -74,51 +61,49 @@ export function createEnvironment() {
   world.add(new THREE.Mesh(farGeometry, new THREE.MeshStandardMaterial({ color: '#7993aa', roughness: 1 })))
 
   const dummy = new THREE.Object3D()
-  const rockGeo = new THREE.IcosahedronGeometry(1, 1)
-  const vertices = rockGeo.getAttribute('position')
-  for (let i = 0; i < vertices.count; i++) {
-    const x = vertices.getX(i), y = vertices.getY(i), z = vertices.getZ(i)
-    const shape = 1 + 0.17 * Math.sin(x * 8 + y * 5 + z * 11)
-    vertices.setXYZ(i, x * shape, y * shape, z * shape)
+  const rockMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94 })
+  const iceMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.48, metalness: 0.04 })
+  for (let variant = 0; variant < 3; variant++) {
+    const rocks = new THREE.InstancedMesh(rockGeometry(variant), rockMaterial, 165)
+    const ice = new THREE.InstancedMesh(iceGeometry(variant), iceMaterial, 48)
+    for (let i = 0; i < rocks.count; i++) {
+      const seed = i + variant * 733, band = seeded(seed + 2), u = seeded(seed + 83)
+      const t = band < 0.24 ? u * 0.09 : band < 0.56 ? 0.09 + u * 0.24 : band < 0.65 ? 0.36 + u * 0.17 : 0.56 + u * 0.32
+      const center = routePoint(t), side = i % 2 ? 1 : -1
+      const offset = side * (4.5 + seeded(seed + 53) ** 2 * 47)
+      const x = center.x + offset, z = center.z
+      const s = 0.18 + seeded(seed + 41) ** 2 * (t < 0.09 ? 1.5 : t > 0.55 ? 3.5 : 2.4)
+      const slope = Math.abs(groundHeight(x + 1, z) - groundHeight(x - 1, z)) / 2
+      dummy.position.set(x, groundHeight(x, z) - s * (0.16 + slope * 0.6), z)
+      dummy.rotation.set(seeded(seed) * 0.35, seeded(seed + 1) * 6.28, seeded(seed + 3) * 0.25)
+      dummy.scale.set(s * (1 + seeded(seed + 15) * 0.5), s * (0.6 + seeded(seed + 19) * 0.35), s)
+      dummy.updateMatrix(); rocks.setMatrixAt(i, dummy.matrix)
+      rocks.setColorAt(i, new THREE.Color().setScalar(0.78 + seeded(seed + 19) * 0.24))
+    }
+    for (let i = 0; i < ice.count; i++) {
+      const seed = i + variant * 411
+      const t = 0.085 + seeded(seed + 7) * 0.27
+      const center = routePoint(t), side = i % 2 ? 1 : -1
+      const s = 1.4 + seeded(seed + 80) ** 1.3 * 5
+      const x = center.x + side * (9 + s + seeded(seed + 44) * 32), z = center.z
+      const slope = Math.abs(groundHeight(x + 1, z) - groundHeight(x - 1, z)) / 2
+      dummy.position.set(x, groundHeight(x, z) - s * (0.12 + slope * 0.65), z)
+      dummy.rotation.set((seeded(seed + 23) - 0.5) * 0.24, seeded(seed + 45) * 5, side * 0.08)
+      dummy.scale.set(s * (0.7 + seeded(seed + 4) * 0.5), s * (0.7 + seeded(seed + 12) * 0.65), s)
+      dummy.updateMatrix(); ice.setMatrixAt(i, dummy.matrix)
+    }
+    world.add(rocks, ice)
   }
-  rockGeo.computeVertexNormals()
-  const rocks = new THREE.InstancedMesh(rockGeo, surface('#505765'), 560)
-  const ice = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), surface('#7894ab'), 220)
-  for (let i = 0; i < rocks.count; i++) {
-    const t = seeded(i + 2) * 0.94
-    const center = routePoint(t)
-    const side = i % 2 ? 1 : -1
-    const offset = side * (4 + seeded(i + 53) ** 2 * 65)
-    const x = center.x + offset, z = center.z
-    const s = 0.18 + seeded(i + 41) ** 2 * (t < 0.08 ? 1.7 : 3.5)
-    const slope = Math.abs(groundHeight(x + 1, z) - groundHeight(x - 1, z)) / 2
-    dummy.position.set(x, groundHeight(x, z) - s * (0.12 + slope * 0.5), z)
-    dummy.rotation.set(seeded(i) * 0.6, seeded(i + 1) * 6.28, seeded(i + 3) * 0.35)
-    dummy.scale.set(s * 1.4, s * 0.65, s)
-    dummy.updateMatrix(); rocks.setMatrixAt(i, dummy.matrix)
-    rocks.setColorAt(i, new THREE.Color().setScalar(0.68 + seeded(i + 19) * 0.4))
-  }
-  for (let i = 0; i < ice.count; i++) {
-    const t = 0.085 + seeded(i + 7) * 0.38
-    const center = routePoint(t)
-    const side = i % 2 ? 1 : -1
-    const s = 2 + seeded(i + 80) * 7
-    const x = center.x + side * (9 + s + seeded(i + 44) * 42), z = center.z
-    const slope = Math.abs(groundHeight(x + 1, z) - groundHeight(x - 1, z)) / 2
-    dummy.position.set(x, groundHeight(x, z) + s * (0.3 - slope * 0.45), z)
-    dummy.rotation.set(seeded(i + 23) * 0.18, seeded(i + 45) * 5, side * 0.13)
-    dummy.scale.set(s * 0.72, s * (1 + seeded(i + 12)), s)
-    dummy.updateMatrix(); ice.setMatrixAt(i, dummy.matrix)
-  }
-  world.add(rocks, ice)
 
-  const poleMaterial = surface('#373d43')
-  const tentMaterial = surface('#b6733b')
+  const poleMaterial = new THREE.MeshStandardMaterial({ color: '#637681', metalness: 0.28, roughness: 0.65 })
+  const tentMaterial = surface('#bd925d')
   const tentGeo = tentGeometry()
   const entranceGeo = new THREE.BufferGeometry()
-  entranceGeo.setAttribute('position', new THREE.Float32BufferAttribute([-0.55, 0.04, 1.615, 0.55, 0.04, 1.615, 0, 1.22, 1.28], 3))
+  entranceGeo.setAttribute('position', new THREE.Float32BufferAttribute([-0.58, 0.04, 1.661, 0.58, 0.04, 1.661, 0, 1.22, 1.661], 3))
   entranceGeo.computeVertexNormals()
-  const entranceMaterial = surface('#292b2c')
+  const entranceMaterial = surface('#354a54')
+  const seamMaterial = surface('#e0c89f')
+  const seams = tentSeams(seamMaterial)
   for (let camp = 0; camp < 5; camp++) {
     const center = routePoint(camp / 4)
     const tentCount = camp === 0 ? 5 : camp === 4 ? 0 : camp === 3 ? 1 : 2
@@ -129,7 +114,7 @@ export function createEnvironment() {
       const tent = new THREE.Group()
       tent.position.set(x, groundHeight(x, z) + 0.04, z)
       tent.rotation.y = -0.12 + i * 0.3
-      tent.add(new THREE.Mesh(tentGeo, tentMaterial), new THREE.Mesh(entranceGeo, entranceMaterial))
+      tent.add(new THREE.Mesh(tentGeo, tentMaterial), new THREE.Mesh(entranceGeo, entranceMaterial), seams.clone())
       world.add(tent)
       const line = new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(x, tent.position.y + 1.7, z + 1), new THREE.Vector3(x, groundHeight(x, z + 3.7) + 0.05, z + 3.7),
@@ -139,12 +124,22 @@ export function createEnvironment() {
     const a = new THREE.Vector3(center.x - (camp === 0 ? 10 : 5), 0, center.z - 22)
     const b = new THREE.Vector3(center.x + 18, 0, center.z - 14)
     a.y = groundHeight(a.x, a.z); b.y = groundHeight(b.x, b.z)
-    addFlags(world, a, b, poleMaterial)
+    if (camp < 2) addFlags(world, a, b, poleMaterial)
+    else {
+      const marker = new THREE.Group()
+      const x = center.x + 4, z = center.z - 9
+      marker.position.set(x, groundHeight(x, z), z)
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.036, 1.7, 8), poleMaterial)
+      pole.position.y = 0.85
+      const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.24), new THREE.MeshStandardMaterial({ color: '#c6ac7c', side: THREE.DoubleSide, roughness: 1 }))
+      flag.position.set(0.21, 1.48, 0); flag.rotation.y = 0.35
+      marker.add(pole, flag); world.add(marker)
+    }
   }
 
   // One continuous fixed rope and stakes give a readable, reversible route.
   const ropePoints: THREE.Vector3[] = []
-  const stakes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.035, 0.045, 1.1, 5), poleMaterial, 111)
+  const stakes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.035, 0.045, 1.1, 8), poleMaterial, 111)
   for (let i = 0; i <= 440; i++) {
     const t = i / 440
     const p = routePoint(t)
@@ -157,6 +152,6 @@ export function createEnvironment() {
       stakes.setMatrixAt(i / 4, dummy.matrix)
     }
   }
-  world.add(stakes, new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ropePoints), 1500, 0.026, 4, false), surface('#918e76')))
+  world.add(stakes, new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ropePoints), 1500, 0.026, 6, false), surface('#b4ac92')))
   return world
 }

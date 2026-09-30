@@ -1,9 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import '@fontsource/barlow-condensed/latin-500.css'
-import '@fontsource/barlow-condensed/latin-600.css'
-import '@fontsource/ibm-plex-mono/latin-400.css'
-import '@fontsource-variable/noto-sans-kr'
+import '@sun-typeface/suit/fonts/variable/woff2/SUIT-Variable.css'
 import './styles.css'
 import { App } from './App'
 
