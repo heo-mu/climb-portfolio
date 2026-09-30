@@ -1,6 +1,7 @@
 ﻿import * as THREE from 'three'
 import { experienceConfig } from '../config/experience'
 import { noise2, terrainNoise } from './noise'
+import { arrivalCamps } from './campLayout'
 
 // 29 independent route controls: exit, ice approach, switchbacks, traverse,
 // sheltered camps, exposed ridge and final shoulder. World units are metres.
@@ -22,17 +23,20 @@ export function routePoint(t: number, out = new THREE.Vector3()) {
 function surfaceHeight(offset: number, z: number, base: number) {
   const t = -z / depth
   const d = Math.abs(offset)
-  const opening = 20 + 32 * Math.exp(-Math.pow(t / 0.075, 2)) - 13 * Math.exp(-Math.pow((t - 0.18) / 0.095, 2)) + 22 * Math.exp(-Math.pow((t - 0.43) / 0.1, 2))
+  const basin = ease(.31, .4, t) * (1 - ease(.54, .61, t))
+  const icefall = ease(.1, .15, t) * (1 - ease(.29, .37, t))
+  const opening = 20 + 32 * Math.exp(-Math.pow(t / .075, 2)) - 10 * icefall + 64 * basin
   const wall = Math.max(0, d - opening)
   const irregular = 1 + 0.24 * Math.sin(z * 0.029 + offset * 0.013) + 0.13 * Math.sin(z * 0.073 - offset * 0.05)
   const wallHeight = 145 + 45 * Math.sin(z * 0.011) + 20 * Math.cos(z * 0.027)
   const valley = wallHeight * (1 - Math.exp(-wall / 65)) * irregular
-  const traverse = ease(0.49, 0.61, t) * (1 - ease(0.72, 0.82, t))
+  const traverse = ease(.56, .64, t) * (1 - ease(.77, .84, t))
   const ridge = ease(0.77, 0.91, t)
   const leftFall = -Math.max(0, d - 4) * 0.82
   const ridgeWidth = 3 + 14 * ease(0.96, 1, t)
   const ridgeFall = -Math.pow(Math.max(0, d - ridgeWidth), 0.87) * 1.4
-  const flank = THREE.MathUtils.lerp(valley, offset < 0 ? leftFall : valley * 1.3, traverse)
+  const faceWall = valley * 1.35 + (1 - Math.exp(-Math.max(0, offset - 9) / 22)) * 54
+  const flank = THREE.MathUtils.lerp(valley * (1 - basin * .25), offset < 0 ? leftFall : faceWall, traverse)
   const profile = THREE.MathUtils.lerp(flank, ridgeFall, ridge)
   // Leave the walked corridor untouched; snow banks and eroded flanks carry detail.
   const rough = ((terrainNoise(offset * 0.065, z * 0.045) - 0.5) * (1.3 + ease(12, 100, d) * 12)
@@ -41,14 +45,32 @@ function surfaceHeight(offset: number, z: number, base: number) {
   const drift = Math.exp(-Math.pow((d - bankCenter) / 4.2, 2)) * (1.1 + noise2(z * .043, offset * .015) * 1.8)
   const erosion = (noise2(z * .045 + Math.sin(offset * .018), offset * .028) - .5) * 16 * ease(3, 38, wall)
   const shelf = Math.sin(z * .035 + offset * .08) * .5 * ease(12, 32, d)
-  return base + profile + rough + (drift + erosion + shelf) * ease(2.8, 5.5, d) * (1 - ridge * .65)
+  // Lateral glacier fractures never cross the walked corridor or the rope.
+  const fracture = Math.exp(-Math.pow(Math.sin(z * .065 + offset * .045) / .17, 2))
+    * ease(6, 12, d) * (1 - ease(26, 46, d)) * icefall * -5.5
+  const moraine = ease(.015, .03, t) * (1 - ease(.075, .1, t))
+    * Math.exp(-Math.pow((d - 13) / 5, 2)) * (3 + noise2(z * .075, offset) * 5) * ease(2.8, 6, d)
+  return base + profile + rough * (1 - basin * .8) + fracture + moraine
+    + (drift * (1 - basin * .85) + erosion + shelf) * ease(2.8, 5.5, d) * (1 - ridge * .65)
 }
+
+const campShelves = arrivalCamps.flatMap(camp => Array.from({ length: camp.tents }, (_, i) => {
+  const z = routePoint(camp.route).z - camp.tentDepth - i * 12, p = routePoint(-z / depth)
+  return { x: p.x + 7.2, z, height: surfaceHeight(7.2, z, p.y) }
+}))
 
 export function groundHeight(x: number, z: number) {
   const p = routePoint(-z / depth)
   // Beyond the summit the ground falls away, revealing the horizon.
   const extension = z < -depth ? -Math.max(0, -z - depth - 4) * 0.42 : 0
-  return surfaceHeight(x - p.x, z, p.y + extension)
+  let height = surfaceHeight(x - p.x, z, p.y + extension)
+  for (const shelf of campShelves) {
+    if (Math.abs(z - shelf.z) > 6 || Math.abs(x - shelf.x) > 4.8) continue
+    const radius = Math.hypot((x - shelf.x) / 4.8, (z - shelf.z) / 6)
+    const blend = (1 - ease(.62, 1, radius)) * ease(3.4, 4.5, x - p.x)
+    height = THREE.MathUtils.lerp(height, shelf.height, blend)
+  }
+  return height
 }
 
 export function cameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3) {
@@ -78,7 +100,10 @@ export function terrainGeometry(detailStep = 1) {
       positions.push(x, y, z)
       const slope = Math.abs(groundHeight(x + 0.5, z) - groundHeight(x - 0.5, z))
       const grain = terrainNoise(x * 0.085, z * 0.07) * 2 - 1
-      color.copy(snow).lerp(ice, Math.min(0.65, slope * 0.28)).lerp(rock, ease(0.5, 0.72, -z / depth) * (1 - ease(0.73, 0.88, -z / depth)) * ease(1, 2.8, slope))
+      const t = -z / depth
+      const face = ease(.56, .65, t) * (1 - ease(.79, .88, t))
+      const moraine = ease(.02, .04, t) * (1 - ease(.08, .11, t))
+      color.copy(snow).lerp(ice, Math.min(.72, slope * .28)).lerp(rock, Math.max(face, moraine * .8) * ease(.8, 2.2, slope))
       color.multiplyScalar(0.92 + grain * 0.065)
       colors.push(color.r, color.g, color.b)
       if (row < rows && col < stride - 1) { const a = row * stride + col; indices.push(a, a + 1, a + stride, a + 1, a + stride + 1, a + stride) }
@@ -90,5 +115,36 @@ export function terrainGeometry(detailStep = 1) {
   geometry.setIndex(indices)
   geometry.computeVertexNormals()
   geometry.computeBoundingSphere()
+  geometry.userData.grid = { offsets, rows, zStart: 120, zSpan: 1656 }
   return geometry
+}
+
+/** Sample the rendered triangles, including their diagonal, rather than the noise field. */
+export class TerrainSurface {
+  constructor(private geometry: THREE.BufferGeometry) {}
+
+  sample(x: number, z: number) {
+    const { offsets, rows, zStart, zSpan } = this.geometry.userData.grid as { offsets: number[]; rows: number; zStart: number; zSpan: number }
+    const p = this.geometry.getAttribute('position'), stride = offsets.length
+    const rowPosition = THREE.MathUtils.clamp((zStart - z) / zSpan * rows, 0, rows - 1e-8)
+    const row = Math.floor(rowPosition), v = rowPosition - row
+    const center = THREE.MathUtils.lerp(p.getX(row * stride), p.getX((row + 1) * stride), v) - offsets[0]
+    const offset = x - center
+    let low = 0, high = stride - 1
+    while (high - low > 1) { const mid = (low + high) >>> 1; if (offsets[mid] <= offset) low = mid; else high = mid }
+    const u = THREE.MathUtils.clamp((offset - offsets[low]) / (offsets[low + 1] - offsets[low]), 0, 1)
+    const a = row * stride + low, b = a + 1, c = a + stride, d = c + 1
+    const ids = u + v <= 1 ? [a, b, c] : [d, c, b]
+    const weights = u + v <= 1 ? [1 - u - v, u, v] : [u + v - 1, 1 - u, 1 - v]
+    const vertices = ids.map(i => new THREE.Vector3().fromBufferAttribute(p, i))
+    const normal = vertices[1].clone().sub(vertices[0]).cross(vertices[2].clone().sub(vertices[0])).normalize()
+    return { height: ids.reduce((sum, i, n) => sum + p.getY(i) * weights[n], 0), normal }
+  }
+
+  heightAt(x: number, z: number) { return this.sample(x, z).height }
+
+  normalAt(x: number, z: number, radius = .6) {
+    return new THREE.Vector3(this.heightAt(x - radius, z) - this.heightAt(x + radius, z), radius * 2,
+      this.heightAt(x, z - radius) - this.heightAt(x, z + radius)).normalize()
+  }
 }

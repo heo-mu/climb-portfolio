@@ -2,11 +2,11 @@
 import { cameraPose, seeded } from './terrain'
 import { environmentStages } from './environment'
 import type { ExpeditionFrame } from './progress'
-import { smoothstep } from './progress'
 import { experienceConfig as config } from '../config/experience'
+import { worldMood } from './worldMood'
 
 type SceneOptions = { canvas: HTMLCanvasElement; onLost: () => void }
-type SnowLayer = { points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>; speed: number }
+type SnowLayer = { points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>; speed: number; drift: number; fall: number }
 
 export class MountainScene {
   private renderer: THREE.WebGLRenderer
@@ -15,14 +15,17 @@ export class MountainScene {
   private fog = new THREE.FogExp2('#293e53', config.atmosphere.fogBase)
   private keyLight = new THREE.DirectionalLight('#d5e1ee', config.lighting.keyBase)
   private ambient = new THREE.HemisphereLight('#c0d5e3', '#536574', config.lighting.ambientBase)
+  private fill = new THREE.DirectionalLight('#afcbdc', config.lighting.fill)
   private snow: SnowLayer[] = []
   private position = new THREE.Vector3()
   private target = new THREE.Vector3()
   private sky = new THREE.Color()
-  private low = new THREE.Color('#516f87')
-  private middle = new THREE.Color('#8babc1')
-  private high = new THREE.Color('#b8ac9e')
-  private snowFog = new THREE.Color('#a6b6c7')
+  private low = new THREE.Color('#486376')
+  private iceSky = new THREE.Color('#3c627c')
+  private basinSky = new THREE.Color('#91aebd')
+  private faceSky = new THREE.Color('#527386')
+  private high = new THREE.Color('#adafa4')
+  private snowFog = new THREE.Color('#718795')
   private horizon = new THREE.Color('#e4c4a1')
   private coldLight = new THREE.Color('#d5e1ee')
   private warmLight = new THREE.Color('#ffe2bd')
@@ -44,16 +47,22 @@ export class MountainScene {
     this.renderer.toneMappingExposure = config.lighting.exposure
     this.scene.fog = this.fog
     this.keyLight.position.set(-180, 240, -90)
-    const fill = new THREE.DirectionalLight('#afcbdc', config.lighting.fill)
-    fill.position.set(200, 100, 150)
-    this.scene.add(this.keyLight, fill, this.ambient)
+    this.fill.position.set(200, 100, 150)
+    this.scene.add(this.keyLight, this.fill, this.ambient)
     this.stages = environmentStages(this.scene, this.wind)
     this.stages.next()
     this.skyMaterial = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false,
-      uniforms: { uSky: { value: new THREE.Color('#182b40') }, uHorizon: { value: new THREE.Color('#52687e') } },
+      uniforms: { uSky: { value: new THREE.Color('#182b40') }, uHorizon: { value: new THREE.Color('#52687e') }, uSun: { value: new THREE.Vector3(-.42, .2, -.8).normalize() }, uGlow: { value: 0 } },
       vertexShader: 'varying vec3 vDirection; void main(){ vDirection=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-      fragmentShader: 'varying vec3 vDirection; uniform vec3 uSky; uniform vec3 uHorizon; void main(){ float h=normalize(vDirection).y; gl_FragColor=vec4(mix(uHorizon,uSky,smoothstep(-0.08,0.7,h)),1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
+      fragmentShader: `varying vec3 vDirection; uniform vec3 uSky, uHorizon, uSun; uniform float uGlow;
+        void main(){ vec3 dir=normalize(vDirection); float h=dir.y;
+          vec3 sky=mix(uHorizon,uSky,smoothstep(-0.08,0.7,h));
+          sky += vec3(1.0,0.83,0.62) * pow(max(0.0,dot(dir,uSun)),48.0) * uGlow;
+          gl_FragColor=vec4(sky,1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
     })
     const sky = new THREE.Mesh(new THREE.SphereGeometry(1800, 24, 16), this.skyMaterial)
     sky.frustumCulled = false
@@ -81,7 +90,7 @@ export class MountainScene {
 
   private createSnow(mobile: boolean) {
     const counts = [config.snow.nearCount, config.snow.middleCount, config.snow.farCount]
-    const boxes = [28, 100, 240], sizes = [0.14, 0.23, 0.35]
+    const boxes = [24, 80, 190], sizes = [0.14, 0.23, 0.35]
     counts.forEach((count, layer) => {
       const positions = new Float32Array(Math.round(count * (mobile ? 0.6 : 1)) * 3)
       for (let i = 0; i < positions.length; i++) positions[i] = seeded(i + layer * 971) * boxes[layer]
@@ -89,22 +98,27 @@ export class MountainScene {
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
       const material = new THREE.ShaderMaterial({
         transparent: true, depthWrite: false,
-        uniforms: { uTime: { value: 0 }, uWind: { value: 1 }, uCamera: { value: this.camera.position }, uBox: { value: boxes[layer] }, uSize: { value: sizes[layer] }, uHeight: { value: 900 }, uOpacity: { value: 0.5 } },
-        vertexShader: `uniform float uTime, uWind, uBox, uSize, uHeight; uniform vec3 uCamera; varying float vAlpha;
+        uniforms: { uTime: { value: 0 }, uWind: { value: 1 }, uDrift: { value: 0 }, uFall: { value: 0 }, uStorm: { value: 0 }, uDensity: { value: .4 }, uLimit: { value: [14, 8, 5][layer] }, uCamera: { value: this.camera.position }, uBox: { value: boxes[layer] }, uSize: { value: sizes[layer] }, uHeight: { value: 900 }, uOpacity: { value: 0.5 } },
+        vertexShader: `uniform float uTime, uWind, uDrift, uFall, uBox, uSize, uHeight, uDensity, uLimit, uStorm; uniform vec3 uCamera; varying float vAlpha;
           void main(){
-            vec3 wind = vec3(uTime * 0.65 + sin(uTime * 0.45 + position.y) * uWind, -uTime * 1.05, uTime * 0.22 + cos(uTime * 0.3 + position.x) * uWind * 0.4);
+            vec3 wind = vec3(uDrift + sin(uTime * 0.45 + position.y) * uWind, -uFall, uDrift * 0.22 + cos(uTime * 0.3 + position.x) * uWind * 0.4);
             vec3 p = mod(position + wind - uCamera + uBox * 0.5, uBox) - uBox * 0.5 + uCamera;
             vec4 mv = modelViewMatrix * vec4(p,1.0);
             gl_Position = projectionMatrix * mv;
-            gl_PointSize = clamp(uSize * (0.65 + fract(position.x * 1.7) * 0.7) * uHeight / max(0.5,-mv.z), 1.0, 23.0);
-            vAlpha = smoothstep(0.3,2.0,-mv.z) * (1.0-smoothstep(uBox*0.35,uBox*0.66,length(p-uCamera)));
+            gl_PointSize = clamp(uSize * (0.65 + fract(position.x * 1.7) * 0.7) * uHeight * (1.0 + uStorm*.7) / max(0.5,-mv.z), 1.0 + uStorm, uLimit + uStorm * 3.0);
+            float density = 1.0-smoothstep(uDensity-.06,uDensity+.06,fract(position.x*2.17+position.z*.19));
+            vAlpha = density * smoothstep(1.0,3.0,-mv.z) * (1.0-smoothstep(uBox*0.35,uBox*0.66,length(p-uCamera)));
           }`,
-        fragmentShader: `uniform float uOpacity; varying float vAlpha;
-          void main(){ float d=length(gl_PointCoord-0.5)*2.0; float a=pow(max(0.0,1.0-d),1.6)*vAlpha*uOpacity; if(a<0.01)discard; gl_FragColor=vec4(0.86,0.91,1.0,a); }`,
+        fragmentShader: `uniform float uOpacity, uStorm; varying float vAlpha;
+          void main(){ vec2 q=mat2(.6,-.8,.8,.6)*(gl_PointCoord-.5);
+            q.x *= 1.0+uStorm*2.2;
+            float d=length(q)*2.0; float a=pow(max(0.0,1.0-d),1.4)*vAlpha*uOpacity;
+            if(a<0.01)discard; gl_FragColor=vec4(0.86,0.91,1.0,a);
+          }`,
       })
       const points = new THREE.Points(geometry, material)
       points.frustumCulled = false
-      this.snow.push({ points, speed: 1 + layer * 0.3 })
+      this.snow.push({ points, speed: 1 + layer * 0.3, drift: 0, fall: 0 })
       this.scene.add(points)
     })
   }
@@ -130,28 +144,37 @@ export class MountainScene {
     const moving = Math.abs(frame.progress - this.lastProgress) > 0.000001
     if (frame.reducedMotion && !moving) return
     if (!moving && frame.time - this.lastRender < 1 / 30) return
+    const elapsed = Math.min(.1, Math.max(0, frame.time - this.lastRender))
     this.lastRender = frame.time
     this.lastProgress = frame.progress
     this.wind.value = frame.reducedMotion ? 0 : frame.time
     cameraPose(frame.route, this.position, this.target)
     this.camera.position.copy(this.position)
     this.camera.lookAt(this.target)
-    const whiteout = Math.exp(-Math.pow((frame.route - 0.895) / 0.044, 2))
-    const summit = smoothstep((frame.route - 0.95) / 0.045)
-    const daylight = Math.sin(frame.route * Math.PI) * 0.78
-    this.sky.copy(this.low).lerp(this.middle, daylight).lerp(this.high, summit)
-    this.fog.color.copy(this.sky).lerp(this.snowFog, whiteout * 0.4)
-    this.fog.density = config.atmosphere.fogBase + daylight * config.atmosphere.fogRouteVariation + whiteout * config.atmosphere.whiteoutPeak - summit * config.atmosphere.summitRelief
+    const mood = worldMood(frame.route)
+    this.sky.copy(this.low).lerp(this.iceSky, mood.ice).lerp(this.basinSky, mood.basin).lerp(this.faceSky, mood.face).lerp(this.snowFog, mood.storm * .85).lerp(this.high, mood.summit)
+    this.fog.color.copy(this.sky).lerp(this.snowFog, mood.storm * .5)
+    this.fog.density = mood.fog
     this.skyMaterial.uniforms.uSky.value.copy(this.sky)
-    this.skyMaterial.uniforms.uHorizon.value.copy(this.sky).lerp(this.horizon, summit * 0.7)
-    this.keyLight.intensity = config.lighting.keyBase + summit * config.lighting.keySummit
-    this.keyLight.color.copy(this.coldLight).lerp(this.warmLight, summit)
-    this.ambient.intensity = config.lighting.ambientBase + daylight * config.lighting.ambientRoute
+    this.skyMaterial.uniforms.uHorizon.value.copy(this.sky).lerp(this.horizon, mood.summit * .6)
+    this.skyMaterial.uniforms.uGlow.value = (mood.basin * .08 + mood.face * .1 + mood.summit * .24) * (1 - mood.arrival * .5)
+    this.keyLight.intensity = mood.key
+    this.keyLight.color.copy(this.coldLight).lerp(this.warmLight, mood.summit * .8 + mood.basin * .17)
+    this.keyLight.position.set(-180 + mood.face * 85, 240 - mood.face * 95, -90)
+    this.ambient.intensity = mood.ambient
+    this.fill.intensity = .3 + mood.basin * .12 - mood.storm * .12
     this.snow.forEach(layer => {
       layer.points.visible = !frame.reducedMotion
-      layer.points.material.uniforms.uTime.value = frame.time * layer.speed
-      layer.points.material.uniforms.uWind.value = 0.35 + Math.sin(frame.route * Math.PI) * 0.7 + whiteout * 1.4
-      layer.points.material.uniforms.uOpacity.value = 0.55 + whiteout * 0.2 - summit * 0.28
+      // Integrate velocity: changing weather must not teleport the particle field.
+      layer.drift += elapsed * mood.windSpeed * layer.speed
+      layer.fall += elapsed * (1.05 + mood.storm * .8) * layer.speed
+      const uniforms = layer.points.material.uniforms
+      uniforms.uTime.value = frame.time * layer.speed
+      uniforms.uDrift.value = layer.drift; uniforms.uFall.value = layer.fall
+      uniforms.uWind.value = .25 + mood.storm * .8
+      uniforms.uStorm.value = mood.storm
+      uniforms.uDensity.value = mood.snowDensity
+      uniforms.uOpacity.value = .55 + mood.storm * .4 - mood.summit * .2
     })
     this.renderer.render(this.scene, this.camera)
   }

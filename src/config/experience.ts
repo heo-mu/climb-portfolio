@@ -8,5 +8,5 @@ export const experienceConfig = {
   lighting: { exposure: 1.04, keyBase: 2.7, keySummit: 0.35, ambientBase: 1.2, ambientRoute: 0.22, fill: 0.38 },
   content: { readableRange: 0.018, transitionRange: 0.037 },
   home: { exitRange: 0.022 },
-  snow: { nearCount: 180, middleCount: 650, farCount: 1100 },
+  snow: { nearCount: 220, middleCount: 800, farCount: 1400 },
 }

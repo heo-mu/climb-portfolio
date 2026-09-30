@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { checkpoints, inventory, profile, workflow } from '../data/expedition'
 import { projects } from '../data/projects'
 import { Home } from './Home'
+import { CareerTimeline } from './CareerTimeline'
+import { ArrowUpRight } from './ArrowUpRight'
 
 function About() {
   return <>
@@ -11,7 +13,7 @@ function About() {
       <span>알 수 있는 구조를 설계해요.</span>
     </h1>
     <div className="about-content">
-      <ol className="career-timeline" aria-label="경력 흐름" role="list">
+      <CareerTimeline>
         <li>
           <div className="career-entry">
             <h2 className="career-category">Agency</h2>
@@ -30,7 +32,7 @@ function About() {
             <p><strong>지금은 SI 솔루션 업체에서 일해요.</strong>{' '}여러 프로젝트의 복잡한 데이터와 업무 조건을 사용자가 이해하기 쉬운 정보와 행동 순서로 바꾸고 있어요.</p>
           </div>
         </li>
-      </ol>
+      </CareerTimeline>
       <dl className="about-stats">
         <div><dt>완수 프로젝트</dt><dd>27+</dd></div>
         <div><dt>프로덕트 디자인 경험</dt><dd>4년차</dd></div>
@@ -46,7 +48,7 @@ function AI() {
     <div className="panel-body"><p className="body-copy section-intro">질문을 넓히고, 생각을 빠르게 구현해요.</p>
       <ol className="workflow">{workflow.map((step, index) => <li key={step.name} data-active={active === index}>
         <button className="workflow-step" onClick={() => setActive(index)} onFocus={() => setActive(index)} onPointerEnter={event => { if (event.pointerType === 'mouse') setActive(index) }} aria-expanded={active === index} aria-controls={`workflow-${index}`}>
-          <span className="step-number">0{index + 1}</span><span className="step-name">{step.name === 'IMPLEMENT' ? 'BUILD' : step.name}</span><span className="step-label">{step.label}</span><span className="step-symbol" aria-hidden="true">{active === index ? '−' : '+'}</span>
+          <span className="step-number">0{index + 1}</span><span className="step-name">{step.name === 'IMPLEMENT' ? 'BUILD' : step.name}</span><span className="step-label">{step.label}</span><span className="step-symbol" aria-hidden="true" />
         </button>
         <div className="workflow-description" id={`workflow-${index}`} hidden={active !== index}><p>{step.description}</p></div>
       </li>)}</ol>
@@ -60,7 +62,7 @@ function Tools() {
     <h1 className="portfolio-heading" id="title-camp-two" tabIndex={-1}>Tools for the work.</h1>
     <div className="panel-body inventory">
       <div className="inventory-list" aria-label="디자인 도구">{inventory.map((tool, index) => <button type="button" key={tool.name} onClick={() => setSelected(index)} onFocus={() => setSelected(index)} onPointerEnter={event => { if (event.pointerType === 'mouse') setSelected(index) }} aria-pressed={selected === index} aria-controls="tool-description">
-        <span className="tool-name">{tool.name}</span><span className="tool-use">{tool.use}</span><span className="tool-arrow" aria-hidden="true">↗</span>
+        <span className="tool-name">{tool.name}</span><span className="tool-use">{tool.use}</span><ArrowUpRight className="tool-arrow" />
       </button>)}</div>
       <p className="tool-description" id="tool-description" aria-live="polite">{inventory[selected].detail}</p>
     </div>
@@ -78,11 +80,11 @@ function Projects() {
     <h1 className="portfolio-heading" id="title-high-camp" tabIndex={-1}>Selected projects.</h1>
     <div className="panel-body projects-layout">
       <div className="project-index" aria-label="프로젝트 선택">{projects.map((item, index) => <button type="button" key={item.slug} onClick={() => setActive(index)} onFocus={() => setActive(index)} onPointerEnter={event => { if (event.pointerType === 'mouse') setActive(index) }} className="project-row" data-active={active === index} aria-pressed={active === index} aria-controls="selected-project">
-        <span className="project-number">{item.number}</span><span className="project-label"><strong>{item.name.replace('PROJECT ', '')}</strong><span>{item.type}</span></span><span className="project-arrow" aria-hidden="true">↗</span>
+        <span className="project-number">{item.number}</span><span className="project-label"><strong>{item.name.replace('PROJECT ', '')}</strong><span>{item.type}</span></span><ArrowUpRight className="project-arrow" />
       </button>)}<p className="concept-note">예시 프로젝트</p></div>
       <article className="project-preview" id="selected-project" aria-label="선택한 프로젝트">
         <Link className="project-media-link" to={`/project/${project.slug}`} state={{ returnCheckpoint: 'high-camp' }} aria-label={`${project.name} 프로젝트 보기`}><ProjectArtwork active={active} /></Link>
-        <div className="project-information" key={project.slug}><div className="project-preview-meta"><span>{project.role}</span><span>{project.year}</span></div><p>{project.summary}</p><Link className="project-open" to={`/project/${project.slug}`} state={{ returnCheckpoint: 'high-camp' }}>프로젝트 보기 <span aria-hidden="true">↗</span></Link></div>
+        <div className="project-information" key={project.slug}><div className="project-preview-meta"><span>{project.role}</span><span>{project.year}</span></div><p>{project.summary}</p><Link className="project-open" to={`/project/${project.slug}`} state={{ returnCheckpoint: 'high-camp' }}>프로젝트 보기 <ArrowUpRight className="project-open-arrow" /></Link></div>
       </article>
     </div>
   </>
