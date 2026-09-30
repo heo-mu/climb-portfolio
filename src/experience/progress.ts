@@ -1,4 +1,5 @@
 import { checkpoints } from '../data/expedition'
+import { experienceConfig } from '../config/experience'
 
 export const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value))
 export const smoothstep = (value: number) => { const t = clamp(value); return t * t * (3 - 2 * t) }
@@ -26,7 +27,7 @@ export function activeCheckpoint(progress: number) {
 
 export function visibilityAt(progress: number, checkpoint: number) {
   const distance = Math.abs(progress - checkpoints[checkpoint].progress)
-  return 1 - smoothstep((distance - 0.046) / 0.060)
+  return 1 - smoothstep((distance - experienceConfig.content.readableRange) / experienceConfig.content.transitionRange)
 }
 
 export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; delta: number; time: number; reducedMotion: boolean }

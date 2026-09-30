@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { experienceConfig } from '../config/experience'
 
 export const MOUNTAIN_HEIGHT = 920
 export const CAMP_HEIGHTS = [100, 305, 525, 735, 916]
@@ -81,7 +82,7 @@ export function createCameraRails(mobile: boolean, reduced = false) {
     targets.push(target)
   }
   return {
-    position: new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.25),
-    target: new THREE.CatmullRomCurve3(targets, false, 'catmullrom', 0.25),
+    position: new THREE.CatmullRomCurve3(points, false, 'catmullrom', experienceConfig.camera.railTension),
+    target: new THREE.CatmullRomCurve3(targets, false, 'catmullrom', experienceConfig.camera.railTension),
   }
 }

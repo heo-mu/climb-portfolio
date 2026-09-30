@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { CAMP_ANGLES, CAMP_HEIGHTS, createCameraRails, mountainGeometry, radiusAt, surfacePoint } from './terrain'
 import type { ExpeditionFrame } from './progress'
 import { smoothstep } from './progress'
+import { experienceConfig } from '../config/experience'
 
 type SceneOptions = { canvas: HTMLCanvasElement; onLost: () => void; onBeacon: (x: number, y: number, visible: boolean) => void }
 
@@ -113,7 +114,7 @@ export class MountainScene {
     this.mobile = this.width < 768 || this.width / this.height < 0.95
     this.rails = createCameraRails(this.mobile, this.reduced)
     this.camera.aspect = this.width / this.height
-    this.camera.fov = this.mobile ? 58 : 48
+    this.camera.fov = this.mobile ? experienceConfig.camera.mobileFov : experienceConfig.camera.desktopFov
     this.camera.updateProjectionMatrix()
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.mobile ? 1.25 : 1.6))
     this.renderer.setSize(this.width, this.height, false)
@@ -136,7 +137,7 @@ export class MountainScene {
     // Keep a safety margin from the analytic terrain envelope at every point on the spline.
     const angle = Math.atan2(this.position.x, this.position.z)
     const radius = Math.hypot(this.position.x, this.position.z)
-    const safeRadius = radiusAt(this.position.y, angle) + 65
+    const safeRadius = radiusAt(this.position.y, angle) + experienceConfig.camera.nearTerrainClearance
     if (radius < safeRadius) { this.position.x *= safeRadius / radius; this.position.z *= safeRadius / radius }
     this.camera.position.copy(this.position)
     this.rails.target.getPoint(frame.route, this.target)
@@ -145,10 +146,10 @@ export class MountainScene {
     const summit = smoothstep((frame.progress - 0.92) / 0.075)
     this.sky.copy(this.skyLow).lerp(this.skyHigh, frame.route * 0.65 + summit * 0.35)
     this.fog.color.copy(this.sky)
-    this.fog.density = 0.00065 + Math.sin(frame.route * Math.PI) * 0.00045 + whiteout * 0.0033 - summit * 0.00048
+    this.fog.density = experienceConfig.atmosphere.fogBase + Math.sin(frame.route * Math.PI) * experienceConfig.atmosphere.fogRouteVariation + whiteout * experienceConfig.atmosphere.whiteoutPeak - summit * experienceConfig.atmosphere.summitRelief
     this.renderer.setClearColor(this.sky)
-    this.keyLight.intensity = 2.5 + summit * 0.7
-    this.ambient.intensity = 1.6 + frame.route * 0.55
+    this.keyLight.intensity = experienceConfig.lighting.keyBase + summit * experienceConfig.lighting.keySummit
+    this.ambient.intensity = experienceConfig.lighting.ambientBase + frame.route * experienceConfig.lighting.ambientRoute
     this.particles.visible = !this.reduced
     if (!this.reduced) {
       this.particles.position.y = -(frame.time * 2.2 % 60)
