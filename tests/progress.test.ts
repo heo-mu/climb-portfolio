@@ -8,7 +8,7 @@ import { Vector3 } from 'three'
 describe('expedition progression', () => {
   it('keeps navigation, altitude and camera rail aligned at every camp', () => {
     checkpoints.forEach((camp, index) => {
-      expect(routeProgress(camp.progress)).toBeCloseTo(index / 4)
+      expect(routeProgress(camp.progress)).toBeCloseTo(camp.route)
       expect(altitudeAt(camp.progress)).toBe(camp.altitude)
       expect(activeCheckpoint(camp.progress)).toBe(index)
       expect(visibilityAt(camp.progress, index)).toBe(1)
@@ -26,8 +26,10 @@ describe('expedition progression', () => {
     expect(routeProgress(2)).toBe(1)
   })
   it('slows near a camp without a scroll snap or a dead zone', () => {
-    const approach = routeProgress(0.25) - routeProgress(0.249)
-    const travel = routeProgress(0.125) - routeProgress(0.124)
+    const camp = checkpoints[2].progress
+    const midpoint = (checkpoints[1].progress + camp) / 2
+    const approach = routeProgress(camp) - routeProgress(camp - 0.001)
+    const travel = routeProgress(midpoint) - routeProgress(midpoint - 0.001)
     expect(approach).toBeGreaterThan(0)
     expect(approach).toBeLessThan(travel / 4)
   })

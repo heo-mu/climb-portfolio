@@ -7,18 +7,22 @@ export const smoothstep = (value: number) => { const t = clamp(value); return t 
 // Slow near every camp without locking, snapping, or intercepting native scrolling.
 export function routeProgress(progress: number) {
   const p = clamp(progress)
-  const segment = Math.min(3, checkpoints.findIndex((point, i) => i < 4 && p <= checkpoints[i + 1].progress && p >= point.progress))
+  const segment = checkpoints.findIndex((point, i) => i < checkpoints.length - 1 && p <= checkpoints[i + 1].progress && p >= point.progress)
   const index = Math.max(0, segment)
   const start = checkpoints[index].progress
   const end = checkpoints[index + 1].progress
   const local = (p - start) / (end - start)
-  return (index + 0.12 * local + 0.88 * smoothstep(local)) / 4
+  const from = checkpoints[index].route
+  const to = checkpoints[index + 1].route
+  return from + (to - from) * (0.12 * local + 0.88 * smoothstep(local))
 }
 
 export function altitudeAt(progress: number) {
-  const t = routeProgress(progress) * 4
-  const index = Math.min(3, Math.floor(t))
-  return Math.round(checkpoints[index].altitude + (checkpoints[index + 1].altitude - checkpoints[index].altitude) * (t - index))
+  const route = routeProgress(progress)
+  const index = Math.max(0, checkpoints.findIndex((point, i) => i < checkpoints.length - 1 && route >= point.route && route <= checkpoints[i + 1].route))
+  const from = checkpoints[index], to = checkpoints[index + 1]
+  const local = (route - from.route) / (to.route - from.route)
+  return Math.round(from.altitude + (to.altitude - from.altitude) * local)
 }
 
 export function activeCheckpoint(progress: number) {

@@ -14,6 +14,7 @@ export function Expedition() {
   const navigationType = useNavigationType()
   const [controller] = useState(() => new ScrollController())
   const [fallback, setFallback] = useState(false)
+  const [sceneReady, setSceneReady] = useState(false)
   const root = useRef<HTMLElement>(null)
   const lastProgress = useRef(0)
   const [initialProgress] = useState(() => {
@@ -27,6 +28,7 @@ export function Expedition() {
   })
 
   const onFallback = useCallback(() => setFallback(true), [])
+  const onReady = useCallback(() => setSceneReady(true), [])
 
   useLayoutEffect(() => {
     document.title = 'ASCENT — CHANGMU HEO'
@@ -45,6 +47,8 @@ export function Expedition() {
       sections.forEach(section => observer.observe(section))
       return () => { cancelAnimationFrame(raf); observer.disconnect() }
     }
+    // Let the Home reveal begin after the scene loader has left the screen.
+    if (!sceneReady) return
     let previousActive = -1
     const reveals = sections.map(() => 0)
     const unsubscribe = controller.subscribe(frame => {
@@ -73,7 +77,7 @@ export function Expedition() {
     })
     controller.start(lastProgress.current || initialProgress)
     return () => { unsubscribe(); controller.stop() }
-  }, [controller, fallback, initialProgress])
+  }, [controller, fallback, initialProgress, sceneReady])
 
   useEffect(() => {
     const save = () => {
@@ -94,10 +98,10 @@ export function Expedition() {
   }, [controller, fallback])
 
   return <main ref={root} className={`expedition ${fallback ? 'reading-mode' : ''}`} style={fallback ? undefined : { height: `${experienceConfig.route.scrollScreens * 100}svh` }}>
-    <a className="skip-link" href="#high-camp" onClick={event => { if (!fallback) { event.preventDefault(); controller.goTo(checkpoints[3].progress, true); requestAnimationFrame(() => document.getElementById('title-high-camp')?.focus({ preventScroll: true })) } }}>프로젝트로 바로 가요</a>
-    {fallback ? <div className="static-landscape" aria-hidden="true"><div /><div /><div /></div> : <Scene controller={controller} onFallback={onFallback} />}
+    <a className="skip-link" href="#high-camp" onClick={event => { if (!fallback) { event.preventDefault(); controller.goTo(checkpoints.find(camp => camp.id === 'high-camp')!.progress, true); requestAnimationFrame(() => document.getElementById('title-high-camp')?.focus({ preventScroll: true })) } }}>프로젝트로 바로 가요</a>
+    {fallback ? <div className="static-landscape" aria-hidden="true"><div /><div /><div /></div> : <Scene controller={controller} onFallback={onFallback} onReady={onReady} />}
     <HUD controller={controller} fallback={fallback} />
-    <CheckpointSections />
+    <CheckpointSections onExplore={() => { if (fallback) document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); else controller.goTo(checkpoints[1].progress) }} />
     {fallback && <p className="fallback-note">3D 화면을 사용할 수 없어 콘텐츠를 바로 보여드려요.</p>}
   </main>
 }

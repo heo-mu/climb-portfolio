@@ -1,9 +1,10 @@
 export const checkpoints = [
-  { id: 'base-camp', index: '00', navigation: 'ABOUT', name: 'BASE CAMP', topic: 'ABOUT', altitude: 1240, progress: 0, eyebrow: 'THE START OF SOMETHING', title: 'ASCENT', subtitle: 'A DESIGN EXPEDITION', coordinate: '37°33′ N / 126°58′ E' },
-  { id: 'camp-one', index: '01', navigation: 'AI', name: 'CAMP I', topic: 'AI CAPABILITY', altitude: 2080, progress: 0.25, eyebrow: 'HUMAN INTENT. EXPANDED.', title: 'THINK FURTHER.', subtitle: 'AI, IN THE DESIGN PROCESS', coordinate: 'RESEARCH → REALITY' },
-  { id: 'camp-two', index: '02', navigation: 'TOOLS', name: 'CAMP II', topic: 'TOOLS', altitude: 2840, progress: 0.49, eyebrow: 'THE RIGHT TOOLS. THE RIGHT QUESTIONS.', title: 'TRAVEL LIGHT.', subtitle: 'EXPEDITION INVENTORY', coordinate: '09 TOOLS / ONE WORKFLOW' },
-  { id: 'high-camp', index: '03', navigation: 'PROJECTS', name: 'HIGH CAMP', topic: 'PROJECTS', altitude: 3620, progress: 0.73, eyebrow: 'IDEAS, TAKEN INTO THE WORLD.', title: 'SELECTED WORK.', subtitle: 'FIVE EXPLORATIONS / 2026', coordinate: 'SELECTED PROJECTS / 01—05' },
-  { id: 'summit', index: '04', navigation: 'CONTACT', name: 'SUMMIT', topic: 'CONTACT', altitude: 4208, progress: 1, eyebrow: 'THE VIEW IS BETTER TOGETHER.', title: "LET’S BUILD", subtitle: 'WHAT’S NEXT.', coordinate: 'END OF ROUTE / START OF A CONVERSATION' },
+  { id: 'base-camp', index: '00', navigation: 'HOME', name: 'BASE CAMP', altitude: 1240, progress: 0, route: 0 },
+  { id: 'about', index: '01', navigation: 'ABOUT', name: 'APPROACH', altitude: 1576, progress: 0.12, route: 0.1 },
+  { id: 'camp-one', index: '02', navigation: 'AI', name: 'CAMP I', altitude: 2080, progress: 0.29, route: 0.25 },
+  { id: 'camp-two', index: '03', navigation: 'TOOLS', name: 'CAMP II', altitude: 2840, progress: 0.52, route: 0.5 },
+  { id: 'high-camp', index: '04', navigation: 'PROJECTS', name: 'HIGH CAMP', altitude: 3620, progress: 0.75, route: 0.75 },
+  { id: 'summit', index: '05', navigation: 'CONTACT', name: 'SUMMIT', altitude: 4208, progress: 1, route: 1 },
 ] as const
 
 export const profile = {

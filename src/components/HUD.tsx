@@ -2,7 +2,6 @@
 import { checkpoints } from '../data/expedition'
 import type { ScrollController } from '../experience/progress'
 
-const altitudeRange = checkpoints[4].altitude - checkpoints[0].altitude
 const formatAltitude = (n: number) => n.toLocaleString('en-US').replace(',', '\u2009')
 
 export function HUD({ controller, fallback }: { controller: ScrollController; fallback: boolean }) {
@@ -20,7 +19,10 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
     let previousActive = -1
     return controller.subscribe(frame => {
       if (altitude.current) altitude.current.textContent = formatAltitude(frame.altitude)
-      root.current?.style.setProperty('--progress', String((frame.altitude - checkpoints[0].altitude) / altitudeRange))
+      // Equal spacing keeps all six labels distinct; the marker still follows the journey.
+      const segment = Math.min(checkpoints.length - 2, Math.max(0, checkpoints.findIndex((camp, i) => i < checkpoints.length - 1 && frame.progress >= camp.progress && frame.progress <= checkpoints[i + 1].progress)))
+      const local = (frame.progress - checkpoints[segment].progress) / (checkpoints[segment + 1].progress - checkpoints[segment].progress)
+      root.current?.style.setProperty('--progress', String((segment + local) / (checkpoints.length - 1)))
       if (previousActive !== frame.active) { previousActive = frame.active; setActive(frame.active) }
     })
   }, [controller, fallback])
@@ -29,12 +31,12 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
     if (fallback) document.getElementById(checkpoints[index].id)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
     else controller.goTo(checkpoints[index].progress)
   }
-  return <div className="hud" ref={root}>
+  return <div className="hud" ref={root} data-home={active === 0} inert={active === 0} aria-hidden={active === 0}>
     <div className="altitude-hud" aria-label="현재 고도"><span className="altitude-number" ref={altitude}>{formatAltitude(checkpoints[0].altitude)}</span><span className="altitude-unit">m</span></div>
     <div className="current-location" aria-live="polite" aria-atomic="true"><span>{checkpoints[active].index}</span><span className="current-rule" /><strong>{checkpoints[active].navigation}</strong></div>
     <nav className="checkpoint-nav" aria-label="포트폴리오 섹션">
       <div className="nav-track" aria-hidden="true"><span /></div>
-      {checkpoints.map((camp, index) => <button key={camp.id} style={{ '--stop': `${100 * (checkpoints[4].altitude - camp.altitude) / altitudeRange}%` } as CSSProperties} onClick={() => navigate(index)} aria-current={active === index ? 'step' : undefined} aria-label={`${camp.index} ${camp.navigation}`}><span className="nav-number">{camp.index}</span><span className="nav-label">{camp.navigation}</span><i /></button>)}
+      {checkpoints.map((camp, index) => <button key={camp.id} style={{ '--stop': `${100 * (1 - index / (checkpoints.length - 1))}%` } as CSSProperties} onClick={() => navigate(index)} aria-current={active === index ? 'step' : undefined} aria-label={`${camp.index} ${camp.navigation}`}><span className="nav-number">{camp.index}</span><span className="nav-label">{camp.navigation}</span><i /></button>)}
       <span className="nav-position" aria-hidden="true" />
     </nav>
   </div>

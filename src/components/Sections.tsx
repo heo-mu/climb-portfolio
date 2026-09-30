@@ -2,10 +2,11 @@
 import { Link } from 'react-router-dom'
 import { checkpoints, inventory, profile, workflow } from '../data/expedition'
 import { projects } from '../data/projects'
+import { Home } from './Home'
 
 function About() {
   return <>
-    <h1 className="portfolio-heading" id="title-base-camp" tabIndex={-1}><span className="occupation">Product Designer</span>Changmu Heo<span className="name-korean">허창무</span></h1>
+    <h1 className="portfolio-heading" id="title-about" tabIndex={-1}><span className="occupation">Product Designer</span>Changmu Heo<span className="name-korean">허창무</span></h1>
     <div className="panel-body about-content">
       <p className="intro">복잡한 문제를 정리하고,<br />명료한 경험으로 연결해요.</p>
       <p className="body-copy">구조와 인터랙션을 함께 고민하는 프로덕트 디자이너예요. 좋은 질문에서 시작해 작동하는 경험까지 구체화해요.</p>
@@ -73,9 +74,9 @@ function Contact() {
   </>
 }
 
-export function CheckpointSections() {
+export function CheckpointSections({ onExplore }: { onExplore: () => void }) {
   const sections = [<About />, <AI />, <Tools />, <Projects />, <Contact />]
-  return <div className="checkpoint-sections">{checkpoints.map((camp, index) => <section key={camp.id} id={camp.id} className={`checkpoint checkpoint-${index}`} aria-labelledby={`title-${camp.id}`} data-checkpoint={index}>
+  return <div className="checkpoint-sections"><Home onExplore={onExplore} />{checkpoints.slice(1).map((camp, index) => <section key={camp.id} id={camp.id} className={`checkpoint checkpoint-${camp.id}`} aria-labelledby={`title-${camp.id}`} data-checkpoint={index + 1}>
     <div className="panel-surface" aria-hidden="true" />
     <div className="panel-content"><div className="panel-kicker"><span>{camp.index}</span><span>{camp.navigation}</span></div>{sections[index]}</div>
   </section>)}</div>

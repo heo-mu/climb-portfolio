@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ScrollController } from './progress'
 
-export function Scene({ controller, onFallback }: { controller: ScrollController; onFallback: () => void }) {
+export function Scene({ controller, onFallback, onReady }: { controller: ScrollController; onFallback: () => void; onReady: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [loading, setLoading] = useState(true)
 
@@ -22,10 +22,11 @@ export function Scene({ controller, onFallback }: { controller: ScrollController
         dispose = () => { unsubscribe(); scene.dispose() }
         window.clearTimeout(timer)
         setLoading(false)
+        onReady()
       } catch { window.clearTimeout(timer); onFallback() }
     }).catch(onFallback)
     return () => { cancelled = true; window.clearTimeout(timer); dispose?.() }
-  }, [controller, onFallback])
+  }, [controller, onFallback, onReady])
 
   return <>
     <div className="scene" aria-hidden="true"><canvas ref={canvas} /><div className="scene-shade" /><div className="scene-vignette" /></div>
