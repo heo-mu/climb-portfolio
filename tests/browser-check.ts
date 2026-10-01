@@ -424,9 +424,17 @@ try {
     await expect(page.locator('[data-checkpoint][inert]')).toHaveCount(0)
     await expect(page.locator('[data-checkpoint][aria-hidden="true"]')).toHaveCount(0)
     for (const camp of camps) await expect(page.locator(`#title-${camp.id}`)).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'reading route scrolls horizontally').toBe(true)
+    // The notice explaining the reading route is not covered by Home.
+    expect(await page.evaluate(() => { const note = document.querySelector('.fallback-note')!, r = note.getBoundingClientRect(); return note.contains(document.elementFromPoint(r.left + 4, r.top + r.height / 2)) }), 'fallback notice visible').toBe(true)
     // The trail joins once Home has scrolled away, as in the 3D journey.
     await page.locator('#about').scrollIntoViewIfNeeded()
     await expect(page.locator('.hud')).toHaveAttribute('data-home', 'false')
+    const overlaps = await page.evaluate(() => {
+      const labels = Array.from(document.querySelectorAll('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect()).filter(r => r.width)
+      return Array.from(document.querySelectorAll('.panel-content')).filter(content => { const c = content.getBoundingClientRect(); return labels.some(l => c.right > l.left && c.left < l.right) }).map(content => content.closest('section')!.id)
+    })
+    expect(overlaps, 'sections running under the fixed trail').toEqual([])
     await page.locator('.trail-checkpoint').nth(4).click()
     await expect(page.locator('#high-camp')).toBeInViewport()
     await page.locator('.project-open').click()

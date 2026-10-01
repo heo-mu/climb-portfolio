@@ -33,8 +33,9 @@ export function Expedition() {
     if (fallback) {
       sections.forEach(section => { section.removeAttribute('style'); section.inert = false; section.removeAttribute('aria-hidden') })
       const camp = checkpoints.reduce((best, item) => Math.abs(item.progress - lastProgress.current) < Math.abs(best.progress - lastProgress.current) ? item : best)
-      const initialCamp = checkpoints.find(item => item.progress === initialProgress)
-      const raf = requestAnimationFrame(() => document.getElementById(lastProgress.current ? camp.id : initialCamp?.id ?? camp.id)?.scrollIntoView())
+      const target = (lastProgress.current ? camp : checkpoints.find(item => item.progress === initialProgress)) ?? camp
+      // Home is the top of the reading route, above it sits the note explaining the fallback.
+      const raf = requestAnimationFrame(() => target.progress ? document.getElementById(target.id)?.scrollIntoView() : window.scrollTo({ top: 0, behavior: 'instant' }))
       const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
           if (entry.isIntersecting) lastProgress.current = checkpoints[Number((entry.target as HTMLElement).dataset.checkpoint)].progress
