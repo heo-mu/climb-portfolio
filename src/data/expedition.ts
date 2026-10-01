@@ -18,14 +18,11 @@ export const checkpoints = [
 ] as const
 
 export const profile = {
-  name: 'Changmu Heo', role: 'Product Designer', location: 'Seoul, KR',
-  introduction: '복잡한 문제에서 명료한 경험으로. 구조와 인터랙션을 연결하는 프로덕트 디자이너 허창무예요.',
-  focus: ['UI / UX', 'Interaction', 'Design Systems'],
+  name: 'Changmu Heo', role: 'Product Designer',
   email: 'gjckdan156@naver.com',
   phone: '010-8524-6956',
   // Replace null with the actual profile URL when real content is available.
   socials: [{ label: 'LinkedIn', url: null }, { label: 'GitHub', url: null }] as { label: string; url: string | null }[],
-  contact: '아직 그려지지 않은 다음 경험을 함께 만들어요. 좋은 질문에서 새로운 여정이 시작돼요.',
 }
 
 export const workflow = [

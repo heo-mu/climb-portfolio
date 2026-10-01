@@ -1,22 +1,26 @@
-import { useLayoutEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { caseStudy, projects } from '../data/projects'
+import { Fragment, useLayoutEffect } from 'react'
+import { Link, Navigate, useParams } from 'react-router-dom'
+import { legacyProjectSlugs, processCaseStudy, projects } from '../data/projects'
 import { NotFound } from './NotFound'
 
 export function ProjectDetail() {
-  const { slug } = useParams()
+  const { slug = '' } = useParams()
   const index = projects.findIndex(project => project.slug === slug)
   const project = projects[index]
   const next = projects[(index + 1) % projects.length]
   useLayoutEffect(() => {
+    if (!project) return
     window.scrollTo({ top: 0, behavior: 'instant' })
     document.title = 'Heo Chang Mu - Portfolio'
     document.querySelector<HTMLElement>('.detail-title')?.focus({ preventScroll: true })
   }, [project])
+  if (legacyProjectSlugs[slug]) return <Navigate to={`/project/${legacyProjectSlugs[slug]}`} replace />
   if (!project) return <NotFound />
+  const meta = [['Role', project.role], ['Period', project.period], ['Type', project.type], ...project.status ? [['Status', project.status]] : []]
   return <main className="project-detail">
     <header className="detail-header">
-      <Link to="/#high-camp" className="back-link" aria-label="프로젝트 목록으로 돌아가기">
+      {/* Returns to the Projects camp with this project selected, without a reload. */}
+      <Link to="/#high-camp" state={{ project: project.slug }} className="back-link">
         <svg className="back-link-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true">
           <path d="M13.5 8.5h-11m4-4-4 4 4 4" vectorEffect="non-scaling-stroke" />
         </svg>
@@ -25,9 +29,16 @@ export function ProjectDetail() {
     </header>
     <div className="detail-wrap"><div className="detail-kicker"><span>Project {project.number}</span></div>
       <h1 className="detail-title" tabIndex={-1}>{project.name}</h1><p className="detail-summary">{project.summary}</p><ul className="project-tags" aria-label="프로젝트 키워드">{project.tags.map(tag => <li key={tag}>#{tag}</li>)}</ul>
-      <dl className="detail-meta"><div><dt>Role</dt><dd>{project.role}</dd></div><div><dt>Period</dt><dd>{project.period}</dd></div><div><dt>Type</dt><dd>{project.type}</dd></div><div><dt>Status</dt><dd>Concept</dd></div></dl>
-      <div className="detail-hero media-surface" role="img" aria-label="프로젝트 미디어"><span>{project.number}</span></div>
-      <div className="case-study">{caseStudy.map((section, sectionIndex) => <section className="case-section" key={section.title}><div className="case-label mono"><span>{String(sectionIndex + 1).padStart(2, '0')}</span>{section.title}</div><div><h2>{section.heading}</h2><p>{section.body}</p>{sectionIndex === 3 && <div className="process-line mono"><span>Discover</span><i>→</i><span>Define</span><i>→</i><span>Explore</span><i>→</i><span>Validate</span></div>}{sectionIndex === 4 && <div className="case-media media-surface" role="img" aria-label="디자인 시스템 미디어" />}</div></section>)}</div>
+      <dl className="detail-meta">{meta.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
+      <div className="detail-hero media-surface" aria-hidden="true"><span>{project.number}</span></div>
+      <div className="case-study">{(project.caseStudy ?? processCaseStudy).map((section, sectionIndex) => <section className="case-section" key={section.title} aria-labelledby={`case-${sectionIndex}`}>
+        <div className="case-label mono"><span>{String(sectionIndex + 1).padStart(2, '0')}</span>{section.title}</div>
+        <div>
+          <h2 id={`case-${sectionIndex}`}>{section.heading}</h2><p>{section.body}</p>
+          {section.process && <div className="process-line mono">{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}
+          {section.media && <div className="case-media media-surface" aria-hidden="true" />}
+        </div>
+      </section>)}</div>
       <Link className="next-project" to={`/project/${next.slug}`}><span className="mono">Next Project / {next.number}</span><span>{next.name}<i aria-hidden="true">↗</i></span></Link>
     </div>
   </main>

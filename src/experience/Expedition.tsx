@@ -86,7 +86,7 @@ export function Expedition() {
 
   return <main ref={root} className={`expedition ${fallback ? 'reading-mode' : ''}`} style={fallback ? undefined : { height: `${experienceConfig.route.scrollScreens * 100}svh` }}>
     <a className="skip-link" href="#high-camp" onClick={event => { if (!fallback) { event.preventDefault(); controller.goTo(checkpoints.find(camp => camp.id === 'high-camp')!.progress, true); requestAnimationFrame(() => document.getElementById('title-high-camp')?.focus({ preventScroll: true })) } }}>프로젝트로 바로 가요</a>
-    {fallback ? <div className="static-landscape" aria-hidden="true"><div /><div /><div /></div> : <Scene controller={controller} onFallback={onFallback} />}
+    {fallback ? <div className="static-landscape" aria-hidden="true" /> : <Scene controller={controller} onFallback={onFallback} />}
     <HUD controller={controller} fallback={fallback} />
     <CheckpointSections onExplore={() => { if (fallback) document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); else controller.goTo(checkpoints[1].progress) }} />
     {fallback && <p className="fallback-note">3D 화면을 사용할 수 없어 콘텐츠를 바로 보여드려요.</p>}

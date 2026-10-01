@@ -1,3 +1,5 @@
+import { profile } from '../data/expedition'
+
 type HomeProps = { onExplore: () => void }
 
 export function Home({ onExplore }: HomeProps) {
@@ -5,7 +7,7 @@ export function Home({ onExplore }: HomeProps) {
     <div className="home-backdrop" aria-hidden="true" />
     <div className="home-layout">
       <div className="home-identity-shell">
-        <div className="home-identity"><p>Changmu Heo</p><span>Product Designer</span></div>
+        <div className="home-identity"><p>{profile.name}</p><span>{profile.role}</span></div>
       </div>
       <div className="home-main">
         <div className="home-statement">

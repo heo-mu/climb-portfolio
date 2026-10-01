@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { checkpoints, inventory, profile, workflow } from '../data/expedition'
 import { projects } from '../data/projects'
 import { Home } from './Home'
@@ -74,14 +74,22 @@ function ProjectArtwork({ active }: { active: number }) {
   return <div className="project-art" data-variant={active} aria-hidden="true"><div className="art-grid" /><div className="art-form art-form-one" /><div className="art-form art-form-two" /><div className="art-form art-form-three" /></div>
 }
 
+// The selection survives in-app trips to a project page and back.
+let rememberedProject = 0
+
 function Projects() {
-  const [active, setActive] = useState(0)
+  const { state } = useLocation()
+  const [active, setActive] = useState(() => {
+    const returned = projects.findIndex(item => item.slug === (state as { project?: string } | null)?.project)
+    return returned >= 0 ? returned : rememberedProject
+  })
+  const select = (index: number) => { rememberedProject = index; setActive(index) }
   const project = projects[active]
   return <>
     <h1 className="portfolio-heading" id="title-high-camp" tabIndex={-1}>Selected Work<span className="heading-accent">.</span></h1>
     <p className="body-copy section-intro">복잡한 문제를 구조화하고 실제 제품으로 만든 작업을 모았어요.</p>
     <div className="panel-body projects-layout">
-      <div className="project-index" aria-label="프로젝트 선택">{projects.map((item, index) => <button type="button" key={item.slug} onClick={() => setActive(index)} className="project-row" data-active={active === index} aria-pressed={active === index} aria-controls="selected-project">
+      <div className="project-index" role="group" aria-label="프로젝트 선택">{projects.map((item, index) => <button type="button" key={item.slug} onClick={() => select(index)} className="project-row" data-active={active === index} aria-pressed={active === index} aria-controls="selected-project">
         <span className="project-number">{item.number}</span><span className="project-label"><strong>{item.name}</strong><span>{item.type}</span></span>
       </button>)}</div>
       <article className="project-preview" id="selected-project" aria-label="선택한 프로젝트">
@@ -93,10 +101,10 @@ function Projects() {
           <p>{project.summary}</p>
           <div className="project-actions">
             <ul className="project-tags" aria-label="프로젝트 키워드">{project.tags.map(tag => <li key={tag}>#{tag}</li>)}</ul>
-            <Link className="project-open" to={`/project/${project.slug}`} state={{ returnCheckpoint: 'high-camp' }}>프로젝트 보기 <ArrowUpRight className="project-open-arrow" /></Link>
+            <Link className="project-open" to={`/project/${project.slug}`}>프로젝트 보기 <ArrowUpRight className="project-open-arrow" /></Link>
           </div>
         </div>
-        <Link className="project-media-link" to={`/project/${project.slug}`} state={{ returnCheckpoint: 'high-camp' }} aria-label={`${project.name} 프로젝트 보기`}><ProjectArtwork active={active} /></Link>
+        <Link className="project-media-link" to={`/project/${project.slug}`} aria-label={`${project.name} 프로젝트 보기`}><ProjectArtwork active={active} /></Link>
       </article>
     </div>
   </>
