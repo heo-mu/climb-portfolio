@@ -15,7 +15,14 @@ export function ProjectDetail() {
   }, [project])
   if (!project) return <NotFound />
   return <main className="project-detail">
-    <header className="detail-header"><Link to="/#high-camp" className="back-link">↙ Projects</Link></header>
+    <header className="detail-header">
+      <Link to="/#high-camp" className="back-link" aria-label="프로젝트 목록으로 돌아가기">
+        <svg className="back-link-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true">
+          <path d="M13.5 8.5h-11m4-4-4 4 4 4" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <span>Back to Projects</span>
+      </Link>
+    </header>
     <div className="detail-wrap"><div className="detail-kicker"><span>Project {project.number}</span></div>
       <h1 className="detail-title" tabIndex={-1}>{project.name}</h1><p className="detail-summary">{project.summary}</p><ul className="project-tags" aria-label="프로젝트 키워드">{project.tags.map(tag => <li key={tag}>#{tag}</li>)}</ul>
       <dl className="detail-meta"><div><dt>Role</dt><dd>{project.role}</dd></div><div><dt>Period</dt><dd>{project.period}</dd></div><div><dt>Type</dt><dd>{project.type}</dd></div><div><dt>Status</dt><dd>Concept</dd></div></dl>

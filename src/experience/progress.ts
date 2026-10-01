@@ -53,7 +53,7 @@ export function advanceSectionUI(previous: SectionUIState, arrived: boolean, del
   return { amount, phase: arrived ? amount === 1 ? 'active' : 'entering' : amount === 0 ? 'hidden' : 'exiting', interactive: arrived }
 }
 
-const initialSectionUI = (progress: number) => checkpoints.map((_, index) => advanceSectionUI({ phase: 'hidden', amount: 0, interactive: false }, readableCheckpoint(progress) === index, 0, true))
+export const sectionUIAt = (progress: number, returningHome = false) => checkpoints.map((_, index) => advanceSectionUI({ phase: 'hidden', amount: 0, interactive: false }, readableCheckpoint(progress) === index && (!returningHome || index === 0), 0, true))
 
 export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; reveals: number[]; sections: SectionUIState[]; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
 type Listener = (frame: ExpeditionFrame) => void
@@ -69,7 +69,7 @@ export class ScrollController {
   private media = window.matchMedia('(prefers-reduced-motion: reduce)')
   private started = false
   private returningHome = false
-  private frame: ExpeditionFrame = { progress: 0, route: 0, altitude: 1240, active: 0, reveals: checkpoints.map((_, index) => visibilityAt(0, index)), sections: initialSectionUI(0), returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
+  private frame: ExpeditionFrame = { progress: 0, route: 0, altitude: 1240, active: 0, reveals: checkpoints.map((_, index) => visibilityAt(0, index)), sections: sectionUIAt(0), returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener)
@@ -108,9 +108,10 @@ export class ScrollController {
     this.current += (this.target - this.current) * (reducedMotion ? 1 : 1 - Math.exp(-delta * experienceConfig.route.damping))
     if (Math.abs(this.target - this.current) < 0.00001) this.current = this.target
     if (this.current === 0) this.returningHome = false
-    const arrival = readableCheckpoint(this.current)
     const returningHome = this.returningHome
-    const sections = this.frame.sections.map((state, index) => advanceSectionUI(state, arrival === index && (!returningHome || index === 0), delta, reducedMotion))
+    // Spatial approach already reveals the composition. On entering the reading
+    // zone it must be fully settled AND interactive, with no second fade clock.
+    const sections = sectionUIAt(this.current, returningHome)
     const reveals = sections.map((state, index) => index === 0 ? visibilityAt(this.current, 0) : smoothstep(state.amount))
     const active = returningHome ? this.frame.active : activeCheckpoint(this.current, this.frame.active)
     this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active, reveals, sections, returningHome, delta, time: time / 1000, reducedMotion }
@@ -123,7 +124,7 @@ export class ScrollController {
     this.started = true
     this.measure()
     this.current = this.target = clamp(initialProgress)
-    const sections = initialSectionUI(this.current)
+    const sections = sectionUIAt(this.current)
     this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), sections, reveals: sections.map((state, index) => index === 0 ? visibilityAt(this.current, 0) : state.amount) }
     window.scrollTo({ top: this.current * this.range, behavior: 'instant' })
     window.addEventListener('scroll', this.onScroll, { passive: true })
@@ -139,7 +140,7 @@ export class ScrollController {
     this.measure()
     this.returningHome = progress === 0 && this.current > 0
     const returningHome = this.returningHome
-    const sections = returningHome ? this.frame.sections.map(state => advanceSectionUI(state, false, 0, this.media.matches)) : this.frame.sections
+    const sections = sectionUIAt(this.current, returningHome)
     this.frame = { ...this.frame, sections, returningHome }
     this.listeners.forEach(listener => listener(this.frame))
     if (instant || this.media.matches) this.current = this.target = clamp(progress)

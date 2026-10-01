@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigationType } from 'react-router-dom'
 import { Scene } from './Scene'
-import { ScrollController, smoothstep } from './progress'
+import { ScrollController } from './progress'
 import { checkpoints } from '../data/expedition'
 import { CheckpointSections } from '../components/Sections'
 import { HUD } from '../components/HUD'
@@ -52,15 +52,8 @@ export function Expedition() {
       sections.forEach((section, index) => {
         // Panels and navigation consume the same arrival state as the camera controller.
         const state = frame.sections[index]
-        // Home's visual departure is owned by the rendered camera projection.
-        // Section state still owns its input/focus eligibility at Base Camp.
-        if (index !== 0) {
-          const reveal = frame.reveals[index]
-          section.style.setProperty('--panel-surface', String(smoothstep(reveal / 0.65)))
-          section.style.setProperty('--panel-title', String(smoothstep((reveal - 0.08) / 0.78)))
-          section.style.setProperty('--panel-body', String(smoothstep((reveal - 0.22) / 0.78)))
-          section.style.visibility = state.phase === 'hidden' ? 'hidden' : 'visible'
-        }
+        // The rendered camera owns visual approach/departure. This shared
+        // arrival state owns focus/input, matching the trail navigation.
         section.dataset.phase = state.phase
         const interactive = state.interactive
         section.inert = !interactive

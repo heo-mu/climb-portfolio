@@ -120,6 +120,6 @@ export function CheckpointSections({ onExplore }: { onExplore: () => void }) {
   const sections = [<About />, <AI />, <Tools />, <Projects />, <Contact />]
   return <div className="checkpoint-sections"><Home onExplore={onExplore} />{checkpoints.slice(1).map((camp, index) => <section key={camp.id} id={camp.id} className={`checkpoint checkpoint-${camp.id}`} aria-labelledby={`title-${camp.id}`} data-checkpoint={index + 1}>
     <div className="panel-surface" aria-hidden="true" />
-    <div className="panel-content"><div className="panel-kicker"><span>{camp.index}</span><span>{camp.navigation}</span></div>{sections[index]}</div>
+    <div className="spatial-panel"><div className="panel-content"><div className="panel-kicker"><span>{camp.index}</span><span>{camp.navigation}</span></div>{sections[index]}</div></div>
   </section>)}</div>
 }
