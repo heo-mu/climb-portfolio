@@ -20,7 +20,7 @@ export function Home({ onExplore }: HomeProps) {
         <div className="home-action-shell">
           <button type="button" className="home-explore" onClick={onExplore} aria-label="Ascend — About으로 이동해요">
             <span>Ascend</span>
-            <svg viewBox="0 0 80 24" fill="none" aria-hidden="true"><path className="ascend-route" d="M0 12H60" /><path className="ascend-arrow" d="M55 7L60 12L55 17" /></svg>
+            <svg viewBox="0 0 80 24" fill="none" aria-hidden="true"><path className="ascend-route" d="M0 12.5H60" /><path className="ascend-arrow" d="M55 7.5L60 12.5L55 17.5" /></svg>
           </button>
         </div>
       </div>

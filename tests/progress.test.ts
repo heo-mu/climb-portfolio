@@ -10,13 +10,19 @@ const eye = (progress: number) => new Vector3(...routeEyeAt(routeProgress(progre
 
 describe('spatial arrival', () => {
   it('derives every arrival zone from the walker’s real distance to its reading plateau', () => {
-    campZones.forEach(({ plateau, arrival }, index) => {
-      const reach = index ? experienceConfig.content.arrivalDistance : experienceConfig.content.homeArrivalDistance
+    const { arrivalDistance, homeDockDistance } = experienceConfig.content
+    campZones.forEach(({ plateau, arrival, dock }, index) => {
       expect(arrival[0]).toBeLessThanOrEqual(plateau[0])
       expect(arrival[1]).toBeGreaterThanOrEqual(plateau[1])
-      if (index) expect(eye(arrival[0]).distanceTo(eye(plateau[0]))).toBeCloseTo(reach, 3)
-      if (plateau[1] < 1) expect(eye(arrival[1]).distanceTo(eye(plateau[1]))).toBeCloseTo(reach, 3)
+      if (index) expect(eye(arrival[0]).distanceTo(eye(plateau[0]))).toBeCloseTo(arrivalDistance, 3)
+      if (plateau[1] < 1) expect(eye(arrival[1]).distanceTo(eye(plateau[1]))).toBeCloseTo(arrivalDistance, 3)
       if (index) expect(arrival[0]).toBeGreaterThan(campZones[index - 1].arrival[1])
+      // Camps dock wherever they are arrived; Home docks closer, so one wheel step departs.
+      if (index) expect(dock).toEqual(arrival)
+      else {
+        expect(eye(dock[1]).distanceTo(eye(0))).toBeCloseTo(homeDockDistance, 3)
+        expect(dock[1]).toBeLessThan(arrival[1])
+      }
     })
   })
   it('enables content, input and trail position on one boundary in both directions', () => {
@@ -36,7 +42,9 @@ describe('spatial arrival', () => {
   it('keeps the reading dwell longer than the plateau and Home short', () => {
     const range = (experienceConfig.route.scrollScreens - 1) * 900
     const dwell = campZones.map(({ arrival }) => (arrival[1] - arrival[0]) * range)
-    expect(dwell[0]).toBeLessThan(100)
+    expect(dwell[0]).toBeLessThan(120)
+    // A single ~100px wheel step from Home lands beyond its dock on common heights.
+    for (const height of [768, 900, 1080]) expect(campZones[0].dock[1] * (experienceConfig.route.scrollScreens - 1) * height).toBeLessThan(95)
     // Every camp keeps at least its full plateau; the summit sits at the end of the rail.
     dwell.slice(1, -1).forEach(px => expect(px).toBeGreaterThan(2 * experienceConfig.content.readableRange * range))
     expect(dwell.at(-1)).toBeGreaterThan(experienceConfig.content.readableRange * range)

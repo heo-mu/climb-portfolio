@@ -5,9 +5,10 @@ export const experienceConfig = {
   atmosphere: { fogBase: 0.0028 },
   lighting: { exposure: 1.04, keyBase: 2.7, ambientBase: 1.2, fill: 0.38 },
   // A camp is arrived (readable, interactive, current in the trail) while the eye
-  // is within `arrivalDistance` metres of its reading plateau. Home stays tighter
-  // so a single wheel step still departs.
-  content: { readableRange: 0.024, arrivalDistance: 5, homeArrivalDistance: 3 },
+  // is within `arrivalDistance` metres of its reading plateau, and docks there when
+  // the walker will stop inside it. Home docks only within `homeDockDistance`, so a
+  // single wheel step still departs instead of springing back.
+  content: { readableRange: 0.024, arrivalDistance: 5, homeDockDistance: 3 },
   home: { exitRange: 0.022 },
   snow: { nearCount: 220, middleCount: 800, farCount: 1400 },
 }

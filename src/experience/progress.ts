@@ -26,7 +26,7 @@ export function altitudeAt(progress: number) {
   return Math.round(from.altitude + (to.altitude - from.altitude) * local)
 }
 
-const { readableRange, arrivalDistance, homeArrivalDistance } = experienceConfig.content
+const { readableRange, arrivalDistance, homeDockDistance } = experienceConfig.content
 const eyeAt = (progress: number) => routeEyeAt(routeProgress(progress))
 
 /** Progress at which the walker is `reach` metres from the eye pose at `anchor`. */
@@ -43,24 +43,32 @@ function reachFrom(anchor: number, direction: -1 | 1, reach: number) {
   return inside
 }
 
-export type CampZone = { plateau: readonly [number, number]; arrival: readonly [number, number] }
+type Span = readonly [number, number]
+export type CampZone = { plateau: Span; arrival: Span; dock: Span }
 
 /**
  * `plateau`: the composition is parked exactly on its reading axes.
  * `arrival`: the eye is within reach of a plateau boundary. Content, input,
  * trail and location label all switch here, on the same spatial distance the
  * rendered approach and departure projections use.
+ * `dock`: where a walker coming to rest pulls the composition onto its axes.
  */
 export const campZones: CampZone[] = checkpoints.map((camp, index) => {
-  if (index === 0) return { plateau: [0, 0], arrival: [0, reachFrom(0, 1, homeArrivalDistance)] }
+  if (index === 0) return { plateau: [0, 0], arrival: [0, reachFrom(0, 1, arrivalDistance)], dock: [0, reachFrom(0, 1, homeDockDistance)] }
   const entry = clamp(camp.progress - readableRange), exit = clamp(camp.progress + readableRange)
-  return { plateau: [entry, exit], arrival: [reachFrom(entry, -1, arrivalDistance), reachFrom(exit, 1, arrivalDistance)] }
+  const arrival = [reachFrom(entry, -1, arrivalDistance), reachFrom(exit, 1, arrivalDistance)] as const
+  return { plateau: [entry, exit], arrival, dock: arrival }
 })
+
+const within = (progress: number, [from, to]: Span) => progress >= from - Number.EPSILON && progress <= to + Number.EPSILON
 
 // Arrival is spatial, never dependent on a second animation clock.
 export function readableCheckpoint(progress: number) {
-  return campZones.findIndex(({ arrival }) => progress >= arrival[0] - Number.EPSILON && progress <= arrival[1] + Number.EPSILON)
+  return campZones.findIndex(({ arrival }) => within(progress, arrival))
 }
+
+/** The camp whose dock holds `progress`: where a composition settles when the walker stops there. */
+export const dockingCheckpoint = (progress: number) => campZones.findIndex(({ dock }) => within(progress, dock))
 
 /** The camp most recently passed while walking uphill to `progress`. */
 const campBelow = (progress: number) => checkpoints.reduce((found, camp, index) => camp.progress <= progress ? index : found, 0)
@@ -89,7 +97,7 @@ export function sectionUIAt(progress: number, returningHome = false): readonly S
   return states
 }
 
-/** `destination`: the camp whose arrival zone holds the scroll target, where the walker will stand. */
+/** `destination`: the camp whose dock holds the scroll target, where the walker will stand. */
 export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
 type Listener = (frame: ExpeditionFrame) => void
 
@@ -119,7 +127,21 @@ export class ScrollController {
     this.target = clamp(window.scrollY / this.range)
   }
 
-  private onScroll = () => { this.measure() }
+  private returnWatch = 0
+  private onScroll = () => {
+    const previous = this.target
+    this.measure()
+    if (!this.returningHome) return
+    // A return Home is one uninterrupted descent. Climbing, or coming to rest
+    // short of Home, means the visitor took over, including through inputs that
+    // fire no wheel/touch/key events, such as dragging the scrollbar.
+    if (this.target > previous + 1e-6) return this.cancelReturn()
+    this.watchReturn()
+  }
+  private watchReturn() {
+    clearTimeout(this.returnWatch)
+    this.returnWatch = window.setTimeout(() => { if (this.returningHome && this.target > 0) this.cancelReturn() }, 250)
+  }
   private cancelReturn = () => {
     if (!this.returningHome) return
     this.returningHome = false
@@ -147,14 +169,15 @@ export class ScrollController {
     const reducedMotion = this.media.matches
     this.current += (this.target - this.current) * (reducedMotion ? 1 : 1 - Math.exp(-delta * experienceConfig.route.damping))
     if (Math.abs(this.target - this.current) < 0.00001) this.current = this.target
-    if (this.current === 0) this.returningHome = false
+    // The return ends on arriving Home, not on the last sub-pixel of camera easing.
+    if (this.returningHome && this.target === 0 && readableCheckpoint(this.current) === 0) this.returningHome = false
     const returningHome = this.returningHome
     // The rendered approach reveals the composition; arrival makes it settled,
     // interactive and current in the same frame, with no second fade clock.
     const sections = sectionUIAt(this.current, returningHome)
     // Returning Home names its destination at once; the marker shows the descent.
     const active = returningHome ? 0 : activeCheckpoint(this.current, this.frame.active)
-    this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active, destination: readableCheckpoint(this.target), sections, returningHome, delta, time: time / 1000, reducedMotion }
+    this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active, destination: dockingCheckpoint(this.target), sections, returningHome, delta, time: time / 1000, reducedMotion }
     this.emit()
     this.raf = requestAnimationFrame(this.tick)
   }
@@ -164,7 +187,7 @@ export class ScrollController {
     this.started = true
     this.measure()
     this.current = this.target = clamp(initialProgress)
-    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: readableCheckpoint(this.current), sections: sectionUIAt(this.current) }
+    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current) }
     window.scrollTo({ top: this.current * this.range, behavior: 'instant' })
     window.addEventListener('scroll', this.onScroll, { passive: true })
     window.addEventListener('resize', this.onResize)
@@ -182,12 +205,14 @@ export class ScrollController {
     this.emit()
     if (instant || this.media.matches) this.current = this.target = clamp(progress)
     window.scrollTo({ top: clamp(progress) * this.range, behavior: instant || this.media.matches ? 'instant' : 'smooth' })
+    if (this.returningHome) this.watchReturn()
   }
 
   stop() {
     this.started = false
     cancelAnimationFrame(this.raf)
     cancelAnimationFrame(this.resizeRaf)
+    clearTimeout(this.returnWatch)
     window.removeEventListener('scroll', this.onScroll)
     window.removeEventListener('resize', this.onResize)
     window.removeEventListener('wheel', this.cancelReturn)
