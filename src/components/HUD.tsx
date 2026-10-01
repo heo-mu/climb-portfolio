@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { checkpoints } from '../data/expedition'
 import { experienceConfig } from '../config/experience'
 import type { ScrollController } from '../experience/progress'
+import { TrailNavigation } from './TrailNavigation'
 
 const formatAltitude = (n: number) => String(Math.round(n))
 
@@ -10,6 +11,7 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
   const [active, setActive] = useState(0)
   const [homeVisible, setHomeVisible] = useState(false)
   const [altitudeVisible, setAltitudeVisible] = useState(false)
+  const [returningHome, setReturningHome] = useState(false)
   useEffect(() => {
     if (fallback) {
       const observer = new IntersectionObserver(entries => {
@@ -28,6 +30,7 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
     return controller.subscribe(frame => {
       if (altitude.current) altitude.current.textContent = formatAltitude(frame.altitude)
       setAltitudeVisible(frame.progress > 0)
+      setReturningHome(frame.returningHome)
       if (previousActive !== frame.active) { previousActive = frame.active; setActive(frame.active) }
       setHomeVisible(frame.progress > experienceConfig.home.exitRange)
     })
@@ -44,11 +47,9 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
   }
   return <>
     <div className="altitude-hud" data-visible={!fallback && altitudeVisible} aria-hidden={fallback || !altitudeVisible} aria-label="현재 고도"><span className="altitude-number" ref={altitude}>{formatAltitude(checkpoints[0].altitude)}</span><span className="altitude-unit">m</span></div>
-    <div className="hud" data-home={active === 0} inert={active === 0} aria-hidden={active === 0}>
+    <div className="hud" data-home={!homeVisible} inert={!homeVisible} aria-hidden={!homeVisible}>
     <div className="current-location" aria-live="polite" aria-atomic="true"><span>{checkpoints[active].index}</span><span className="current-rule" /><strong>{checkpoints[active].navigation}</strong></div>
-    <nav className="checkpoint-nav" aria-label="포트폴리오 섹션">
-      {checkpoints.map((camp, index) => <button key={camp.id} onClick={() => navigate(index)} aria-current={active === index ? 'step' : undefined} aria-label={`${camp.index} ${camp.navigation}`}><span className="nav-label">{camp.navigation}</span><span className="nav-dot" aria-hidden="true" /></button>)}
-    </nav>
+    <TrailNavigation controller={controller} active={!fallback && returningHome ? -1 : active} fallback={fallback} navigate={navigate} />
     </div>
     <button type="button" className="journey-home" data-visible={homeVisible} inert={!homeVisible} tabIndex={homeVisible ? 0 : -1} onClick={returnHome} aria-label="여정의 출발점인 Home으로 돌아가요">
       <svg className="journey-home-icon" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="m3 7.5 6-5 6 5v7H11v-5H7v5H3z" /></svg><span>Home</span>

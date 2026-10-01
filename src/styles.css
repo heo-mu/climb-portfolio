@@ -31,14 +31,25 @@ h1:focus { outline: none; }
 .current-location > span:first-child { opacity: .65; font-variant-numeric: tabular-nums; }
 .current-location strong { font-weight: 500; }
 .current-rule { width: 22px; height: 1px; background: currentColor; opacity: .5; }
-.checkpoint-nav { position: absolute; right: var(--safe-right); top: 50%; transform: translateY(-50%); width: 116px; display: grid; gap: 6px; }
-.checkpoint-nav { top: round(nearest, 50%, 1px); transform: translateY(round(nearest, -50%, 1px)); }
-.checkpoint-nav button { display: grid; grid-template-columns: 1fr 6px; align-items: center; gap: 20px; min-height: 40px; text-align: right; color: #d2dadd; opacity: .56; transition: color .2s, opacity .2s; }
-.checkpoint-nav button:hover { opacity: 1; }
-.checkpoint-nav button[aria-current] { color: var(--color-accent); opacity: 1; }
-.checkpoint-nav .nav-label { font-size: 11px; font-weight: 500; letter-spacing: .055em; line-height: 16px; }
-.nav-dot { width: 4px; height: 4px; justify-self: center; border-radius: 50%; background: currentColor; opacity: .32; }
-.checkpoint-nav button[aria-current] .nav-dot { opacity: 1; }
+.checkpoint-nav { position: absolute; right: calc(var(--safe-right) + 12px); top: calc(50% - 8px); width: 160px; height: clamp(300px, 42svh, 450px); transform: translateY(-50%); }
+@supports (top: round(nearest, 50%, 1px)) {
+  .checkpoint-nav { top: calc(round(nearest, 50%, 1px) - 8px); height: round(nearest, clamp(300px, 42svh, 450px), 1px); transform: translateY(round(nearest, -50%, 1px)); }
+}
+.trail-map { display: block; width: 100%; height: 100%; overflow: visible; }
+.trail-map path { fill: none; stroke-width: 1.25px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.trail-remaining { stroke: rgb(237 240 238 / 28%); }
+.trail-completed { stroke: var(--color-accent); opacity: .52; }
+.trail-current { fill: var(--color-accent); }
+.trail-mobile-label { display: none; }
+.trail-checkpoint { position: absolute; width: 96px; height: 32px; margin: -16px 0 0 -82px; display: flex; align-items: center; justify-content: flex-end; padding-right: 24px; color: #d2dadd; }
+.trail-checkpoint .nav-label { font-size: 10px; font-weight: 500; letter-spacing: .035em; line-height: 16px; white-space: nowrap; opacity: .52; transition: opacity .2s, color .2s; }
+.trail-node { position: absolute; left: 81px; top: 15px; width: 2px; height: 2px; border-radius: 50%; background: #d2dadd; opacity: .55; transition: opacity .2s; }
+.trail-checkpoint:is(:hover, :focus-visible) .nav-label, .trail-checkpoint:is(:hover, :focus-visible) .trail-node { opacity: 1; }
+.trail-checkpoint[aria-current] .nav-label { color: #f0f1eb; opacity: 1; }
+.trail-checkpoint[aria-current] .trail-node { background: var(--color-accent); opacity: 1; }
+.hud[data-home=true] .trail-map, .hud[data-home=true] .trail-checkpoint { opacity: 0; }
+.trail-map { transition: opacity .25s; }
+.trail-checkpoint { transition: opacity .3s; }
 .journey-home { position: fixed; z-index: 11; left: var(--safe-left); top: var(--safe-top); display: flex; align-items: center; justify-content: flex-start; gap: 9px; min-height: 40px; color: #edf0ee; font-size: 11px; font-weight: 600; line-height: 18px; letter-spacing: .075em; opacity: 0; pointer-events: none; transition: opacity .22s ease, color .2s ease; }
 .journey-home[data-visible=true] { opacity: 1; pointer-events: auto; }
 .journey-home:hover, .journey-home:focus-visible { color: var(--color-accent); }
@@ -262,11 +273,11 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
   .current-location { font-size: 10px; gap: 9px; }
   .current-rule { width: 15px; }
   .hud::before { inset: auto 0 0; width: 100%; height: 95px; background: linear-gradient(0deg, rgb(17 37 52 / 80%), transparent); }
-  .checkpoint-nav { top: auto; bottom: max(22px, env(safe-area-inset-bottom)); left: var(--safe-left); right: var(--safe-right); width: auto; transform: none; display: flex; justify-content: space-between; gap: 8px; }
-  .checkpoint-nav button { min-height: 36px; display: flex; gap: 0; border-bottom: 1px solid transparent; }
-  .checkpoint-nav .nav-dot { display: none; }
-  .checkpoint-nav .nav-label { min-width: 0; font-size: 10px; }
-  .checkpoint-nav button[aria-current] { border-bottom: 1px solid var(--color-accent); }
+  .checkpoint-nav { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); left: var(--safe-left); right: var(--safe-right); width: auto; height: 56px; transform: none; }
+  .trail-checkpoint { width: 32px; height: 32px; margin-left: -16px; padding: 0; }
+  .trail-node { left: 15px; }
+  .trail-checkpoint .nav-label { display: none; }
+  .trail-mobile-label { display: block; position: absolute; bottom: 0; left: 0; right: 0; text-align: center; color: #d2dadd; font-size: 10px; line-height: 16px; letter-spacing: .035em; }
   .checkpoint { width: 100%; max-width: none; min-width: 0; padding: 128px var(--gutter) 96px; align-items: flex-end; }
   .checkpoint:not(.checkpoint-high-camp) { padding-top: 92px; padding-bottom: 108px; }
   .panel-content { top: auto; transform: none; max-height: calc(100svh - 230px); padding-right: 4px; }
@@ -292,7 +303,7 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
   .art-number { font-size: 150px; }
   .contact-address { font-size: 24px; }
   .reading-mode .checkpoint-sections { padding-top: 110px; }
-  .reading-mode .checkpoint-nav { background: #172936; bottom: 0; left: 0; right: 0; padding: 0 var(--gutter); height: 55px; }
+  .reading-mode .checkpoint-nav { background: #172936; }
 }
 @media (max-width: 767px) and (max-height: 740px) {
   .checkpoint .panel-kicker { margin-bottom: 12px; }
