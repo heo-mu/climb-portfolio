@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useLocation, useNavigationType } from 'react-router-dom'
 import { Scene } from './Scene'
 import { ScrollController } from './progress'
+import type { ExpeditionFrame } from './progress'
 import { checkpoints } from '../data/expedition'
 import { CheckpointSections } from '../components/Sections'
 import { HUD } from '../components/HUD'
@@ -43,22 +44,22 @@ export function Expedition() {
       return () => { cancelAnimationFrame(raf); observer.disconnect() }
     }
     let previousActive = -1
-    const start = lastProgress.current || initialProgress
-    sections[0].style.visibility = start === 0 ? 'visible' : 'hidden'
-    controller.start(start)
+    let previousSections: ExpeditionFrame['sections'] | null = null
+    controller.start(lastProgress.current || initialProgress)
     const unsubscribe = controller.subscribe(frame => {
       lastProgress.current = frame.progress
-      root.current?.style.setProperty('--journey-progress', String(frame.progress))
-      sections.forEach((section, index) => {
-        // Panels and navigation consume the same arrival state as the camera controller.
-        const state = frame.sections[index]
-        // The rendered camera owns visual approach/departure. This shared
-        // arrival state owns focus/input, matching the trail navigation.
-        section.dataset.phase = state.phase
-        const interactive = state.interactive
-        section.inert = !interactive
-        section.setAttribute('aria-hidden', String(!interactive))
-      })
+      // The rendered camera owns visual approach/departure. This shared arrival
+      // state owns focus/input, matching the trail navigation. States are shared
+      // references, so the DOM is only touched when arrival actually changes.
+      if (frame.sections !== previousSections) {
+        previousSections = frame.sections
+        sections.forEach((section, index) => {
+          const { phase, interactive } = frame.sections[index]
+          section.dataset.phase = phase
+          section.inert = !interactive
+          section.setAttribute('aria-hidden', String(!interactive))
+        })
+      }
       if (previousActive !== frame.active) {
         const focused = document.activeElement
         if (focused instanceof HTMLElement && sections.some(section => section.contains(focused))) focused.blur()

@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { PerspectiveCamera, Vector3 } from 'three'
-import { HomeDepartureProjection } from '../src/experience/HomeSpatialTransition'
+import { SpatialAnchorProjection } from '../src/experience/SpatialAnchorProjection'
 import { cameraPose } from '../src/experience/terrain'
-import { routeProgress } from '../src/experience/progress'
-import { checkpoints } from '../src/data/expedition'
-import { experienceConfig } from '../src/config/experience'
+import { campZones, routeProgress } from '../src/experience/progress'
 
 function setup(width = 1440, height = 900) {
   const camera = new PerspectiveCamera(width / height < .95 ? 72 : 64, width / height, .08, 2400)
-  const projection = new HomeDepartureProjection()
+  const projection = new SpatialAnchorProjection()
   projection.resize(camera, width, height)
   const move = (progress: number) => {
     const target = new Vector3()
@@ -51,7 +49,7 @@ describe('Home departure projection', () => {
     expect(point(720, 450).x).toBeLessThan(720)
     expect(Math.abs(projection.matrix.determinant())).toBeGreaterThan(.01)
     expect(projection.blur).toBeLessThanOrEqual(2)
-    move(checkpoints[1].progress - experienceConfig.content.readableRange)
+    move(campZones[1].arrival[0])
     expect(projection.opacity).toBe(0)
   })
 

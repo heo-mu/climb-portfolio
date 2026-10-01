@@ -1,57 +1,67 @@
 import { describe, expect, it } from 'vitest'
-import { activeCheckpoint, advanceSectionUI, altitudeAt, readableCheckpoint, routeProgress, visibilityAt } from '../src/experience/progress'
-import type { SectionUIState } from '../src/experience/progress'
+import { activeCheckpoint, altitudeAt, campZones, readableCheckpoint, routeProgress, sectionUIAt } from '../src/experience/progress'
 import { checkpoints } from '../src/data/expedition'
+import { routeEyeAt } from '../src/data/ascentRoute'
 import { cameraPose, groundHeight, routeCurve, terrainGeometry } from '../src/experience/terrain'
 import { experienceConfig } from '../src/config/experience'
 import { Vector3 } from 'three'
 
-describe('expedition progression', () => {
-  it('enables entering content immediately and completes animation without further scrolling', () => {
-    let state: SectionUIState = { phase: 'hidden', amount: 0, interactive: false }
-    state = advanceSectionUI(state, true, .01)
-    expect(state.phase).toBe('entering')
-    expect(state.interactive).toBe(true)
-    for (let i = 0; i < 50; i++) state = advanceSectionUI(state, true, .01)
-    expect(state).toEqual({ phase: 'active', amount: 1, interactive: true })
-    state = advanceSectionUI(state, false, 0)
-    expect(state.phase).toBe('exiting')
-    expect(state.interactive).toBe(false)
-    for (let i = 0; i < 30; i++) state = advanceSectionUI(state, false, .01)
-    expect(state).toEqual({ phase: 'hidden', amount: 0, interactive: false })
-    expect(advanceSectionUI(state, true, 0, true).phase).toBe('active')
+const eye = (progress: number) => new Vector3(...routeEyeAt(routeProgress(progress)))
+
+describe('spatial arrival', () => {
+  it('derives every arrival zone from the walker’s real distance to its reading plateau', () => {
+    campZones.forEach(({ plateau, arrival }, index) => {
+      const reach = index ? experienceConfig.content.arrivalDistance : experienceConfig.content.homeArrivalDistance
+      expect(arrival[0]).toBeLessThanOrEqual(plateau[0])
+      expect(arrival[1]).toBeGreaterThanOrEqual(plateau[1])
+      if (index) expect(eye(arrival[0]).distanceTo(eye(plateau[0]))).toBeCloseTo(reach, 3)
+      if (plateau[1] < 1) expect(eye(arrival[1]).distanceTo(eye(plateau[1]))).toBeCloseTo(reach, 3)
+      if (index) expect(arrival[0]).toBeGreaterThan(campZones[index - 1].arrival[1])
+    })
   })
-  it('keeps approach content completely hidden, including stopping before Projects', () => {
-    expect(visibilityAt(.72, 4)).toBe(0)
-    expect(readableCheckpoint(.72)).toBe(-1)
-    const hidden: SectionUIState = { phase: 'hidden', amount: 0, interactive: false }
-    expect(advanceSectionUI(hidden, false, 10)).toEqual(hidden)
+  it('enables content, input and trail position on one boundary in both directions', () => {
+    campZones.forEach(({ arrival }, index) => {
+      for (const [edge, outside] of [[arrival[0], arrival[0] - .0001], [arrival[1], arrival[1] + .0001]]) {
+        if (outside < 0 || outside > 1) continue
+        expect(readableCheckpoint(edge)).toBe(index)
+        expect(sectionUIAt(edge)[index]).toEqual({ phase: 'active', interactive: true })
+        expect(readableCheckpoint(outside)).toBe(-1)
+        expect(sectionUIAt(outside).some(state => state.interactive)).toBe(false)
+        // Latch the last arrival: jitter out of the zone cannot select a neighbour.
+        expect(activeCheckpoint(outside, index)).toBe(index)
+        expect(activeCheckpoint(edge, index ? index - 1 : 1)).toBe(index)
+      }
+    })
+  })
+  it('keeps the reading dwell longer than the plateau and Home short', () => {
+    const range = (experienceConfig.route.scrollScreens - 1) * 900
+    const dwell = campZones.map(({ arrival }) => (arrival[1] - arrival[0]) * range)
+    expect(dwell[0]).toBeLessThan(100)
+    // Every camp keeps at least its full plateau; the summit sits at the end of the rail.
+    dwell.slice(1, -1).forEach(px => expect(px).toBeGreaterThan(2 * experienceConfig.content.readableRange * range))
+    expect(dwell.at(-1)).toBeGreaterThan(experienceConfig.content.readableRange * range)
+  })
+  it('shares immutable section states, so frames can skip unchanged DOM work', () => {
+    expect(sectionUIAt(checkpoints[2].progress)).toBe(sectionUIAt(checkpoints[2].progress + .001))
+    expect(sectionUIAt(checkpoints[2].progress)).not.toBe(sectionUIAt(checkpoints[3].progress))
+    // A Home return passes camps without activating them; Home itself still arrives.
+    expect(sectionUIAt(checkpoints[3].progress, true).every(state => !state.interactive)).toBe(true)
+    expect(sectionUIAt(0, true)[0].interactive).toBe(true)
   })
   it('retains the last arrived section between camps in either direction', () => {
     for (let index = 1; index < checkpoints.length; index++) {
       const midpoint = (checkpoints[index - 1].progress + checkpoints[index].progress) / 2
       expect(activeCheckpoint(midpoint, index - 1)).toBe(index - 1)
       expect(activeCheckpoint(midpoint, index)).toBe(index)
-    }
-  })
-  it('activates navigation and readable content on the same spatial entry in both directions', () => {
-    for (let index = 1; index < checkpoints.length; index++) {
-      for (const direction of [-1, 1]) {
-        const edge = checkpoints[index].progress + direction * experienceConfig.content.readableRange
-        if (edge > 1) continue
-        const previous = direction < 0 ? index - 1 : Math.min(index + 1, checkpoints.length - 1)
-        expect(readableCheckpoint(edge + direction * 0.0001)).toBe(-1)
-        expect(activeCheckpoint(edge + direction * 0.0001, previous)).toBe(previous)
-        expect(readableCheckpoint(edge)).toBe(index)
-        expect(activeCheckpoint(edge, previous)).toBe(index)
-        expect(visibilityAt(edge, index)).toBe(1)
-        // Jitter back out of the entered zone does not reactivate a neighbour.
-        expect(activeCheckpoint(edge + direction * 0.0001, index)).toBe(index)
-      }
+      // Without a history (a restored position), name the camp last passed uphill.
+      expect(activeCheckpoint(midpoint)).toBe(index - 1)
     }
     expect(activeCheckpoint(1, 1)).toBe(5)
     expect(activeCheckpoint(0, 5)).toBe(0)
   })
+})
+
+describe('expedition progression', () => {
   it('climbs smoothly from 1240 m to the 6956 m summit without a display-only override', () => {
     expect(altitudeAt(0)).toBe(1240)
     expect(altitudeAt(1)).toBe(6956)
@@ -63,23 +73,12 @@ describe('expedition progression', () => {
       previous = altitude
     }
   })
-  it('starts exiting Home on the first scroll and reveals About after the overlay clears', () => {
-    const exit = experienceConfig.home.exitRange
-    expect(visibilityAt(0, 0)).toBe(1)
-    expect(visibilityAt(0.00001, 0)).toBeLessThan(1)
-    expect(visibilityAt(exit / 2, 0)).toBeGreaterThan(0)
-    expect(visibilityAt(exit / 2, 0)).toBeLessThan(1)
-    expect(visibilityAt(exit, 0)).toBe(0)
-    expect(visibilityAt(exit, 1)).toBe(0)
-    expect(visibilityAt((exit + checkpoints[1].progress - experienceConfig.content.readableRange) / 2, 1)).toBe(0)
-    expect(visibilityAt(checkpoints[1].progress, 1)).toBe(1)
-  })
   it('keeps navigation, altitude and camera rail aligned at every camp', () => {
     checkpoints.forEach((camp, index) => {
       expect(routeProgress(camp.progress)).toBeCloseTo(camp.route)
       expect(altitudeAt(camp.progress)).toBe(camp.altitude)
       expect(activeCheckpoint(camp.progress)).toBe(index)
-      expect(visibilityAt(camp.progress, index)).toBe(1)
+      expect(sectionUIAt(camp.progress)[index].interactive).toBe(true)
     })
   })
   it('is continuous and strictly ascends in both time directions', () => {
@@ -124,6 +123,14 @@ describe('first-person route', () => {
     }
     expect(sideways).toBeGreaterThan(250)
     expect(position.y).toBeGreaterThan(300)
+  })
+  it('computes the same eye without three.js for arrival and the trail map', () => {
+    const position = new Vector3(), target = new Vector3()
+    for (let i = 0; i <= 2000; i++) {
+      cameraPose(i / 2000, position, target)
+      const [x, y, z] = routeEyeAt(i / 2000)
+      expect(Math.abs(position.x - x) + Math.abs(position.y - y) + Math.abs(position.z - z)).toBeLessThan(1e-9)
+    }
   })
   it('retraces the same physical pose when descending', () => {
     const up = new Vector3(), upTarget = new Vector3(), down = new Vector3(), downTarget = new Vector3()

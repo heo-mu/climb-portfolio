@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { PerspectiveCamera, Vector3 } from 'three'
 import { checkpoints } from '../src/data/expedition'
-import { SpatialAnchorProjection } from '../src/experience/SpatialAnchorProjection'
-import { sectionAnchorRange } from '../src/experience/SpatialSectionTransition'
-import { activeCheckpoint, routeProgress, sectionUIAt } from '../src/experience/progress'
+import { campFog, SpatialAnchorProjection } from '../src/experience/SpatialAnchorProjection'
+import { ArrivalDock } from '../src/experience/SpatialSectionTransition'
+import { campZones, routeProgress } from '../src/experience/progress'
 import { cameraPose } from '../src/experience/terrain'
 
 function pose(camera: PerspectiveCamera, progress: number) {
@@ -13,41 +13,16 @@ function pose(camera: PerspectiveCamera, progress: number) {
   camera.updateMatrixWorld()
 }
 
-it('captures the current camp for HOME return without moving its final composition', () => {
-  const camera = new PerspectiveCamera(64, 1440 / 900, .08, 2400)
-  pose(camera, .75)
-  const projection = new SpatialAnchorProjection()
-  projection.resize(camera, 1440, 900, true)
-  projection.update(camera)
-  const initial = projection.matrix.clone()
-  expect(new Vector3(58, 131, 0).applyMatrix4(initial).x).toBeCloseTo(58, 7)
-  pose(camera, .72)
-  projection.update(camera)
-  expect(projection.distance).toBeGreaterThan(0)
-  expect(projection.opacity).toBeLessThan(1)
-  pose(camera, .75)
-  projection.update(camera)
-  expect(projection.matrix.equals(initial)).toBe(true)
-})
+const scaleOf = (projection: SpatialAnchorProjection, width: number, height: number) =>
+  (new Vector3(width, height / 2, 0).applyMatrix4(projection.matrix).x - new Vector3(0, height / 2, 0).applyMatrix4(projection.matrix).x) / width
 
 describe.each(checkpoints.slice(1).map((camp, i) => ({ ...camp, index: i + 1 })))('$navigation spatial camp', camp => {
-  it('preserves the reading plateau and enables content with the navigation', () => {
-    const { entry, exit } = sectionAnchorRange(camp.index)
-    for (const progress of [entry, camp.progress, exit]) {
-      expect(sectionUIAt(progress)[camp.index]).toEqual({ phase: 'active', amount: 1, interactive: true })
-      expect(activeCheckpoint(progress, 0)).toBe(camp.index)
-      expect(sectionUIAt(progress, true)[camp.index].interactive).toBe(false)
-    }
-    for (const progress of [entry - .0001, exit + .0001].filter(p => p <= 1)) {
-      expect(sectionUIAt(progress)[camp.index].interactive).toBe(false)
-    }
-  })
+  const { plateau, arrival } = campZones[camp.index]
 
-  it.each([[1440, 900], [390, 844]])('projects reversibly and settles exactly at %i x %i', (width, height) => {
+  it.each([[1440, 900], [390, 844]])('projects reversibly and settles exactly on its axes at %i x %i', (width, height) => {
     const camera = new PerspectiveCamera(width < height ? 72 : 64, width / height, .08, 2400)
-    const { entry, exit } = sectionAnchorRange(camp.index)
-    for (const boundary of [entry, exit]) {
-      const projection = new SpatialAnchorProjection(routeProgress(boundary))
+    for (const boundary of plateau) {
+      const projection = new SpatialAnchorProjection(routeProgress(boundary), campFog)
       projection.resize(camera, width, height)
       pose(camera, boundary)
       projection.update(camera)
@@ -70,5 +45,50 @@ describe.each(checkpoints.slice(1).map((camp, i) => ({ ...camp, index: i + 1 }))
         expect(pixel.y).toBeCloseTo(y, 7)
       }
     }
+  })
+
+  it('still reads as distant where it is not yet arrived', () => {
+    const camera = new PerspectiveCamera(64, 1440 / 900, .08, 2400)
+    const approach = new SpatialAnchorProjection(routeProgress(plateau[0]), campFog)
+    approach.resize(camera, 1440, 900)
+    pose(camera, arrival[0] - .0005)
+    approach.update(camera)
+    expect(scaleOf(approach, 1440, 900)).toBeLessThan(.8)
+  })
+
+  it('has dissolved before a neighbouring camp is reached', () => {
+    const camera = new PerspectiveCamera(64, 1440 / 900, .08, 2400)
+    const approach = new SpatialAnchorProjection(routeProgress(plateau[0]), campFog)
+    const departure = new SpatialAnchorProjection(routeProgress(plateau[1]), campFog)
+    approach.resize(camera, 1440, 900)
+    departure.resize(camera, 1440, 900)
+    pose(camera, campZones[camp.index - 1].arrival[1])
+    approach.update(camera)
+    expect(approach.opacity).toBe(0)
+    if (camp.index < checkpoints.length - 1) {
+      pose(camera, campZones[camp.index + 1].arrival[0])
+      departure.update(camera)
+      expect(departure.opacity).toBe(0)
+    }
+  })
+})
+
+describe('arrival docking', () => {
+  it('eases onto the reading axes and back, ending exactly at rest values', () => {
+    const dock = new ArrivalDock()
+    expect(dock.pending(true)).toBe(true)
+    let frames = 0
+    while (dock.amount < 1 && frames < 120) { dock.ease(true, 1 / 60); frames++ }
+    expect(dock.amount).toBe(1)
+    expect(frames).toBeLessThan(40)
+    expect(dock.pending(true)).toBe(false)
+    dock.ease(false, 1 / 60)
+    expect(dock.amount).toBeGreaterThan(0)
+    expect(dock.amount).toBeLessThan(1)
+    while (dock.amount > 0 && frames < 240) { dock.ease(false, 1 / 60); frames++ }
+    expect(dock.amount).toBe(0)
+    expect(dock.pending(false)).toBe(false)
+    dock.park()
+    expect(dock.amount).toBe(1)
   })
 })

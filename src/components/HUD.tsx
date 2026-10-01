@@ -11,7 +11,6 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
   const [active, setActive] = useState(0)
   const [homeVisible, setHomeVisible] = useState(false)
   const [altitudeVisible, setAltitudeVisible] = useState(false)
-  const [returningHome, setReturningHome] = useState(false)
   useEffect(() => {
     if (fallback) {
       const observer = new IntersectionObserver(entries => {
@@ -26,12 +25,13 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
       document.querySelectorAll('[data-checkpoint]').forEach(section => observer.observe(section))
       return () => observer.disconnect()
     }
-    let previousActive = -1
+    let previousAltitude = ''
     return controller.subscribe(frame => {
-      if (altitude.current) altitude.current.textContent = formatAltitude(frame.altitude)
-      setAltitudeVisible(frame.progress > 0)
-      setReturningHome(frame.returningHome)
-      if (previousActive !== frame.active) { previousActive = frame.active; setActive(frame.active) }
+      const value = formatAltitude(frame.altitude)
+      if (altitude.current && value !== previousAltitude) altitude.current.textContent = previousAltitude = value
+      // The climb is shown from the moment the walker has left Home behind.
+      setAltitudeVisible(!frame.sections[0].interactive)
+      setActive(frame.active)
       setHomeVisible(frame.progress > experienceConfig.home.exitRange)
     })
   }, [controller, fallback])
@@ -46,10 +46,10 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
     navigate(0)
   }
   return <>
-    <div className="altitude-hud" data-visible={!fallback && altitudeVisible} aria-hidden={fallback || !altitudeVisible} aria-label="현재 고도"><span className="altitude-number" ref={altitude}>{formatAltitude(checkpoints[0].altitude)}</span><span className="altitude-unit">m</span></div>
+    <div className="altitude-hud" data-visible={!fallback && altitudeVisible} aria-hidden="true"><span className="altitude-number" ref={altitude}>{formatAltitude(checkpoints[0].altitude)}</span><span className="altitude-unit">m</span></div>
     <div className="hud" data-home={!homeVisible} inert={!homeVisible} aria-hidden={!homeVisible}>
     <div className="current-location" aria-live="polite" aria-atomic="true"><span>{checkpoints[active].index}</span><span className="current-rule" /><strong>{checkpoints[active].navigation}</strong></div>
-    <TrailNavigation controller={controller} active={!fallback && returningHome ? -1 : active} fallback={fallback} navigate={navigate} />
+    <TrailNavigation controller={controller} active={active} fallback={fallback} navigate={navigate} />
     </div>
     <button type="button" className="journey-home" data-visible={homeVisible} inert={!homeVisible} tabIndex={homeVisible ? 0 : -1} onClick={returnHome} aria-label="여정의 출발점인 Home으로 돌아가요">
       <svg className="journey-home-icon" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="m3 7.5 6-5 6 5v7H11v-5H7v5H3z" /></svg><span>Home</span>

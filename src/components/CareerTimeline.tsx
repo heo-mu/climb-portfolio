@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
 type NodePosition = { y: number; active: boolean }
 
@@ -29,7 +29,7 @@ export function CareerTimeline({ children }: { children: ReactNode }) {
         {nodes.map((node, index) => <rect key={index} className="career-gap" y={node.y - 7.5} width="18" height="15" fill="black" />)}
       </mask></defs>
       {nodes.length > 1 && <rect className="career-line" y={nodes[0].y} width="1" height={nodes[nodes.length - 1].y - nodes[0].y} mask={`url(#${maskId})`} />}
-      {nodes.map((node, index) => <g key={index} className="career-node" data-active={node.active} style={{ '--entry-start': [.18, .27, .36][index] ?? .36 } as CSSProperties}>
+      {nodes.map((node, index) => <g key={index} className="career-node" data-active={node.active}>
         {node.active && <circle className="career-halo" cy={node.y} r="8.5" />}
         <circle className="career-dot" cy={node.y} r="4" />
       </g>)}

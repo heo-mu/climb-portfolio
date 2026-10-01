@@ -22,8 +22,10 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
     return () => observer.disconnect()
   }, [])
   useLayoutEffect(() => {
+    let drawn = -1
     const update = (route: number) => {
-      currentRoute.current = route
+      if (route === drawn) return
+      drawn = currentRoute.current = route
       const point = map.at(route)
       completed.current?.setAttribute('stroke-dashoffset', String(map.length - point.length))
       marker.current?.setAttribute('cx', String(point.x))

@@ -2,11 +2,11 @@
 import { experienceConfig } from '../config/experience'
 import { noise2, terrainNoise } from './noise'
 import { arrivalCamps } from './campLayout'
-import { ascentRouteControls } from '../data/ascentRoute'
+import { ascentRouteControls, ROUTE_CONTROL_SPACING } from '../data/ascentRoute'
 
 // 29 independent route controls: exit, ice approach, switchbacks, traverse,
 // sheltered camps, exposed ridge and final shoulder. World units are metres.
-export const routeCurve = new THREE.CatmullRomCurve3(ascentRouteControls.map(([x, y], i) => new THREE.Vector3(x, y, -i * 40)), false, 'catmullrom', 0.5)
+export const routeCurve = new THREE.CatmullRomCurve3(ascentRouteControls.map(([x, y], i) => new THREE.Vector3(x, y, -i * ROUTE_CONTROL_SPACING)), false, 'catmullrom', 0.5)
 const depth = experienceConfig.route.depth
 const ease = (a: number, b: number, x: number) => THREE.MathUtils.smoothstep(x, a, b)
 export const seeded = (i: number) => { const n = Math.sin(i * 127.1 + 311.7) * 43758.5453; return n - Math.floor(n) }

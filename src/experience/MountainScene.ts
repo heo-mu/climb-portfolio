@@ -6,7 +6,7 @@ import { experienceConfig as config } from '../config/experience'
 import { alpineWind, worldMood } from './worldMood'
 import { SpatialSectionTransition } from './SpatialSectionTransition'
 
-type SceneOptions = { canvas: HTMLCanvasElement; home: HTMLElement; onLost: () => void }
+type SceneOptions = { canvas: HTMLCanvasElement; root: HTMLElement; onLost: () => void }
 type SnowLayer = { points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>; speed: number; drift: number; fall: number }
 
 export class MountainScene {
@@ -34,7 +34,7 @@ export class MountainScene {
   private lastRender = 0
   private lastProgress = -1
   private lastReducedMotion = false
-  private lastReturningHome = false
+  private poseRoute = -1
   private resizeObserver: ResizeObserver
   private disposed = false
   private wind = { value: 0 }
@@ -44,7 +44,7 @@ export class MountainScene {
   private spatialTransition: SpatialSectionTransition
 
   constructor(private options: SceneOptions) {
-    this.spatialTransition = new SpatialSectionTransition(options.home.closest<HTMLElement>('.expedition')!)
+    this.spatialTransition = new SpatialSectionTransition(options.root)
     const mobile = window.innerWidth < 768
     this.renderer = new THREE.WebGLRenderer({ canvas: options.canvas, antialias: !mobile, alpha: false, powerPreference: 'high-performance' })
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -84,7 +84,11 @@ export class MountainScene {
         this.lastProgress = -1
         if (stage.done) { this.createSnow(mobile); this.resize(); return }
         schedule()
-      } catch { this.options.onLost() }
+      } catch (error) {
+        // Visitors get the reading route; development keeps the actual cause.
+        if (import.meta.env.DEV) console.error('[MountainScene] environment stage failed', error)
+        this.options.onLost()
+      }
     }
     const schedule = () => {
       this.idle = typeof window.requestIdleCallback === 'function'
@@ -147,20 +151,24 @@ export class MountainScene {
 
   update = (frame: ExpeditionFrame) => {
     if (this.disposed) return
-    const moving = frame.progress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || frame.returningHome !== this.lastReturningHome
+    if (frame.route !== this.poseRoute) {
+      this.poseRoute = frame.route
+      cameraPose(frame.route, this.position, this.target)
+      this.camera.position.copy(this.position)
+      this.camera.lookAt(this.target)
+      this.camera.updateMatrixWorld()
+    }
+    // Spatial UI follows every controller frame (docking settles while standing);
+    // it returns immediately when nothing changed.
+    this.spatialTransition.update(this.camera, frame)
+    const moving = frame.progress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion
     if (frame.reducedMotion && !moving) return
     if (!moving && frame.time - this.lastRender < 1 / 30) return
     const elapsed = Math.min(.1, Math.max(0, frame.time - this.lastRender))
     this.lastRender = frame.time
     this.lastProgress = frame.progress
     this.lastReducedMotion = frame.reducedMotion
-    this.lastReturningHome = frame.returningHome
     this.wind.value = frame.reducedMotion ? 0 : frame.time
-    cameraPose(frame.route, this.position, this.target)
-    this.camera.position.copy(this.position)
-    this.camera.lookAt(this.target)
-    this.camera.updateMatrixWorld()
-    this.spatialTransition.update(this.camera, frame)
     const mood = worldMood(frame.route)
     this.sky.copy(this.low).lerp(this.iceSky, mood.ice).lerp(this.basinSky, mood.basin).lerp(this.faceSky, mood.face).lerp(this.snowFog, mood.storm * .85).lerp(this.high, mood.summit)
     this.fog.color.copy(this.sky).lerp(this.snowFog, mood.storm * .5)

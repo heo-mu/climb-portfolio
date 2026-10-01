@@ -13,12 +13,15 @@ export function Scene({ controller, onFallback }: { controller: ScrollController
       try {
         const { MountainScene } = await import('./MountainScene')
         if (cancelled || !canvas.current) return
-        const home = canvas.current.closest('.expedition')!.querySelector<HTMLElement>('.home-hero')!
-        const scene = new MountainScene({ canvas: canvas.current, home, onLost: onFallback })
+        const scene = new MountainScene({ canvas: canvas.current, root: canvas.current.closest<HTMLElement>('.expedition')!, onLost: onFallback })
         const unsubscribe = controller.subscribe(scene.update)
         dispose = () => { unsubscribe(); scene.dispose() }
         setReady(true)
-      } catch { if (!cancelled) onFallback() }
+      } catch (error) {
+        // Visitors get the reading route; development keeps the actual cause.
+        if (import.meta.env.DEV) console.error('[Scene] WebGL initialization failed', error)
+        if (!cancelled) onFallback()
+      }
     }
     // Paint Home before the optional WebGL module begins initialization.
     raf = requestAnimationFrame(() => { raf = requestAnimationFrame(() => { void initialize() }) })

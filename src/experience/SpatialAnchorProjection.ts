@@ -2,14 +2,21 @@ import { Matrix4, PerspectiveCamera, Vector3 } from 'three'
 import { cameraPose } from './terrain'
 import { smoothstep } from './progress'
 
-// The scene keeps looking uphill. This rearward departure projection briefly
-// shows the composition left at camp, using its actual lateral motion and
-// orientation, with longitudinal travel reflected into recession. The world
-// anchor never follows the camera. A normal forward projection would immediately
-// cull a camp anchor behind the camera (or enlarge a plane in front of it).
+// The scene keeps looking uphill. Ahead of an anchor this is an ordinary
+// perspective approach; beyond it, a rearward departure projection briefly
+// shows the composition left at camp, using the walker's actual lateral motion
+// and orientation, with longitudinal travel reflected into recession. The world
+// anchor never follows the camera. A normal forward projection would cull a
+// passed anchor behind the camera (or enlarge a plane in front of it).
 const anchorDepth = 18
-const fogStart = 28
-const fogEnd = 62 // Camp has disappeared before the About reading zone.
+
+/** Distances over which a composition dissolves into the weather. */
+export type AnchorFog = { start: number; end: number }
+// Home's full-bleed statement recedes visibly before dissolving.
+export const homeFog: AnchorFog = { start: 28, end: 62 }
+// Camp panels carry solid artwork that the DOM cannot hide behind terrain:
+// they dissolve sooner, while their silhouette is still small.
+export const campFog: AnchorFog = { start: 14, end: 58 }
 
 export class SpatialAnchorProjection {
   readonly matrix = new Matrix4()
@@ -20,29 +27,23 @@ export class SpatialAnchorProjection {
   blur = 0
   private plane = new Matrix4()
   private viewport = new Matrix4()
-  private departureView = new Matrix4()
+  private view = new Matrix4()
   private forward = new Vector3()
   private displacement = new Vector3()
-  private departurePosition = new Vector3()
-  private homeCamera = new PerspectiveCamera()
+  private eye = new Vector3()
+  private anchorCamera = new PerspectiveCamera()
   private target = new Vector3()
 
-  constructor(private anchorRoute = 0) {}
+  constructor(private anchorRoute = 0, private fog: AnchorFog = homeFog) {}
 
-  resize(camera: PerspectiveCamera, width: number, height: number, captureCamera = false) {
-    if (captureCamera) {
-      this.origin.copy(camera.position)
-      this.homeCamera.position.copy(this.origin)
-      this.homeCamera.quaternion.copy(camera.quaternion)
-    } else {
-      cameraPose(this.anchorRoute, this.origin, this.target)
-      this.homeCamera.position.copy(this.origin)
-      this.homeCamera.lookAt(this.target)
-    }
-    this.homeCamera.updateMatrixWorld()
-    this.homeCamera.getWorldDirection(this.forward)
+  resize(camera: PerspectiveCamera, width: number, height: number) {
+    cameraPose(this.anchorRoute, this.origin, this.target)
+    this.anchorCamera.position.copy(this.origin)
+    this.anchorCamera.lookAt(this.target)
+    this.anchorCamera.updateMatrixWorld()
+    this.anchorCamera.getWorldDirection(this.forward)
     const unitsPerPixel = 2 * anchorDepth * Math.tan(camera.fov * Math.PI / 360) / height
-    this.plane.copy(this.homeCamera.matrixWorld)
+    this.plane.copy(this.anchorCamera.matrixWorld)
       .multiply(new Matrix4().makeTranslation(0, 0, -anchorDepth))
       .multiply(new Matrix4().makeScale(unitsPerPixel, -unitsPerPixel, 1))
       .multiply(new Matrix4().makeTranslation(-width / 2, -height / 2, 0))
@@ -54,17 +55,17 @@ export class SpatialAnchorProjection {
   update(camera: PerspectiveCamera) {
     this.distance = camera.position.distanceTo(this.origin)
     const recession = this.distance / (anchorDepth + this.distance)
-    this.opacity = (1 - .3 * recession) * (1 - smoothstep((this.distance - fogStart) / (fogEnd - fogStart)))
+    this.opacity = (1 - .3 * recession) * (1 - smoothstep((this.distance - this.fog.start) / (this.fog.end - this.fog.start)))
     this.backdrop = 1 - smoothstep(this.distance / 22)
     this.blur = 2 * smoothstep((this.distance - 12) / 40)
     if (this.opacity === 0) return
     this.displacement.copy(camera.position).sub(this.origin)
-    // Ahead of an anchor: ordinary approach. Beyond it: the same rearward
-    // departure used at Home. No input-direction latch; reverse is deterministic.
-    this.departurePosition.copy(camera.position).addScaledVector(this.forward, -2 * Math.max(0, this.displacement.dot(this.forward)))
-    this.departureView.copy(camera.matrixWorld).setPosition(this.departurePosition).invert()
+    // Ahead of an anchor: ordinary approach. Beyond it: the rearward departure.
+    // No input-direction latch, so reverse travel is deterministic.
+    this.eye.copy(camera.position).addScaledVector(this.forward, -2 * Math.max(0, this.displacement.dot(this.forward)))
+    this.view.copy(camera.matrixWorld).setPosition(this.eye).invert()
     this.matrix.copy(this.viewport).multiply(camera.projectionMatrix)
-      .multiply(this.departureView).multiply(this.plane)
+      .multiply(this.view).multiply(this.plane)
     this.matrix.multiplyScalar(1 / anchorDepth)
     // Embed the plane's 3x3 homography in an invertible CSS 4x4 matrix.
     // A zero z row projects correctly mathematically but browsers cull it.
