@@ -1,11 +1,68 @@
 import { describe, expect, it } from 'vitest'
-import { activeCheckpoint, altitudeAt, routeProgress, visibilityAt } from '../src/experience/progress'
+import { activeCheckpoint, advanceSectionUI, altitudeAt, readableCheckpoint, routeProgress, visibilityAt } from '../src/experience/progress'
+import type { SectionUIState } from '../src/experience/progress'
 import { checkpoints } from '../src/data/expedition'
 import { cameraPose, groundHeight, routeCurve, terrainGeometry } from '../src/experience/terrain'
 import { experienceConfig } from '../src/config/experience'
 import { Vector3 } from 'three'
 
 describe('expedition progression', () => {
+  it('enables entering content immediately and completes animation without further scrolling', () => {
+    let state: SectionUIState = { phase: 'hidden', amount: 0, interactive: false }
+    state = advanceSectionUI(state, true, .01)
+    expect(state.phase).toBe('entering')
+    expect(state.interactive).toBe(true)
+    for (let i = 0; i < 50; i++) state = advanceSectionUI(state, true, .01)
+    expect(state).toEqual({ phase: 'active', amount: 1, interactive: true })
+    state = advanceSectionUI(state, false, 0)
+    expect(state.phase).toBe('exiting')
+    expect(state.interactive).toBe(false)
+    for (let i = 0; i < 30; i++) state = advanceSectionUI(state, false, .01)
+    expect(state).toEqual({ phase: 'hidden', amount: 0, interactive: false })
+    expect(advanceSectionUI(state, true, 0, true).phase).toBe('active')
+  })
+  it('keeps approach content completely hidden, including stopping before Projects', () => {
+    expect(visibilityAt(.72, 4)).toBe(0)
+    expect(readableCheckpoint(.72)).toBe(-1)
+    const hidden: SectionUIState = { phase: 'hidden', amount: 0, interactive: false }
+    expect(advanceSectionUI(hidden, false, 10)).toEqual(hidden)
+  })
+  it('retains the last arrived section between camps in either direction', () => {
+    for (let index = 1; index < checkpoints.length; index++) {
+      const midpoint = (checkpoints[index - 1].progress + checkpoints[index].progress) / 2
+      expect(activeCheckpoint(midpoint, index - 1)).toBe(index - 1)
+      expect(activeCheckpoint(midpoint, index)).toBe(index)
+    }
+  })
+  it('activates navigation and readable content on the same spatial entry in both directions', () => {
+    for (let index = 1; index < checkpoints.length; index++) {
+      for (const direction of [-1, 1]) {
+        const edge = checkpoints[index].progress + direction * experienceConfig.content.readableRange
+        if (edge > 1) continue
+        const previous = direction < 0 ? index - 1 : Math.min(index + 1, checkpoints.length - 1)
+        expect(readableCheckpoint(edge + direction * 0.0001)).toBe(-1)
+        expect(activeCheckpoint(edge + direction * 0.0001, previous)).toBe(previous)
+        expect(readableCheckpoint(edge)).toBe(index)
+        expect(activeCheckpoint(edge, previous)).toBe(index)
+        expect(visibilityAt(edge, index)).toBe(1)
+        // Jitter back out of the entered zone does not reactivate a neighbour.
+        expect(activeCheckpoint(edge + direction * 0.0001, index)).toBe(index)
+      }
+    }
+    expect(activeCheckpoint(1, 1)).toBe(5)
+    expect(activeCheckpoint(0, 5)).toBe(0)
+  })
+  it('climbs smoothly from 1240 m to the 6956 m summit without a display-only override', () => {
+    expect(altitudeAt(0)).toBe(1240)
+    expect(altitudeAt(1)).toBe(6956)
+    let previous = altitudeAt(0)
+    for (let i = 1; i <= 2000; i++) {
+      const altitude = altitudeAt(i / 2000)
+      expect(altitude).toBeGreaterThanOrEqual(previous)
+      expect(altitude - previous).toBeLessThan(10)
+      previous = altitude
+    }
+  })
   it('starts exiting Home on the first scroll and reveals About after the overlay clears', () => {
     const exit = experienceConfig.home.exitRange
     expect(visibilityAt(0, 0)).toBe(1)
@@ -14,7 +71,7 @@ describe('expedition progression', () => {
     expect(visibilityAt(exit / 2, 0)).toBeLessThan(1)
     expect(visibilityAt(exit, 0)).toBe(0)
     expect(visibilityAt(exit, 1)).toBe(0)
-    expect(visibilityAt((exit + checkpoints[1].progress) / 2, 1)).toBeGreaterThan(0)
+    expect(visibilityAt((exit + checkpoints[1].progress - experienceConfig.content.readableRange) / 2, 1)).toBe(0)
     expect(visibilityAt(checkpoints[1].progress, 1)).toBe(1)
   })
   it('keeps navigation, altitude and camera rail aligned at every camp', () => {

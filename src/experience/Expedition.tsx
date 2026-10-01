@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigationType } from 'react-router-dom'
 import { Scene } from './Scene'
-import { ScrollController, smoothstep, visibilityAt } from './progress'
+import { ScrollController, smoothstep } from './progress'
 import { checkpoints } from '../data/expedition'
 import { CheckpointSections } from '../components/Sections'
 import { HUD } from '../components/HUD'
@@ -19,9 +19,7 @@ export function Expedition() {
   const [initialProgress] = useState(() => {
     if (location.hash) return checkpoints.find(camp => `#${camp.id}` === location.hash)?.progress ?? 0
     if (navigationType === 'POP') {
-      const saved = routePositions.get(location.key)
-      if (saved !== undefined) return saved
-      try { return Number(sessionStorage.getItem(`ascent:${location.key}`)) || 0 } catch { return 0 }
+      return routePositions.get(location.key) ?? 0
     }
     return 0
   })
@@ -29,8 +27,7 @@ export function Expedition() {
   const onFallback = useCallback(() => setFallback(true), [])
 
   useLayoutEffect(() => {
-    document.title = 'ASCENT — CHANGMU HEO'
-    history.scrollRestoration = 'manual'
+    document.title = 'Heo Chang Mu - Portfolio'
     const sections = Array.from(root.current!.querySelectorAll<HTMLElement>('[data-checkpoint]'))
     if (fallback) {
       sections.forEach(section => { section.removeAttribute('style'); section.inert = false; section.removeAttribute('aria-hidden') })
@@ -47,24 +44,21 @@ export function Expedition() {
     }
     let previousActive = -1
     const start = lastProgress.current || initialProgress
-    const reveals = sections.map((_, index) => visibilityAt(start, index))
     controller.start(start)
     const unsubscribe = controller.subscribe(frame => {
       lastProgress.current = frame.progress
       root.current?.style.setProperty('--journey-progress', String(frame.progress))
       sections.forEach((section, index) => {
-        const desired = visibilityAt(frame.progress, index)
-        const previous = reveals[index]
-        // A brief arrival stagger; departure follows scroll immediately, with no queue or lock.
-        const reveal = frame.reducedMotion || desired < previous ? desired : previous + (desired - previous) * (1 - Math.exp(-frame.delta * 10))
-        reveals[index] = reveal
+        // Panels and navigation consume the same arrival state as the camera controller.
+        const reveal = frame.reveals[index]
         section.style.setProperty('--panel-surface', String(smoothstep(reveal / 0.65)))
         section.style.setProperty('--panel-title', String(smoothstep((reveal - 0.08) / 0.78)))
         section.style.setProperty('--panel-body', String(smoothstep((reveal - 0.22) / 0.78)))
-        if (index === 0) section.style.setProperty('--home-exit', String(1 - desired))
-        section.style.visibility = reveal < 0.005 ? 'hidden' : 'visible'
-        section.dataset.phase = desired < previous ? 'exit' : reveal > 0.98 ? 'read' : 'enter'
-        const interactive = frame.active === index && reveal > 0.45
+        if (index === 0) section.style.setProperty('--home-exit', String(1 - reveal))
+        const state = frame.sections[index]
+        section.style.visibility = index === 0 ? reveal === 0 ? 'hidden' : 'visible' : state.phase === 'hidden' ? 'hidden' : 'visible'
+        section.dataset.phase = state.phase
+        const interactive = state.interactive
         section.inert = !interactive
         section.setAttribute('aria-hidden', String(!interactive))
       })
@@ -78,12 +72,9 @@ export function Expedition() {
   }, [controller, fallback, initialProgress])
 
   useEffect(() => {
-    const save = () => {
+    return () => {
       routePositions.set(location.key, lastProgress.current)
-      try { sessionStorage.setItem(`ascent:${location.key}`, String(lastProgress.current)) } catch { /* Storage is optional. */ }
     }
-    window.addEventListener('pagehide', save)
-    return () => { save(); window.removeEventListener('pagehide', save) }
   }, [location.key])
 
   useEffect(() => {

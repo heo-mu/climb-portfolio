@@ -6,7 +6,8 @@ export const experienceConfig = {
   route: { depth: 1120, damping: 9, scrollScreens: 18 },
   atmosphere: { fogBase: 0.0028, fogRouteVariation: 0.0012, whiteoutPeak: 0.019, summitRelief: 0.0015 },
   lighting: { exposure: 1.04, keyBase: 2.7, keySummit: 0.35, ambientBase: 1.2, ambientRoute: 0.22, fill: 0.38 },
-  content: { readableRange: 0.018, transitionRange: 0.037 },
+  content: { readableRange: 0.024, transitionRange: 0.037 },
+  motion: { sectionEnter: .36, sectionExit: .24 },
   home: { exitRange: 0.022 },
   snow: { nearCount: 220, middleCount: 800, farCount: 1400 },
 }

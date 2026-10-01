@@ -1,38 +1,48 @@
+import figmaIcon from '../../img/tools/Figma.png'
+import photoshopIcon from '../../img/tools/Photoshop.png'
+import illustratorIcon from '../../img/tools/Illustrator.png'
+import claudeIcon from '../../img/tools/claude.png'
+import chatgptIcon from '../../img/tools/ChatGPT.png'
+import fireflyIcon from '../../img/tools/Firefly.png'
+import jiraIcon from '../../img/tools/Jira.png'
+import notionIcon from '../../img/tools/Notion.png'
+import slackIcon from '../../img/tools/Slack.png'
+
 export const checkpoints = [
-  { id: 'base-camp', index: '00', navigation: 'HOME', name: 'BASE CAMP', altitude: 1240, progress: 0, route: 0 },
-  { id: 'about', index: '01', navigation: 'ABOUT', name: 'APPROACH', altitude: 1576, progress: 0.06, route: 0.1 },
-  { id: 'camp-one', index: '02', navigation: 'AI', name: 'CAMP I', altitude: 2080, progress: 0.29, route: 0.25 },
-  { id: 'camp-two', index: '03', navigation: 'TOOLS', name: 'CAMP II', altitude: 2840, progress: 0.52, route: 0.5 },
-  { id: 'high-camp', index: '04', navigation: 'PROJECTS', name: 'HIGH CAMP', altitude: 3620, progress: 0.75, route: 0.75 },
-  { id: 'summit', index: '05', navigation: 'CONTACT', name: 'SUMMIT', altitude: 4208, progress: 1, route: 1 },
+  { id: 'base-camp', index: '00', navigation: 'Home', name: 'Base Camp', altitude: 1240, progress: 0, route: 0 },
+  { id: 'about', index: '01', navigation: 'About', name: 'Approach', altitude: 1887, progress: 0.06, route: 0.1 },
+  { id: 'camp-one', index: '02', navigation: 'AI Workflow', name: 'Camp I', altitude: 2858, progress: 0.29, route: 0.25 },
+  { id: 'camp-two', index: '03', navigation: 'Tools', name: 'Camp II', altitude: 4321, progress: 0.52, route: 0.5 },
+  { id: 'high-camp', index: '04', navigation: 'Projects', name: 'High Camp', altitude: 5824, progress: 0.75, route: 0.75 },
+  { id: 'summit', index: '05', navigation: 'Contact', name: 'Summit', altitude: 6956, progress: 1, route: 1 },
 ] as const
 
 export const profile = {
-  name: 'CHANGMU HEO', role: 'PRODUCT DESIGNER', location: 'SEOUL, KR',
+  name: 'Changmu Heo', role: 'Product Designer', location: 'Seoul, KR',
   introduction: '복잡한 문제에서 명료한 경험으로. 구조와 인터랙션을 연결하는 프로덕트 디자이너 허창무예요.',
-  focus: ['UI / UX', 'INTERACTION', 'DESIGN SYSTEMS'],
-  email: 'hello@example.com',
+  focus: ['UI / UX', 'Interaction', 'Design Systems'],
+  email: 'gjckdan156@naver.com',
+  phone: '010-8524-6956',
   // Replace null with the actual profile URL when real content is available.
   socials: [{ label: 'LinkedIn', url: null }, { label: 'GitHub', url: null }] as { label: string; url: string | null }[],
   contact: '아직 그려지지 않은 다음 경험을 함께 만들어요. 좋은 질문에서 새로운 여정이 시작돼요.',
 }
 
 export const workflow = [
-  { name: 'RESEARCH', label: '질문을 넓혀요', description: '인터뷰와 리서치의 맥락을 정리하고, 놓친 질문을 AI와 함께 찾아요.' },
-  { name: 'STRUCTURE', label: '복잡함에 질서를 만들어요', description: '흩어진 단서를 연결해 정보 구조와 사용자 흐름의 가설을 세워요.' },
-  { name: 'PROTOTYPE', label: '생각을 빠르게 경험해요', description: '여러 인터랙션을 작동하는 프로토타입으로 만들고 가능성을 비교해요.' },
-  { name: 'IMPLEMENT', label: '의도를 구현으로 연결해요', description: '컴포넌트와 상태를 구체화하고, 디자인의 의도가 코드까지 이어지게 해요.' },
-  { name: 'QA', label: '마지막 차이를 살펴요', description: '접근성, 예외 상태, 화면 크기를 점검해 경험의 빈틈을 줄여요.' },
+  { name: '요구사항 나누기', description: ['기획을 기능·사용자·상태·예외로 나눠요.', '화면에 앞서 풀어야 할 문제를 정리해요.'] },
+  { name: '화면의 차이 찾기', description: ['비슷한 화면의 정책·권한·상태를 비교해요.', '중복을 줄이고 필요한 차이에 집중해요.'] },
+  { name: '반복 제작 줄이기', description: ['반복 작업은 코드와 AI로 빠르게 만들어요.', '아낀 시간으로 더 많은 상태를 확인해요.'] },
+  { name: '비주얼 다듬기', description: ['이미지와 아이콘은 AI로 빠르게 탐색해요.', '제품의 톤과 실제 화면에 맞게 다듬어요.'] },
 ]
 
 export const inventory = [
-  { name: 'Figma', category: 'DESIGN', use: '화면부터 시스템까지', detail: '생각을 화면으로 구체화하고, 함께 사용할 디자인 언어를 정리해요.' },
-  { name: 'ChatGPT', category: 'AI / REASONING', use: '질문과 구조의 확장', detail: '문제의 맥락을 정리하고, 다른 관점에서 가설과 사용자 흐름을 검토해요.' },
-  { name: 'Claude', category: 'AI / BUILD', use: '아이디어를 작동하게', detail: '인터랙션의 세부 상태를 탐색하고 작동하는 프로토타입으로 확인해요.' },
-  { name: 'Photoshop', category: 'IMAGE', use: '이미지의 맥락과 디테일', detail: '시각적 맥락에 맞춰 이미지를 편집하고 세부 표현을 조정해요.' },
-  { name: 'Illustrator', category: 'VECTOR', use: '명료한 그래픽 언어', detail: '아이콘과 그래픽을 일관된 형태와 규칙으로 만들어요.' },
-  { name: 'Firefly', category: 'AI / EXPLORATION', use: '시각적 가능성 탐색', detail: '초기 콘셉트의 표현 방향을 비교하고 시각적 가설을 탐색해요.' },
-  { name: 'Jira', category: 'DELIVERY', use: '실행의 우선순위', detail: '할 일과 의존 관계를 정리해 팀의 다음 행동을 명확하게 해요.' },
-  { name: 'Notion', category: 'KNOWLEDGE', use: '결정의 맥락 기록', detail: '리서치부터 의사결정까지, 다시 찾을 수 있는 팀의 기억을 만들어요.' },
-  { name: 'Slack', category: 'COLLABORATION', use: '연결된 협업', detail: '질문과 피드백을 연결하고 함께 만드는 과정의 간격을 줄여요.' },
+  { name: 'Figma', group: 'DESIGN', icon: figmaIcon, use: '화면 · 시스템 설계' },
+  { name: 'Photoshop', group: 'DESIGN', icon: photoshopIcon, use: '이미지 보정 · 리터칭' },
+  { name: 'Illustrator', group: 'DESIGN', icon: illustratorIcon, use: '아이콘 · 벡터 그래픽' },
+  { name: 'ChatGPT', group: 'AI', icon: chatgptIcon, use: '정보 정리 · 대안 탐색' },
+  { name: 'Claude', group: 'AI', icon: claudeIcon, use: '요구사항 · 반복 작업 정리' },
+  { name: 'Adobe Firefly', group: 'AI', icon: fireflyIcon, use: '비주얼 시안 탐색' },
+  { name: 'Jira', group: 'COLLABORATION', icon: jiraIcon, use: '이슈 · 수정 내역 관리' },
+  { name: 'Notion', group: 'COLLABORATION', icon: notionIcon, use: '프로젝트 · 작업 기록' },
+  { name: 'Slack', group: 'COLLABORATION', icon: slackIcon, use: '기획 · 개발 커뮤니케이션' },
 ]

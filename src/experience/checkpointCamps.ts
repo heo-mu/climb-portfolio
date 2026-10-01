@@ -4,6 +4,7 @@ import { arrivalCamps } from './campLayout'
 import { cameraPose, TerrainSurface } from './terrain'
 import { contactPatch, groundPole, HangingRope, seatOnGround } from './grounding'
 import { flagGeometry, flagMaterial } from './flags'
+import { scenePalette } from './scenePalette'
 import { rockGeometry } from './props'
 
 export function arrivalPosition(camp: typeof arrivalCamps[number]) {
@@ -21,7 +22,7 @@ function addEquipment(group: THREE.Group, surface: TerrainSurface, position: THR
   const shell = new RoundedBoxGeometry(.92, .46, .62, 2, .045)
   const material = new THREE.MeshStandardMaterial({ color: '#657374', roughness: .86 })
   cache.add(new THREE.Mesh(shell, material))
-  const webbing = new THREE.MeshStandardMaterial({ color: '#aa9a79', roughness: 1 })
+  const webbing = new THREE.MeshStandardMaterial({ color: scenePalette.webbing, roughness: 1 })
   for (const x of [-.29, .29]) {
     const strap = new THREE.Mesh(new THREE.BoxGeometry(.045, .474, .632), webbing); strap.position.x = x; cache.add(strap)
   }

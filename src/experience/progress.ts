@@ -25,25 +25,37 @@ export function altitudeAt(progress: number) {
   return Math.round(from.altitude + (to.altitude - from.altitude) * local)
 }
 
-export function activeCheckpoint(progress: number) {
-  return checkpoints.reduce((best, item, index) => Math.abs(item.progress - progress) < Math.abs(checkpoints[best].progress - progress) ? index : best, 0)
+// Arrival is spatial, never dependent on a second animation clock.
+export function readableCheckpoint(progress: number) {
+  return checkpoints.findIndex((camp, index) => index === 0
+    ? progress <= 0
+    : Math.abs(progress - camp.progress) <= experienceConfig.content.readableRange + Number.EPSILON)
+}
+
+export function activeCheckpoint(progress: number, previous = 0) {
+  const arrived = readableCheckpoint(progress)
+  // Latch the last arrival during travel: crossing an exit cannot select a neighbour.
+  return arrived < 0 ? previous : arrived
 }
 
 export function visibilityAt(progress: number, checkpoint: number) {
+  if (readableCheckpoint(progress) === checkpoint) return 1
   const camp = checkpoints[checkpoint]
   // Home has no reading plateau: native scroll immediately starts the exit.
   if (camp.id === 'base-camp') return 1 - clamp(progress / experienceConfig.home.exitRange)
-  // Reveal the world before the first content panel enters it.
-  if (camp.id === 'about' && progress < camp.progress) {
-    const start = experienceConfig.home.exitRange
-    const end = camp.progress - experienceConfig.content.readableRange
-    return smoothstep((progress - start) / (end - start))
-  }
-  const distance = Math.abs(progress - camp.progress)
-  return 1 - smoothstep((distance - experienceConfig.content.readableRange) / experienceConfig.content.transitionRange)
+  return 0
 }
 
-export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; delta: number; time: number; reducedMotion: boolean }
+export type SectionUIState = { phase: 'hidden' | 'entering' | 'active' | 'exiting'; amount: number; interactive: boolean }
+
+export function advanceSectionUI(previous: SectionUIState, arrived: boolean, delta: number, reducedMotion = false): SectionUIState {
+  const amount = reducedMotion ? Number(arrived) : clamp(previous.amount + (arrived ? delta / experienceConfig.motion.sectionEnter : -delta / experienceConfig.motion.sectionExit))
+  return { amount, phase: arrived ? amount === 1 ? 'active' : 'entering' : amount === 0 ? 'hidden' : 'exiting', interactive: arrived }
+}
+
+const initialSectionUI = (progress: number) => checkpoints.map((_, index) => advanceSectionUI({ phase: 'hidden', amount: 0, interactive: false }, readableCheckpoint(progress) === index, 0, true))
+
+export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; reveals: number[]; sections: SectionUIState[]; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
 type Listener = (frame: ExpeditionFrame) => void
 
 export class ScrollController {
@@ -56,7 +68,8 @@ export class ScrollController {
   private range = 1
   private media = window.matchMedia('(prefers-reduced-motion: reduce)')
   private started = false
-  private frame: ExpeditionFrame = { progress: 0, route: 0, altitude: 1240, active: 0, delta: 0, time: 0, reducedMotion: this.media.matches }
+  private returningHome = false
+  private frame: ExpeditionFrame = { progress: 0, route: 0, altitude: 1240, active: 0, reveals: checkpoints.map((_, index) => visibilityAt(0, index)), sections: initialSectionUI(0), returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener)
@@ -70,6 +83,14 @@ export class ScrollController {
   }
 
   private onScroll = () => { this.measure() }
+  private cancelReturn = () => {
+    if (!this.returningHome) return
+    this.returningHome = false
+    window.scrollTo({ top: window.scrollY, behavior: 'instant' })
+  }
+  private onKey = (event: KeyboardEvent) => {
+    if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) this.cancelReturn()
+  }
   private onResize = () => {
     const progress = this.target
     cancelAnimationFrame(this.resizeRaf)
@@ -86,7 +107,13 @@ export class ScrollController {
     const reducedMotion = this.media.matches
     this.current += (this.target - this.current) * (reducedMotion ? 1 : 1 - Math.exp(-delta * experienceConfig.route.damping))
     if (Math.abs(this.target - this.current) < 0.00001) this.current = this.target
-    this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), delta, time: time / 1000, reducedMotion }
+    if (this.current === 0) this.returningHome = false
+    const arrival = readableCheckpoint(this.current)
+    const returningHome = this.returningHome
+    const sections = this.frame.sections.map((state, index) => advanceSectionUI(state, arrival === index && (!returningHome || index === 0), delta, reducedMotion))
+    const reveals = sections.map((state, index) => index === 0 ? visibilityAt(this.current, 0) : smoothstep(state.amount))
+    const active = returningHome ? this.frame.active : activeCheckpoint(this.current, this.frame.active)
+    this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active, reveals, sections, returningHome, delta, time: time / 1000, reducedMotion }
     this.listeners.forEach(listener => listener(this.frame))
     this.raf = requestAnimationFrame(this.tick)
   }
@@ -96,16 +123,25 @@ export class ScrollController {
     this.started = true
     this.measure()
     this.current = this.target = clamp(initialProgress)
-    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current) }
+    const sections = initialSectionUI(this.current)
+    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), sections, reveals: sections.map((state, index) => index === 0 ? visibilityAt(this.current, 0) : state.amount) }
     window.scrollTo({ top: this.current * this.range, behavior: 'instant' })
     window.addEventListener('scroll', this.onScroll, { passive: true })
     window.addEventListener('resize', this.onResize)
+    window.addEventListener('wheel', this.cancelReturn, { passive: true })
+    window.addEventListener('touchstart', this.cancelReturn, { passive: true })
+    window.addEventListener('keydown', this.onKey)
     document.addEventListener('visibilitychange', this.onVisibility)
     this.raf = requestAnimationFrame(this.tick)
   }
 
   goTo(progress: number, instant = false) {
     this.measure()
+    this.returningHome = progress === 0 && this.current > 0
+    const returningHome = this.returningHome
+    const sections = returningHome ? this.frame.sections.map(state => advanceSectionUI(state, false, 0, this.media.matches)) : this.frame.sections
+    this.frame = { ...this.frame, sections, returningHome }
+    this.listeners.forEach(listener => listener(this.frame))
     if (instant || this.media.matches) this.current = this.target = clamp(progress)
     window.scrollTo({ top: clamp(progress) * this.range, behavior: instant || this.media.matches ? 'instant' : 'smooth' })
   }
@@ -116,6 +152,9 @@ export class ScrollController {
     cancelAnimationFrame(this.resizeRaf)
     window.removeEventListener('scroll', this.onScroll)
     window.removeEventListener('resize', this.onResize)
+    window.removeEventListener('wheel', this.cancelReturn)
+    window.removeEventListener('touchstart', this.cancelReturn)
+    window.removeEventListener('keydown', this.onKey)
     document.removeEventListener('visibilitychange', this.onVisibility)
   }
 }

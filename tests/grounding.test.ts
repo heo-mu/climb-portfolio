@@ -60,7 +60,7 @@ describe('rendered terrain grounding', () => {
 
   it('places the summit cloth inside the arrival view and to the right of the content panel', () => {
     const world = new THREE.Group(), material = new THREE.MeshBasicMaterial()
-    addSummit(world, surface, { value: 0 }, material, material)
+    addSummit(world, surface, { value: 0 }, material)
     world.updateMatrixWorld(true)
     const camera = new THREE.PerspectiveCamera(64, 1440 / 900, .08, 2400), target = new THREE.Vector3()
     cameraPose(1, camera.position, target); camera.lookAt(target); camera.updateMatrixWorld(true)

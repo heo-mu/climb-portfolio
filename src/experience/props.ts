@@ -27,20 +27,21 @@ export function rockGeometry(seed: number) {
 }
 
 export function iceGeometry(seed: number) {
-  const sides = 13, rings = 9
+  const sides = 7 + seed % 3, rings = 4
   const positions: number[] = [], colors: number[] = [], indices: number[] = []
   const blue = new THREE.Color('#739cae'), snow = new THREE.Color('#cbdde2'), deep = new THREE.Color('#416e85'), color = new THREE.Color()
   for (let ring = 0; ring < rings; ring++) {
     const v = ring / (rings - 1)
     for (let i = 0; i < sides; i++) {
       const angle = i / sides * Math.PI * 2
-      const n = noise2(i * .73 + seed * 17, v * 2.7)
-      const groove = Math.pow(.5 + .5 * Math.cos(angle * 3 + seed * 1.3), 12)
-      const taper = 1 - .28 * v - .22 * v * v
-      const radius = (.85 + n * .28 - groove * (.12 + v * .18)) * taper
-      const crown = 1.7 + noise2(i * .9 + seed * 5, 4) * .8 - groove * .43
-      positions.push(Math.cos(angle) * radius + v * v * (.18 + seed * .025), v * crown, Math.sin(angle) * radius * (.75 + seed * .065) - v * .16)
-      color.copy(blue).lerp(snow, v * v * .72 + n * .16).lerp(deep, groove * .42)
+      const n = noise2(i * .73 + seed * 17, 1)
+      const groove = Math.pow(.5 + .5 * Math.cos(angle * 3 + seed * 1.3), 8)
+      const taper = 1 - v * (.12 + seed * .025)
+      const radius = (.8 + n * .32 - groove * .12) * taper
+      // Broad fractured planes and a sloping crown, instead of fluted cone tips.
+      const crown = 1.65 + Math.cos(angle + seed) * .27 + noise2(i * .9 + seed * 5, 4) * .38
+      positions.push(Math.cos(angle) * radius + v * (.08 + seed * .035), v * crown, Math.sin(angle) * radius * (.75 + seed * .065) - v * .12)
+      color.copy(blue).lerp(snow, v * v * .5 + n * .13).lerp(deep, groove * .2)
       colors.push(color.r, color.g, color.b)
       if (ring < rings - 1) {
         const a = ring * sides + i, b = ring * sides + (i + 1) % sides
@@ -49,7 +50,7 @@ export function iceGeometry(seed: number) {
     }
   }
   const cap = positions.length / 3
-  positions.push(.16, 2.08, -.14); colors.push(snow.r, snow.g, snow.b)
+  positions.push(.08 + seed * .035, 1.78, -.12); colors.push(snow.r, snow.g, snow.b)
   for (let i = 0; i < sides; i++) indices.push(cap, (rings - 1) * sides + (i + 1) % sides, (rings - 1) * sides + i)
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))

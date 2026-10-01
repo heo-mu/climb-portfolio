@@ -13,12 +13,12 @@ export function Home({ onExplore }: HomeProps) {
             <span className="hero-line hero-line-first"><span><span className="hero-reveal">Complexity,</span></span></span>
             <span className="hero-line hero-line-second"><span><span className="hero-reveal">made clear<span className="hero-period">.</span></span></span></span>
           </h1>
-          <div className="home-copy-shell"><p className="home-intro"><span>복잡한 데이터와 흐름을 정리해</span>{' '}<span>이해하기 쉬운 제품으로 바꿔요.</span></p></div>
+          <div className="home-copy-shell"><p className="home-intro">복잡한 데이터와 흐름을 정리해 이해하기 쉬운 제품으로 바꿔요.</p></div>
         </div>
         <div className="home-action-shell">
-          <button type="button" className="home-explore" onClick={onExplore} aria-label="ASCEND — About으로 이동해요">
-            <span>ASCEND</span>
-            <svg viewBox="0 0 24 32" fill="none" aria-hidden="true"><path d="M12.5 2v27M3.5 20l9 9 9-9" /></svg>
+          <button type="button" className="home-explore" onClick={onExplore} aria-label="Ascend — About으로 이동해요">
+            <span>Ascend</span>
+            <svg viewBox="0 0 64 32" fill="none" aria-hidden="true"><path className="ascend-route" d="M2 8H28L52 24M43 24H52V15" /><circle className="ascend-marker" cx="2" cy="8" r="2" /></svg>
           </button>
         </div>
       </div>

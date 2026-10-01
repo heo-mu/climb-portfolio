@@ -30,18 +30,22 @@ export function addLandforms(world: THREE.Group, surface: TerrainSurface, clearC
     const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: ice ? .54 : .98, flatShading: true })
     const mesh = new THREE.InstancedMesh(geometry, material, ice ? 12 : 15)
     mesh.name = ice ? 'glacier-walls' : 'rock-buttresses'
+    let count = 0
     for (let i = 0; i < mesh.count; i++) {
       const seed = i + variant * 129 + (ice ? 770 : 330), u = seeded(seed)
       const t = ice ? .125 + u * .19 : i < 5 ? .025 + u * .065 : .595 + u * .19
       const p = routePoint(t), side = i % 3 === 0 ? -1 : 1
       const width = ice ? 2.4 + seeded(seed + 2) * 3 : 2 + seeded(seed + 2) * 3.5
-      const height = ice ? 3 + seeded(seed + 3) * 5 : 1.5 + seeded(seed + 3) * 3
+      const height = ice ? 2.5 + seeded(seed + 3) * 3.5 : 1.5 + seeded(seed + 3) * 3
       const minimumOffset = 7 + width * 1.5
       let offset = minimumOffset + seeded(seed + 4) * (ice ? 12 : 17)
       while (offset > minimumOffset && surface.normalAt(p.x + side * offset, p.z, width).y < .8) offset = Math.max(minimumOffset, offset - 1)
       const x = clearCamp(p.x + side * offset, p.z, width * 1.5, side)
       dummy.position.set(x, 0, p.z)
       const normal = surface.normalAt(x, p.z, width)
+      // A base contact alone is not enough on a sheer wall: viewed from below,
+      // the whole exposed underside reads as a floating prop. Use real shelves.
+      if (normal.y < .8) continue
       dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0).lerp(normal, ice ? .28 : .65).normalize())
       dummy.rotateY((seeded(seed + 5) - .5) * .7)
       dummy.scale.set(width, height, ice ? 1.4 + u * 2 : 2.5 + u * 3)
@@ -52,8 +56,9 @@ export function addLandforms(world: THREE.Group, surface: TerrainSurface, clearC
         dummy.position.y = Math.min(dummy.position.y, surface.heightAt(x, p.z) - height * .55)
         dummy.updateMatrix()
       }
-      mesh.setMatrixAt(i, dummy.matrix)
+      mesh.setMatrixAt(count++, dummy.matrix)
     }
+    mesh.count = count
     world.add(mesh)
   }
 }

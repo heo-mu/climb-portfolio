@@ -22,10 +22,10 @@ afterAll(() => {
 })
 
 describe('checkpoint arrival dressing', () => {
-  it('embeds new landform feet in the rendered terrain', () => {
+  it('embeds the lower hull of rocks, ice and landforms in the rendered terrain', () => {
     const matrix = new THREE.Matrix4(), point = new THREE.Vector3()
     world.traverse(object => {
-      if (!(object instanceof THREE.InstancedMesh) || !['glacier-walls', 'rock-buttresses'].includes(object.name)) return
+      if (!(object instanceof THREE.InstancedMesh) || !['grounded-rocks', 'grounded-ice', 'glacier-walls', 'rock-buttresses'].includes(object.name)) return
       object.geometry.computeBoundingBox()
       const bounds = object.geometry.boundingBox!, threshold = bounds.min.y + (bounds.max.y - bounds.min.y) * .09
       const vertices = object.geometry.getAttribute('position')
@@ -37,6 +37,34 @@ describe('checkpoint arrival dressing', () => {
           point.fromBufferAttribute(vertices, i).applyMatrix4(matrix)
           expect(point.y - surface.heightAt(point.x, point.z)).toBeLessThan(.005)
         }
+      }
+    })
+  })
+
+  it('places loose boulders on supporting slopes instead of sheer snow walls', () => {
+    const matrix = new THREE.Matrix4(), normal = new THREE.Vector3()
+    let checked = 0
+    world.traverse(object => {
+      if (!(object instanceof THREE.InstancedMesh) || object.name !== 'grounded-rocks') return
+      for (let i = 0; i < object.count; i++) {
+        object.getMatrixAt(i, matrix)
+        normal.set(0, 1, 0).transformDirection(matrix)
+        expect(normal.y).toBeGreaterThanOrEqual(.7999)
+        checked++
+      }
+    })
+    expect(checked).toBeGreaterThan(100)
+  })
+
+  it('does not balance a loose boulder across the sharp base-camp snow crest', () => {
+    const matrix = new THREE.Matrix4(), position = new THREE.Vector3()
+    const crest = new THREE.Vector3(15.14786, 6.61387, -30.95665)
+    world.traverse(object => {
+      if (!(object instanceof THREE.InstancedMesh) || object.name !== 'grounded-rocks') return
+      for (let i = 0; i < object.count; i++) {
+        object.getMatrixAt(i, matrix)
+        position.setFromMatrixPosition(matrix)
+        expect(Math.hypot(position.x - crest.x, position.z - crest.z)).toBeGreaterThan(.1)
       }
     })
   })

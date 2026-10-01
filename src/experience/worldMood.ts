@@ -16,10 +16,10 @@ export function worldMood(route: number) {
   const summit = ramp(.955, .995, t)
   return {
     ice, basin, face, ridge, arrival, storm, summit,
-    key: (2.25 - ice * .65 + basin * .15 + face * .65) * (1 - storm * .68) + summit * .65,
-    ambient: 1.05 + basin * .4 + storm * .12 + arrival * .12,
-    fog: .0038 + ice * .0017 - basin * .0015 + face * .0004 + storm * .016 - summit * .0025,
-    snowDensity: (.38 + ice * .14 + ridge * .14 + storm * .34) * (1 - basin * .65) * (1 - summit * .7) * (1 - arrival * .18),
+    key: (2.25 - ice * .65 + basin * .15 + face * .65) * (1 - storm * .68) + summit * .95,
+    ambient: 1.05 + basin * .4 + storm * .12 + arrival * .12 + summit * .35,
+    fog: .0038 + ice * .0017 - basin * .0015 + face * .0004 + storm * .016 - summit * .0029,
+    snowDensity: (.38 + ice * .14 + ridge * .14 + storm * .34) * (1 - basin * .65) * (1 - summit * .82) * (1 - arrival * .18),
     windSpeed: .7 + face * 1.8 + ridge * 2.2 + storm * 8 - summit * 2,
   }
 }

@@ -24,9 +24,9 @@ export class MountainScene {
   private iceSky = new THREE.Color('#3c627c')
   private basinSky = new THREE.Color('#91aebd')
   private faceSky = new THREE.Color('#527386')
-  private high = new THREE.Color('#adafa4')
+  private high = new THREE.Color('#b9d5e3')
   private snowFog = new THREE.Color('#718795')
-  private horizon = new THREE.Color('#e4c4a1')
+  private horizon = new THREE.Color('#e7e5d4')
   private coldLight = new THREE.Color('#d5e1ee')
   private warmLight = new THREE.Color('#ffe2bd')
   private skyMaterial: THREE.ShaderMaterial
@@ -162,7 +162,7 @@ export class MountainScene {
     this.keyLight.color.copy(this.coldLight).lerp(this.warmLight, mood.summit * .8 + mood.basin * .17)
     this.keyLight.position.set(-180 + mood.face * 85, 240 - mood.face * 95, -90)
     this.ambient.intensity = mood.ambient
-    this.fill.intensity = .3 + mood.basin * .12 - mood.storm * .12
+    this.fill.intensity = .3 + mood.basin * .12 - mood.storm * .12 + mood.summit * .12
     this.snow.forEach(layer => {
       layer.points.visible = !frame.reducedMotion
       // Integrate velocity: changing weather must not teleport the particle field.

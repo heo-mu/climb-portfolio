@@ -8,6 +8,7 @@ import { addCheckpointCamp } from './checkpointCamps'
 import { arrivalCamps, type CampSetup } from './campLayout'
 import { addLandforms } from './landforms'
 import { worldMood } from './worldMood'
+import { scenePalette } from './scenePalette'
 
 const matte = (color: string) => new THREE.MeshStandardMaterial({ color, roughness: .94 })
 
@@ -38,7 +39,7 @@ function addFlags(world: THREE.Group, surface: TerrainSurface, start: THREE.Vect
   const at = (t: number) => curve.getPoint(t)
   world.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 48, .007, 4, false), matte('#7f8074')))
   const positions: number[] = [], colors: number[] = [], indices: number[] = [], flex: number[] = []
-  const palette = ['#c29960', '#ded2b2', '#527c91', '#b17055', '#819079'].map(c => new THREE.Color(c))
+  const palette = scenePalette.prayer.map(c => new THREE.Color(c))
   const length = start.distanceTo(end), count = Math.floor(length / .85)
   for (let i = 0; i < count; i++) {
     if (seeded(seed + i * 5) < .09) continue
@@ -101,9 +102,9 @@ function addRoute(world: THREE.Group, surface: TerrainSurface, poleMaterial: THR
 function addCamp(world: THREE.Group, surface: TerrainSurface, camp: CampSetup, poleMaterial: THREE.Material, shadowMaterial: THREE.Material, wind: { value: number }) {
   const center = routePoint(camp.route), count = camp.tents
   const fly = new THREE.MeshStandardMaterial({ color: camp.tentColor, roughness: .98, vertexColors: true, side: THREE.DoubleSide })
-  const outer = new THREE.MeshStandardMaterial({ color: '#ad7947', roughness: .97, side: THREE.DoubleSide })
+  const outer = new THREE.MeshStandardMaterial({ color: scenePalette.vestibule, roughness: .97, side: THREE.DoubleSide })
   const dark = new THREE.MeshStandardMaterial({ color: '#1d2b31', roughness: 1, side: THREE.DoubleSide })
-  const frameMaterial = matte('#c9b998'), skirtMaterial = matte('#495357')
+  const frameMaterial = matte(scenePalette.seams), skirtMaterial = matte('#495357')
   const geometry = tentGeometry(), vestibule = tentVestibule(), seams = tentSeams(frameMaterial)
   const door = new THREE.Shape()
   door.moveTo(-.58, .08); door.lineTo(.58, .08); door.lineTo(.4, .76); door.quadraticCurveTo(0, 1.33, -.4, .76); door.closePath()
@@ -191,7 +192,7 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
   const poleMaterial = new THREE.MeshStandardMaterial({ color: '#556976', metalness: .35, roughness: .65 })
   const shadowMaterial = contactMaterial()
   const routeAnchors = addRoute(world, surface, poleMaterial)
-  addCamp(world, surface, { id: 'base-camp', route: 0, tents: 5, tentDepth: 14, tentColor: '#b88a50', prayer: true, seed: 0 }, poleMaterial, shadowMaterial, wind)
+  addCamp(world, surface, { id: 'base-camp', route: 0, tents: 5, tentDepth: 14, tentColor: scenePalette.tents[0], prayer: true, seed: 0 }, poleMaterial, shadowMaterial, wind)
   yield
   for (const camp of arrivalCamps) {
     addCamp(world, surface, camp, poleMaterial, shadowMaterial, wind)
@@ -220,18 +221,29 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
 
   const dummy = new THREE.Object3D()
   const rockMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .98, flatShading: true })
-  const iceMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .34, metalness: 0, emissive: '#254255', emissiveIntensity: .055 })
+  const iceMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .68, metalness: 0, flatShading: true, emissive: '#254255', emissiveIntensity: .035 })
   for (let variant = 0; variant < 5; variant++) {
     const rocks = new THREE.InstancedMesh(rockGeometry(variant), rockMaterial, 90)
     const patches: THREE.BufferGeometry[] = []
     const ice = new THREE.InstancedMesh(iceGeometry(variant), iceMaterial, 20)
+    let rockCount = 0, iceCount = 0
     for (let i = 0; i < rocks.count; i++) {
       const seed = i + variant * 733, band = seeded(seed + 2), u = seeded(seed + 83)
       const t = band < .24 ? u * .09 : band < .56 ? .09 + u * .24 : band < .65 ? .36 + u * .17 : .56 + u * .32
       const center = routePoint(t), side = i % 2 ? 1 : -1
       const s = .18 + seeded(seed + 41) ** 2 * (t < .09 ? 1.7 : t > .55 ? 3.7 : 2.6)
       // Full size clearance, not center-only clearance, keeps boulders off the guide rope.
-      const z = center.z, x = clearCamp(center.x + side * (5.4 + s * 2.3 + seeded(seed + 53) ** 2 * 35 + worldMood(t).basin * 32), z, s * 2.3, side)
+      const z = center.z
+      const minimumOffset = 5.4 + s * 2.3
+      let offset = minimumOffset + seeded(seed + 53) ** 2 * 35 + worldMood(t).basin * 32
+      let x = clearCamp(center.x + side * offset, z, s * 2.3, side)
+      // Loose stones need a shelf. Cliff faces use embedded bedrock instead of
+      // isolated boulders balanced against almost vertical snow walls.
+      while (surface.normalAt(x, z, Math.max(.6, s)).y < .8 && offset > minimumOffset) {
+        offset = Math.max(minimumOffset, offset - 2)
+        x = clearCamp(center.x + side * offset, z, s * 2.3, side)
+      }
+      if (surface.normalAt(x, z, Math.max(.6, s)).y < .8) continue
       dummy.position.set(x, 0, z)
       const normal = surface.normalAt(x, z, Math.max(.6, s))
       dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal)
@@ -239,9 +251,18 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
       // Steep walls expose shallow bedrock, rather than balancing whole boulders.
       const exposure = THREE.MathUtils.smoothstep(normal.y, .45, .9)
       dummy.scale.set(s * (1 + seeded(seed + 15) * .5), s * (.8 + seeded(seed + 19) * .45) * (.32 + exposure * .68), s)
+      // A gentle average slope can still hide a sharp crest inside the footprint.
+      // Reject those sites rather than burying the center and exposing a hollow rim.
+      const ground = surface.heightAt(x, z)
+      let relief = 0
+      for (const dx of [-dummy.scale.x, 0, dummy.scale.x]) for (const dz of [-s, 0, s]) {
+        const plane = ground - (normal.x * dx + normal.z * dz) / normal.y
+        relief = Math.max(relief, Math.abs(surface.heightAt(x + dx, z + dz) - plane))
+      }
+      if (relief > s * .3) continue
       seatOnGround(dummy, rocks.geometry, surface, s * (.4 + (1 - exposure) * .15))
-      rocks.setMatrixAt(i, dummy.matrix)
-      rocks.setColorAt(i, new THREE.Color().setScalar(.82 + seeded(seed + 19) * .22))
+      rocks.setMatrixAt(rockCount, dummy.matrix)
+      rocks.setColorAt(rockCount++, new THREE.Color().setScalar(.82 + seeded(seed + 19) * .22))
       patches.push(contactPatch(surface, x, z, s * 3.2, s * 2.8))
     }
     for (let i = 0; i < ice.count; i++) {
@@ -257,14 +278,16 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
       // Seracs grow from the glacier floor; avoid isolated towers on cliff faces.
       while (offset > minimumOffset && surface.normalAt(center.x + side * offset, z, s).y < .82) offset = Math.max(minimumOffset, offset - 1)
       const x = clearCamp(center.x + side * offset, z, s * 1.6, side)
+      if (surface.normalAt(x, z, s).y < .76) continue
       dummy.position.set(x, 0, z)
       const iceNormal = new THREE.Vector3(0, 1, 0).lerp(surface.normalAt(x, z, s), .35).normalize()
       dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), iceNormal)
       dummy.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), seeded(seed + 45) * Math.PI * 2))
       dummy.scale.set(s * (.7 + seeded(seed + 4) * .6), s * (.55 + seeded(seed + 12) * 1.05), s)
       seatOnGround(dummy, ice.geometry, surface, s * .14)
-      ice.setMatrixAt(i, dummy.matrix)
+      ice.setMatrixAt(iceCount++, dummy.matrix)
     }
+    rocks.count = rockCount; ice.count = iceCount
     const shade = new THREE.Mesh(mergeGeometries(patches)!, shadowMaterial)
     patches.forEach(patch => patch.dispose())
     rocks.name = 'grounded-rocks'; ice.name = 'grounded-ice'
@@ -273,7 +296,7 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
   }
   addLandforms(world, surface, clearCamp)
   yield
-  addSummit(world, surface, wind, poleMaterial, shadowMaterial)
+  addSummit(world, surface, wind, shadowMaterial)
   yield
 
   const positions: number[] = [], indices: number[] = []

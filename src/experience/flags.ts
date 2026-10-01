@@ -19,31 +19,21 @@ export function flagGeometry(width: number, height: number, top: number, color: 
   return geometry
 }
 
-export function flagMaterial(wind: { value: number }, transmission = .08, summitStripe = false) {
+export function flagMaterial(wind: { value: number }, transmission = .08, flutter = .065) {
   // A little transmitted light keeps the fabric readable on the unlit side.
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .93, emissive: '#977351', emissiveIntensity: .24 })
   material.onBeforeCompile = shader => {
     shader.uniforms.uFlagWind = wind
     shader.vertexShader = 'uniform float uFlagWind;\n' + shader.vertexShader
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.z += sin(uv.x * 8.0 + uv.y * 2.0 - uFlagWind * 1.2) * 0.065 * uv.x;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>\ntransformed.z += sin(uv.x * 8.0 + uv.y * 2.0 - uFlagWind * 1.2) * ${flutter.toFixed(3)} * uv.x;`)
       .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
         float phase = uv.x * 8.0 + uv.y * 2.0 - uFlagWind * 1.2;
-        objectNormal.x -= (sin(phase) + 8.0 * uv.x * cos(phase)) * 0.05;
-        objectNormal.y -= cos(phase) * 0.13 * uv.x;
+        objectNormal.x -= (sin(phase) + 8.0 * uv.x * cos(phase)) * ${(flutter * .77).toFixed(3)};
+        objectNormal.y -= cos(phase) * ${(flutter * 2).toFixed(3)} * uv.x;
         objectNormal = normalize(objectNormal);
       `)
     shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `outgoingLight += diffuseColor.rgb * ${transmission.toFixed(3)};\n#include <opaque_fragment>`)
-    if (summitStripe) {
-      const accent = new THREE.Color('#D5FF40')
-      shader.vertexShader = 'varying vec2 vFlagUv;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvFlagUv = uv;')
-      shader.fragmentShader = 'varying vec2 vFlagUv;\n' + shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
-        float diagonal = vFlagUv.x + vFlagUv.y * .26;
-        float aa = max(fwidth(diagonal), .001);
-        float stripe = smoothstep(.715-aa,.715+aa,diagonal) * (1.0-smoothstep(.955-aa,.955+aa,diagonal));
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${accent.r},${accent.g},${accent.b}), stripe * .8);
-      `)
-    }
   }
-  material.customProgramCacheKey = () => `alpine-cloth-${transmission}-${summitStripe}`
+  material.customProgramCacheKey = () => `alpine-cloth-${transmission}-${flutter}`
   return material
 }

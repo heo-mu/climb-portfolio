@@ -22,6 +22,8 @@ describe('differentiated ascent', () => {
     expect(summit.fog).toBeLessThan(peak.fog / 5)
     expect(summit.snowDensity).toBeLessThan(peak.snowDensity / 4)
     expect(summit.key).toBeGreaterThan(peak.key * 2)
+    expect(summit.ambient).toBeGreaterThan(worldMood(0).ambient)
+    expect(summit.fog).toBeGreaterThan(0)
     for (const camp of checkpoints) expect(worldMood(camp.route).storm).toBe(0)
   })
 
