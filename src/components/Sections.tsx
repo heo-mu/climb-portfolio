@@ -8,7 +8,7 @@ import { ArrowUpRight } from './ArrowUpRight'
 
 function About() {
   return <>
-    <h1 className="portfolio-heading" id="title-about" tabIndex={-1}>About Me.</h1>
+    <h1 className="portfolio-heading" id="title-about" tabIndex={-1}>About Me<span className="heading-accent">.</span></h1>
     <div className="about-content">
       <CareerTimeline>
         <li>
@@ -42,7 +42,7 @@ function About() {
 function AI() {
   const [active, setActive] = useState(0)
   return <>
-    <h1 className="portfolio-heading" id="title-camp-one" tabIndex={-1}>Working with AI.</h1>
+    <h1 className="portfolio-heading" id="title-camp-one" tabIndex={-1}>Working with AI<span className="heading-accent">.</span></h1>
     <div className="panel-body"><p className="body-copy section-intro">AI로 반복을 줄이고, 더 중요한 판단과 설계에 집중해요.</p>
       <ol className="workflow">{workflow.map((step, index) => <li key={step.name} data-active={active === index}>
         <button className="workflow-step" onClick={() => setActive(index)} onFocus={() => setActive(index)} onPointerEnter={event => { if (event.pointerType === 'mouse') setActive(index) }} aria-expanded={active === index} aria-controls={`workflow-${index}`}>
@@ -56,7 +56,7 @@ function AI() {
 
 function Tools() {
   return <>
-    <h1 className="portfolio-heading" id="title-camp-two" tabIndex={-1}>Tools I use.</h1>
+    <h1 className="portfolio-heading" id="title-camp-two" tabIndex={-1}>Tools I Use<span className="heading-accent">.</span></h1>
     <p className="body-copy section-intro">필요한 도구를 연결해 더 빠르게 만들고, 더 정확하게 다듬어요.</p>
     <div className="panel-body inventory">
       {(['DESIGN', 'AI', 'COLLABORATION'] as const).map(group => <div className="tool-group" key={group}>
@@ -78,7 +78,7 @@ function Projects() {
   const [active, setActive] = useState(0)
   const project = projects[active]
   return <>
-    <h1 className="portfolio-heading" id="title-high-camp" tabIndex={-1}>Selected Work.</h1>
+    <h1 className="portfolio-heading" id="title-high-camp" tabIndex={-1}>Selected Work<span className="heading-accent">.</span></h1>
     <p className="body-copy section-intro">복잡한 문제를 구조화하고 실제 제품으로 만든 작업을 모았어요.</p>
     <div className="panel-body projects-layout">
       <div className="project-index" aria-label="프로젝트 선택">{projects.map((item, index) => <button type="button" key={item.slug} onClick={() => setActive(index)} className="project-row" data-active={active === index} aria-pressed={active === index} aria-controls="selected-project">
@@ -104,7 +104,7 @@ function Projects() {
 
 function Contact() {
   return <>
-    <h1 className="portfolio-heading" id="title-summit" tabIndex={-1}>Work Together</h1>
+    <h1 className="portfolio-heading" id="title-summit" tabIndex={-1}>Work Together<span className="heading-accent">!</span></h1>
     <p className="body-copy section-intro">복잡한 문제를 구조화하고 제품으로 풀어내는 팀과 함께하고 싶어요.</p>
     <div className="panel-body contact-content">
       <div className="contact-details">

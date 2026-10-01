@@ -44,19 +44,23 @@ export function Expedition() {
     }
     let previousActive = -1
     const start = lastProgress.current || initialProgress
+    sections[0].style.visibility = start === 0 ? 'visible' : 'hidden'
     controller.start(start)
     const unsubscribe = controller.subscribe(frame => {
       lastProgress.current = frame.progress
       root.current?.style.setProperty('--journey-progress', String(frame.progress))
       sections.forEach((section, index) => {
         // Panels and navigation consume the same arrival state as the camera controller.
-        const reveal = frame.reveals[index]
-        section.style.setProperty('--panel-surface', String(smoothstep(reveal / 0.65)))
-        section.style.setProperty('--panel-title', String(smoothstep((reveal - 0.08) / 0.78)))
-        section.style.setProperty('--panel-body', String(smoothstep((reveal - 0.22) / 0.78)))
-        if (index === 0) section.style.setProperty('--home-exit', String(1 - reveal))
         const state = frame.sections[index]
-        section.style.visibility = index === 0 ? reveal === 0 ? 'hidden' : 'visible' : state.phase === 'hidden' ? 'hidden' : 'visible'
+        // Home's visual departure is owned by the rendered camera projection.
+        // Section state still owns its input/focus eligibility at Base Camp.
+        if (index !== 0) {
+          const reveal = frame.reveals[index]
+          section.style.setProperty('--panel-surface', String(smoothstep(reveal / 0.65)))
+          section.style.setProperty('--panel-title', String(smoothstep((reveal - 0.08) / 0.78)))
+          section.style.setProperty('--panel-body', String(smoothstep((reveal - 0.22) / 0.78)))
+          section.style.visibility = state.phase === 'hidden' ? 'hidden' : 'visible'
+        }
         section.dataset.phase = state.phase
         const interactive = state.interactive
         section.inert = !interactive

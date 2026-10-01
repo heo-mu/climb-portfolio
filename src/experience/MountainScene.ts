@@ -4,8 +4,9 @@ import { environmentStages } from './environment'
 import type { ExpeditionFrame } from './progress'
 import { experienceConfig as config } from '../config/experience'
 import { alpineWind, worldMood } from './worldMood'
+import { HomeSpatialTransition } from './HomeSpatialTransition'
 
-type SceneOptions = { canvas: HTMLCanvasElement; onLost: () => void }
+type SceneOptions = { canvas: HTMLCanvasElement; home: HTMLElement; onLost: () => void }
 type SnowLayer = { points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>; speed: number; drift: number; fall: number }
 
 export class MountainScene {
@@ -32,14 +33,17 @@ export class MountainScene {
   private skyMaterial: THREE.ShaderMaterial
   private lastRender = 0
   private lastProgress = -1
+  private lastReducedMotion = false
   private resizeObserver: ResizeObserver
   private disposed = false
   private wind = { value: 0 }
   private stages: Generator<void, void, unknown>
   private deferred = 0
   private idle = false
+  private homeTransition: HomeSpatialTransition
 
   constructor(private options: SceneOptions) {
+    this.homeTransition = new HomeSpatialTransition(options.home)
     const mobile = window.innerWidth < 768
     this.renderer = new THREE.WebGLRenderer({ canvas: options.canvas, antialias: !mobile, alpha: false, powerPreference: 'high-performance' })
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -133,6 +137,7 @@ export class MountainScene {
     this.camera.aspect = width / height
     this.camera.fov = mobile ? config.camera.mobileFov : config.camera.desktopFov
     this.camera.updateProjectionMatrix()
+    this.homeTransition.resize(this.camera, width, height)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.25 : 1.6))
     this.renderer.setSize(width, height, false)
     this.snow.forEach(layer => { layer.points.material.uniforms.uHeight.value = height * this.renderer.getPixelRatio() })
@@ -141,16 +146,19 @@ export class MountainScene {
 
   update = (frame: ExpeditionFrame) => {
     if (this.disposed) return
-    const moving = Math.abs(frame.progress - this.lastProgress) > 0.000001
+    const moving = frame.progress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion
     if (frame.reducedMotion && !moving) return
     if (!moving && frame.time - this.lastRender < 1 / 30) return
     const elapsed = Math.min(.1, Math.max(0, frame.time - this.lastRender))
     this.lastRender = frame.time
     this.lastProgress = frame.progress
+    this.lastReducedMotion = frame.reducedMotion
     this.wind.value = frame.reducedMotion ? 0 : frame.time
     cameraPose(frame.route, this.position, this.target)
     this.camera.position.copy(this.position)
     this.camera.lookAt(this.target)
+    this.camera.updateMatrixWorld()
+    this.homeTransition.update(this.camera, frame)
     const mood = worldMood(frame.route)
     this.sky.copy(this.low).lerp(this.iceSky, mood.ice).lerp(this.basinSky, mood.basin).lerp(this.faceSky, mood.face).lerp(this.snowFog, mood.storm * .85).lerp(this.high, mood.summit)
     this.fog.color.copy(this.sky).lerp(this.snowFog, mood.storm * .5)
@@ -181,6 +189,7 @@ export class MountainScene {
 
   dispose() {
     this.disposed = true
+    this.homeTransition.dispose()
     if (this.idle) window.cancelIdleCallback(this.deferred)
     else window.clearTimeout(this.deferred)
     this.stages.return()
