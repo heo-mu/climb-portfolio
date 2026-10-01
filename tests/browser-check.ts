@@ -256,6 +256,77 @@ try {
       await expectArrived(page, 3, { atCenter: false })
     })
 
+    await step('HOME control: hit target and full return from every camp, mid-gesture at the summit, keyboard', async () => {
+      const homeCenter = async () => { const box = (await page.locator('.journey-home').boundingBox())!; return [box.x + box.width / 2, box.y + box.height / 2] as const }
+      /** Panel exit, location, altitude and trail all follow one continuous descent to Home. */
+      const expectReturn = async (from: number) => {
+        const descent = await page.evaluate(from => new Promise<{ exitMs: number; homeMs: number; altitudes: number[]; dash: number[] }>(resolve => {
+          const section = document.querySelector(`[data-checkpoint="${from}"]`)!, completed = document.querySelector('.trail-completed')!
+          const start = performance.now(), altitudes: number[] = [], dash: number[] = []
+          let exitMs = -1, homeMs = -1
+          const tick = () => {
+            const t = performance.now() - start
+            if (exitMs < 0 && section.hasAttribute('inert')) exitMs = t
+            if (homeMs < 0 && document.querySelector('.current-location strong')!.textContent === 'Home') homeMs = t
+            altitudes.push(Number(document.querySelector('.altitude-number')!.textContent))
+            dash.push(Number(completed.getAttribute('stroke-dashoffset')))
+            if (t < 700) requestAnimationFrame(tick); else resolve({ exitMs, homeMs, altitudes, dash })
+          }
+          requestAnimationFrame(tick)
+        }), from)
+        const name = camps[from].navigation
+        expect(descent.exitMs, `${name} panel leaves input at once`).toBeGreaterThanOrEqual(0)
+        expect(descent.exitMs).toBeLessThan(100)
+        expect(descent.homeMs, `${name}: location names Home at once`).toBeGreaterThanOrEqual(0)
+        expect(descent.homeMs).toBeLessThan(200)
+        expect(descent.altitudes.every((value, i) => !i || value <= descent.altitudes[i - 1]), `${name}: altitude only falls`).toBe(true)
+        expect(descent.altitudes.at(-1)!, `${name}: altitude falls`).toBeLessThan(descent.altitudes[0])
+        expect(descent.dash.every((value, i) => !i || value >= descent.dash[i - 1] - 1e-6), `${name}: trail only retracts`).toBe(true)
+        await expectArrived(page, 0)
+        await expect(page.locator('.journey-home')).toHaveAttribute('data-visible', 'false')
+      }
+      for (const camp of camps.slice(1)) {
+        await goToCamp(page, camp.order)
+        const [x, y] = await homeCenter()
+        expect(await page.evaluate(([x, y]) => !!document.elementFromPoint(x, y)?.closest('.journey-home'), [x, y] as const), `HOME is the hit target at ${camp.navigation}`).toBe(true)
+        await page.mouse.click(x, y)
+        await expectReturn(camp.order)
+      }
+      // Reaching the summit with a fling: the page is pinned at the bottom while the
+      // gesture keeps emitting wheel events. Pressing HOME then must still return.
+      await goToCamp(page, 5)
+      const [x, y] = await homeCenter()
+      await page.mouse.move(900, 500)
+      const trailing = (async () => { for (let i = 0; i < 30; i++) { await page.mouse.wheel(0, 30); await page.waitForTimeout(16) } })()
+      await page.waitForTimeout(120)
+      await page.mouse.click(x, y)
+      await trailing
+      await expect(page.locator('[data-checkpoint="0"]')).toHaveAttribute('aria-hidden', 'false', { timeout: 15000 })
+      await expect(page.locator('.current-location strong')).toHaveText(camps[0].navigation)
+      // Keyboard: Tab to the control, then Enter or Space.
+      for (const key of ['Enter', ' ']) {
+        await goToCamp(page, 5)
+        for (let i = 0; i < 20 && !await page.evaluate(() => document.activeElement?.classList.contains('journey-home')); i++) await page.keyboard.press('Tab')
+        await expect(page.locator('.journey-home')).toBeFocused()
+        await page.keyboard.press(key)
+        await expectReturn(5)
+      }
+    })
+
+    await step('wheel over the Projects panel continues the journey (no scroll trap)', async () => {
+      for (const [width, height] of [[1440, 900], [1366, 768]]) {
+        await page.setViewportSize({ width, height })
+        await goToCamp(page, 4)
+        const box = (await page.locator('#high-camp .panel-content').boundingBox())!
+        await page.mouse.move(box.x + box.width * .6, box.y + box.height * .5)
+        const before = await page.evaluate(() => scrollY)
+        for (let i = 0; i < 12; i++) { await page.mouse.wheel(0, 120); await page.waitForTimeout(60) }
+        await expect.poll(() => page.evaluate(() => scrollY), { timeout: 3000, message: `${width}x${height}: page moves on past Projects` }).toBeGreaterThan(before + 400)
+      }
+      await page.setViewportSize(desktop)
+      await settle(page)
+    })
+
     await step('Projects: selection, detail round trip and restored selection', async () => {
       await goToCamp(page, 4)
       for (const [index, project] of projects.entries()) {

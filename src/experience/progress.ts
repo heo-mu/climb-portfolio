@@ -97,6 +97,9 @@ export function sectionUIAt(progress: number, returningHome = false): readonly S
   return states
 }
 
+/** Silence (ms) that ends a wheel gesture; momentum and free-spinning wheels fire far more often. */
+const WHEEL_GESTURE_GAP = 180
+
 /** `destination`: the camp whose dock holds the scroll target, where the walker will stand. */
 export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
 type Listener = (frame: ExpeditionFrame) => void
@@ -142,6 +145,20 @@ export class ScrollController {
     clearTimeout(this.returnWatch)
     this.returnWatch = window.setTimeout(() => { if (this.returningHome && this.target > 0) this.cancelReturn() }, 250)
   }
+  private lastWheel = -Infinity
+  private trailingWheel = false
+  private onWheel = (event: WheelEvent) => {
+    const continuing = event.timeStamp - this.lastWheel < WHEEL_GESTURE_GAP
+    this.lastWheel = event.timeStamp
+    if (!this.returningHome) return
+    // HOME pressed while a wheel gesture was still under way: a fling pinned
+    // against the summit keeps emitting wheel events (trackpad momentum, a
+    // free-spinning wheel) without moving the page. That tail is not the visitor
+    // taking over the return; a fresh gesture after a pause is.
+    if (this.trailingWheel && continuing) return
+    this.trailingWheel = false
+    this.cancelReturn()
+  }
   private cancelReturn = () => {
     if (!this.returningHome) return
     this.returningHome = false
@@ -167,8 +184,12 @@ export class ScrollController {
     const delta = this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.05) : 1 / 60
     this.lastTime = time
     const reducedMotion = this.media.matches
-    this.current += (this.target - this.current) * (reducedMotion ? 1 : 1 - Math.exp(-delta * experienceConfig.route.damping))
-    if (Math.abs(this.target - this.current) < 0.00001) this.current = this.target
+    let next = this.current + (this.target - this.current) * (reducedMotion ? 1 : 1 - Math.exp(-delta * experienceConfig.route.damping))
+    if (Math.abs(this.target - next) < 0.00001) next = this.target
+    // A return only descends: a camera still easing up to the camp it is leaving
+    // holds and turns as soon as the scroll passes below it, so the trail and the
+    // altitude reverse at once instead of overshooting first.
+    this.current = this.returningHome ? Math.min(this.current, next) : next
     // The return ends on arriving Home, not on the last sub-pixel of camera easing.
     if (this.returningHome && this.target === 0 && readableCheckpoint(this.current) === 0) this.returningHome = false
     const returningHome = this.returningHome
@@ -191,7 +212,7 @@ export class ScrollController {
     window.scrollTo({ top: this.current * this.range, behavior: 'instant' })
     window.addEventListener('scroll', this.onScroll, { passive: true })
     window.addEventListener('resize', this.onResize)
-    window.addEventListener('wheel', this.cancelReturn, { passive: true })
+    window.addEventListener('wheel', this.onWheel, { passive: true })
     window.addEventListener('touchstart', this.cancelReturn, { passive: true })
     window.addEventListener('keydown', this.onKey)
     document.addEventListener('visibilitychange', this.onVisibility)
@@ -201,6 +222,7 @@ export class ScrollController {
   goTo(progress: number, instant = false) {
     this.measure()
     this.returningHome = progress === 0 && this.current > 0
+    this.trailingWheel = this.returningHome && performance.now() - this.lastWheel < WHEEL_GESTURE_GAP
     this.frame = { ...this.frame, returningHome: this.returningHome, sections: sectionUIAt(this.current, this.returningHome), active: this.returningHome ? 0 : this.frame.active }
     this.emit()
     if (instant || this.media.matches) this.current = this.target = clamp(progress)
@@ -215,7 +237,7 @@ export class ScrollController {
     clearTimeout(this.returnWatch)
     window.removeEventListener('scroll', this.onScroll)
     window.removeEventListener('resize', this.onResize)
-    window.removeEventListener('wheel', this.cancelReturn)
+    window.removeEventListener('wheel', this.onWheel)
     window.removeEventListener('touchstart', this.cancelReturn)
     window.removeEventListener('keydown', this.onKey)
     document.removeEventListener('visibilitychange', this.onVisibility)
