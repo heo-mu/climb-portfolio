@@ -99,7 +99,7 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 .career-current { font-size: 10px; line-height: 16px; font-weight: 500; color: var(--color-accent); }
 .career-entry p { margin-top: 6px; font-size: 14px; font-weight: 400; line-height: 24px; letter-spacing: -.015em; color: #b6c2c5; word-break: keep-all; overflow-wrap: break-word; }
 .career-entry strong { color: #e1e7e5; font-weight: 600; }
-.heading-accent { color: var(--color-accent); }
+.heading-accent { color: currentColor; }
 .about-stats { --stats-reveal: clamp(0, calc((var(--panel-body) - .5) * 2), 1); display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 12px 28px; margin: 24px 0 0; padding-top: 18px; border-top: 1px solid var(--rule); opacity: var(--stats-reveal); transform: translateY(calc((1 - var(--stats-reveal)) * 8px)); }
 .about-stats > div { min-width: 0; display: flex; align-items: baseline; gap: 16px; }
 .about-stats > div:first-child { grid-row: span 2; flex-direction: column; justify-content: center; gap: 6px; }
