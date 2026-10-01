@@ -4,6 +4,18 @@ import { rockGeometry } from './props'
 import { cameraPose, TerrainSurface } from './terrain'
 import { flagGeometry, flagMaterial } from './flags'
 import { scenePalette } from './scenePalette'
+import { alpineWind } from './worldMood'
+
+/** Bounded multi-frequency flutter; the entire hoist edge remains anchored. */
+export function summitClothOffset(u: number, v: number, time: number) {
+  const envelope = u * u
+  const gust = .82 + .18 * Math.sin(time * .73 + Math.sin(time * .31))
+  const wave = u * 7.5 - time * 4.6 + v * 1.3
+  return {
+    y: envelope * (.045 * Math.sin(wave * 1.3 + time * .6) + .016 * Math.sin(u * 17 - time * 8.1)),
+    z: envelope * gust * (.24 * Math.sin(wave) + .07 * Math.sin(u * 13.2 - time * 7.3 - v * 2)),
+  }
+}
 
 export function summitFlagGeometry() {
   const geometry = flagGeometry(1.5, .92, 4.18, scenePalette.summit, .06)
@@ -30,10 +42,27 @@ export function addSummit(world: THREE.Group, surface: TerrainSurface, wind: { v
     const collar = new THREE.Mesh(new THREE.CylinderGeometry(.027, .027, .035, 12), metal)
     collar.position.y = height; summit.add(collar)
   }
-  const cloth = flagMaterial(wind, .12, .03)
+  const cloth = flagMaterial(wind, .12, 0)
   cloth.vertexColors = false; cloth.color.set(scenePalette.summit)
   cloth.emissive.set(scenePalette.summit); cloth.emissiveIntensity = .035
   const flag = new THREE.Mesh(summitFlagGeometry(), cloth); flag.name = 'summit-flag'
+  // Align the cloth's downstream axis with the same world wind used by snow.
+  flag.rotation.y = -Math.atan2(alpineWind.z, alpineWind.x)
+  const positions = flag.geometry.getAttribute('position') as THREE.BufferAttribute
+  const rest = positions.array.slice(), uv = flag.geometry.getAttribute('uv')
+  positions.setUsage(THREE.DynamicDrawUsage)
+  flag.geometry.boundingSphere!.radius += .36
+  let lastTime = -1
+  flag.onBeforeRender = () => {
+    if (wind.value === lastTime) return
+    lastTime = wind.value
+    for (let i = 0; i < positions.count; i++) {
+      const offset = summitClothOffset(uv.getX(i), uv.getY(i), wind.value)
+      positions.setXYZ(i, rest[i * 3], rest[i * 3 + 1] + offset.y, rest[i * 3 + 2] + offset.z)
+    }
+    positions.needsUpdate = true
+    flag.geometry.computeVertexNormals()
+  }
   summit.add(mast, cap, flag); world.add(summit)
   summit.updateMatrixWorld(true)
 

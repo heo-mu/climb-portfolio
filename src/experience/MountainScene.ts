@@ -3,7 +3,7 @@ import { cameraPose, seeded } from './terrain'
 import { environmentStages } from './environment'
 import type { ExpeditionFrame } from './progress'
 import { experienceConfig as config } from '../config/experience'
-import { worldMood } from './worldMood'
+import { alpineWind, worldMood } from './worldMood'
 
 type SceneOptions = { canvas: HTMLCanvasElement; onLost: () => void }
 type SnowLayer = { points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>; speed: number; drift: number; fall: number }
@@ -101,11 +101,11 @@ export class MountainScene {
         uniforms: { uTime: { value: 0 }, uWind: { value: 1 }, uDrift: { value: 0 }, uFall: { value: 0 }, uStorm: { value: 0 }, uDensity: { value: .4 }, uLimit: { value: [14, 8, 5][layer] }, uCamera: { value: this.camera.position }, uBox: { value: boxes[layer] }, uSize: { value: sizes[layer] }, uHeight: { value: 900 }, uOpacity: { value: 0.5 } },
         vertexShader: `uniform float uTime, uWind, uDrift, uFall, uBox, uSize, uHeight, uDensity, uLimit, uStorm; uniform vec3 uCamera; varying float vAlpha;
           void main(){
-            vec3 wind = vec3(uDrift + sin(uTime * 0.45 + position.y) * uWind, -uFall, uDrift * 0.22 + cos(uTime * 0.3 + position.x) * uWind * 0.4);
+            vec3 wind = vec3(uDrift * ${alpineWind.x.toFixed(2)} + sin(uTime * 0.45 + position.y) * uWind, -uFall, uDrift * ${alpineWind.z.toFixed(2)} + cos(uTime * 0.3 + position.x) * uWind * 0.4);
             vec3 p = mod(position + wind - uCamera + uBox * 0.5, uBox) - uBox * 0.5 + uCamera;
             vec4 mv = modelViewMatrix * vec4(p,1.0);
             gl_Position = projectionMatrix * mv;
-            gl_PointSize = clamp(uSize * (0.65 + fract(position.x * 1.7) * 0.7) * uHeight * (1.0 + uStorm*.7) / max(0.5,-mv.z), 1.0 + uStorm, uLimit + uStorm * 3.0);
+            gl_PointSize = clamp(uSize * (0.65 + fract(position.x * 1.7) * 0.7) * uHeight * (1.0 + uStorm * ${[1.25, .85, .45][layer]}) / max(0.5,-mv.z), 1.0 + uStorm, uLimit + uStorm * ${[9, 5, 2][layer]}.0);
             float density = 1.0-smoothstep(uDensity-.06,uDensity+.06,fract(position.x*2.17+position.z*.19));
             vAlpha = density * smoothstep(1.0,3.0,-mv.z) * (1.0-smoothstep(uBox*0.35,uBox*0.66,length(p-uCamera)));
           }`,
@@ -163,15 +163,15 @@ export class MountainScene {
     this.keyLight.position.set(-180 + mood.face * 85, 240 - mood.face * 95, -90)
     this.ambient.intensity = mood.ambient
     this.fill.intensity = .3 + mood.basin * .12 - mood.storm * .12 + mood.summit * .12
-    this.snow.forEach(layer => {
+    this.snow.forEach((layer, index) => {
       layer.points.visible = !frame.reducedMotion
       // Integrate velocity: changing weather must not teleport the particle field.
-      layer.drift += elapsed * mood.windSpeed * layer.speed
-      layer.fall += elapsed * (1.05 + mood.storm * .8) * layer.speed
+      layer.drift += elapsed * mood.windSpeed * layer.speed * (1 + mood.storm * [ .55, .15, 0 ][index])
+      layer.fall += elapsed * (1.05 + mood.storm * 1.1) * layer.speed
       const uniforms = layer.points.material.uniforms
       uniforms.uTime.value = frame.time * layer.speed
       uniforms.uDrift.value = layer.drift; uniforms.uFall.value = layer.fall
-      uniforms.uWind.value = .25 + mood.storm * .8
+      uniforms.uWind.value = .25 + mood.storm * 1.2
       uniforms.uStorm.value = mood.storm
       uniforms.uDensity.value = mood.snowDensity
       uniforms.uOpacity.value = .55 + mood.storm * .4 - mood.summit * .2

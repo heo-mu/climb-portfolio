@@ -3,8 +3,26 @@ import { checkpoints } from '../src/data/expedition'
 import { worldMood } from '../src/experience/worldMood'
 import { groundHeight, routePoint } from '../src/experience/terrain'
 import { escarpmentGeometry } from '../src/experience/landforms'
+import { summitClothOffset } from '../src/experience/summit'
 
 describe('differentiated ascent', () => {
+  it('keeps the flag attached and its free edge bounded throughout gusts', () => {
+    let outerMotion = 0
+    for (let time = 0; time <= 12; time += .025) {
+      for (const v of [0, .5, 1]) {
+        const anchor = summitClothOffset(0, v, time)
+        expect(Math.abs(anchor.y)).toBe(0)
+        expect(Math.abs(anchor.z)).toBe(0)
+        const outer = summitClothOffset(1, v, time)
+        const next = summitClothOffset(1, v, time + .025)
+        expect(Math.abs(outer.z)).toBeLessThanOrEqual(.31)
+        expect(Math.abs(outer.y)).toBeLessThanOrEqual(.061)
+        expect(Math.abs(next.z - outer.z)).toBeLessThan(.05)
+        outerMotion = Math.max(outerMotion, Math.abs(outer.z))
+      }
+    }
+    expect(outerMotion).toBeGreaterThan(.2)
+  })
   it('opens the basin and exposes the face without changing the walking corridor', () => {
     const basin = routePoint(.46), glacier = routePoint(.2), face = routePoint(.69)
     expect(groundHeight(basin.x + 30, basin.z) - basin.y).toBeLessThan(5)
