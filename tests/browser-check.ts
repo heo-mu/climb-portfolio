@@ -173,10 +173,29 @@ const layoutIssues = (page: Page, index: number) => page.evaluate(index => {
   return issues
 }, index)
 
+/** Landscape screens show the selected project on its 3D structure: on view, clear of the panel and the HUD. */
+async function exhibitIssues(page: Page, slug: string) {
+  if (await page.locator('.expedition').getAttribute('data-showcase') !== '3d') return []
+  await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', slug)
+  return page.evaluate(() => {
+    const link = document.querySelector<HTMLElement>('.showcase-link')!, display = link.getBoundingClientRect()
+    if (getComputedStyle(link).visibility !== 'visible') return ['exhibit not on view']
+    const hit = (box: DOMRect) => display.left < box.right && display.right > box.left && display.top < box.bottom && display.bottom > box.top
+    const issues: string[] = []
+    if (hit(document.querySelector('#high-camp .panel-content')!.getBoundingClientRect())) issues.push('exhibit under the panel')
+    if (['.altitude-hud', '.journey-home', '.current-location', '.trail-checkpoint .nav-label'].some(selector => Array.from(document.querySelectorAll(selector)).some(element => hit(element.getBoundingClientRect())))) issues.push('exhibit under the HUD')
+    if (display.left < 0 || display.top < 0 || display.right > innerWidth || display.bottom > innerHeight) issues.push('exhibit cut by the viewport')
+    return issues
+  })
+}
+
 try {
   // ───────────────────────────── Journey (desktop) ─────────────────────────────
   {
     const { context, page } = await open()
+    // The project captures (the only WebP assets) load near Projects, never with Home.
+    const captureRequests: string[] = []
+    page.on('request', request => { if (/\.webp(\?|$)/.test(request.url())) captureRequests.push(request.url()) })
     await page.goto(base, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('#title-base-camp')).toBeVisible()
     await ready(page)
@@ -185,10 +204,12 @@ try {
     const homeGeometry = () => page.evaluate(() => ['.home-identity', '#title-base-camp', '.home-intro', '.home-explore'].map(selector => { const r = document.querySelector(selector)!.getBoundingClientRect(); return [r.left, r.top, r.width, r.height] }))
     const initialHome = await homeGeometry()
 
-    await step('first paint: Home settled, altitude and trail hidden, no internal scroll', async () => {
+    await step('first paint: Home settled, altitude and trail hidden, no internal scroll, no project captures', async () => {
       await expectArrived(page, 0)
       await expect(page.locator('.hud')).toHaveAttribute('data-home', 'true')
       expect(await page.evaluate(() => document.documentElement.scrollTop)).toBe(0)
+      await page.waitForTimeout(1500)
+      expect(captureRequests, 'captures requested at Home').toEqual([])
     })
 
     await step('ascent and descent: every camp parks crisp, interactive and current', async () => {
@@ -328,21 +349,28 @@ try {
       await settle(page)
     })
 
-    await step('project visuals: real thumbnails under the abstract forms, abstract art otherwise', async () => {
+    await step('project exhibit: each project lit on its own 3D structure, clear of the text and the HUD', async () => {
       await goToCamp(page, 4)
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '3d')
+      expect(captureRequests.length, 'captures loaded on the way to Projects').toBe(projects.length)
       for (const [index, project] of projects.entries()) {
         await page.locator('.project-row').nth(index).click()
-        const file = project.thumbnail ? new URL(project.thumbnail).pathname.split('/').pop()!.replace(/\.\w+$/, '') : null
-        await expect.poll(() => page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>('#high-camp .art-photo')).filter(photo => Number(getComputedStyle(photo).opacity) > .99).map(photo => photo.querySelector('img')!.currentSrc)), { message: `${project.slug}: visible photo` })
-          .toEqual(file ? [expect.stringMatching(new RegExp(`${file}[^/]*\\.webp$`))] : [])
-        const art = await page.evaluate(() => {
-          const frame = document.querySelector('#high-camp .project-art')!, box = frame.getBoundingClientRect()
-          const img = frame.querySelector<HTMLImageElement>('.art-photo[data-active="true"] img')
-          return { ratio: box.width / box.height, forms: frame.querySelectorAll('.art-grid, .art-form').length, decoded: img ? img.complete && img.naturalWidth > 0 : null }
+        await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', project.slug)
+        await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-lit', 'true', { timeout: 15000 })
+        await expect(page.locator('.showcase-link')).toHaveAttribute('href', `/project/${project.slug}`)
+        const layout = await page.evaluate(() => {
+          const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect()
+          const hit = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
+          const display = rect('.showcase-link'), labels = Array.from(document.querySelectorAll('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect())
+          return {
+            shown: getComputedStyle(document.querySelector('.showcase-link')!).visibility, share: display.width / innerWidth,
+            text: ['#high-camp .project-preview', '#high-camp .project-index', '#high-camp .portfolio-heading', '#high-camp .section-intro'].some(selector => hit(display, rect(selector))),
+            hud: ['.altitude-hud', '.journey-home', '.current-location'].some(selector => hit(display, rect(selector))) || labels.some(label => hit(display, label)),
+            inside: display.left >= 0 && display.top >= 0 && display.right <= innerWidth && display.bottom <= innerHeight,
+          }
         })
-        expect(art.ratio, `${project.slug}: 16:9 frame`).toBeCloseTo(16 / 9, 1)
-        expect(art.forms, `${project.slug}: abstract forms kept`).toBe(4)
-        if (file) expect(art.decoded, `${project.slug}: thumbnail decoded`).toBe(true)
+        expect(layout, project.slug).toMatchObject({ shown: 'visible', text: false, hud: false, inside: true })
+        expect(layout.share, `${project.slug}: a hero, not a thumbnail`).toBeGreaterThan(.18)
       }
     })
 
@@ -356,6 +384,14 @@ try {
       }
       const pick = projects[2]
       await page.locator('.project-row').nth(2).click()
+      // The exhibit itself opens the project too.
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', pick.slug)
+      await page.locator('.showcase-link').click()
+      await expect(page).toHaveURL(`${base}/project/${pick.slug}`)
+      await page.goBack()
+      await ready(page)
+      await expectArrived(page, 4)
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', pick.slug)
       await page.locator('.project-open').click()
       await expect(page).toHaveURL(`${base}/project/${pick.slug}`)
       await expect(page.locator('.detail-title')).toHaveText(pick.name)
@@ -466,7 +502,10 @@ try {
           for (let i = 0; i < await steps.count(); i++) { await steps.nth(i).click(); await page.waitForTimeout(400); issues.push(...(await layoutIssues(page, camp.order)).map(issue => `step ${i + 1}: ${issue}`)) }
           await steps.first().click()
         }
-        if (camp.id === 'high-camp') for (let i = 0; i < projects.length; i++) { await page.locator('.project-row').nth(i).click(); issues.push(...(await layoutIssues(page, camp.order)).map(issue => `${projects[i].slug}: ${issue}`)) }
+        if (camp.id === 'high-camp') for (let i = 0; i < projects.length; i++) {
+          await page.locator('.project-row').nth(i).click()
+          issues.push(...[...await layoutIssues(page, camp.order), ...await exhibitIssues(page, projects[i].slug)].map(issue => `${projects[i].slug}: ${issue}`))
+        }
         if (issues.length) report.push(`${width}x${height} ${camp.navigation}: ${[...new Set(issues)].join('; ')}`)
       }
       await goToCamp(page, 0)
@@ -500,7 +539,10 @@ try {
     await page.locator('.trail-checkpoint').nth(4).tap()
     await expectArrived(page, 4)
     await expect(page.locator('.trail-mobile-label')).toHaveText(camps[4].navigation)
+    // Phones show the capture itself, flat and whole, instead of the 3D exhibit.
+    await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '2d')
     await page.locator('.project-row').nth(1).tap()
+    await expect.poll(() => page.evaluate(() => { const img = document.querySelector<HTMLImageElement>('#high-camp .project-screen img[data-active="true"]'); return img ? img.complete && img.naturalWidth > 0 && /samsung-bees/.test(img.currentSrc) : false })).toBe(true)
     await page.locator('.project-open').tap()
     await expect(page.locator('.detail-title')).toHaveText(projects[1].name)
     await context.close()
@@ -527,6 +569,7 @@ try {
     expect(overlaps, 'sections running under the fixed trail').toEqual([])
     await page.locator('.trail-checkpoint').nth(4).click()
     await expect(page.locator('#high-camp')).toBeInViewport()
+    await expect(page.locator('#high-camp .project-screen img[data-active="true"]')).toBeVisible()
     await page.locator('.project-open').click()
     await expect(page.locator('.detail-title')).toHaveText(projects[0].name)
   }

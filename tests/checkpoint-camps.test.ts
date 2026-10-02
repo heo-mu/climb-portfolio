@@ -69,8 +69,9 @@ describe('checkpoint arrival dressing', () => {
     })
   })
 
-  it('keeps a readable cloth silhouette in the real arrival camera for every camp', () => {
-    for (const camp of arrivalCamps) {
+  it('keeps a readable cloth silhouette in the real arrival camera for every marked camp', () => {
+    // High Camp carries no pennant: the Projects exhibit is its landmark (see project-showcase.test).
+    for (const camp of arrivalCamps.filter(camp => camp.marker)) {
       const group = world.getObjectByName(`arrival-${camp.id}`)!
       const cloth = group.getObjectByName('checkpoint-cloth') as THREE.Mesh
       expect(cloth).toBeDefined()
@@ -82,14 +83,12 @@ describe('checkpoint arrival dressing', () => {
         expect(p.x).toBeGreaterThan(.15)
         expect(p.x).toBeLessThan(.93)
         expect(Math.abs(p.y)).toBeLessThan(.9)
-        // Projects has a wider panel; its pennant sits above the project artwork.
-        if (camp.id === 'high-camp') expect(p.y).toBeGreaterThan(.39)
       }
     }
   })
 
   it('grounds camp rope branches and equipment on the same rendered surface', () => {
-    for (const camp of arrivalCamps) {
+    for (const camp of arrivalCamps.filter(camp => camp.marker)) {
       const group = world.getObjectByName(`arrival-${camp.id}`)!
       const rope = group.getObjectByName('camp-branch-rope') as THREE.Mesh
       const positions = rope.geometry.getAttribute('position')

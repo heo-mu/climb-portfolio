@@ -1,7 +1,8 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { checkpoints, inventory, profile, workflow } from '../data/expedition'
 import { projects } from '../data/projects'
+import { projectSelection } from '../experience/projectSelection'
 import { Home } from './Home'
 import { CareerTimeline } from './CareerTimeline'
 import { ArrowUpRight } from './ArrowUpRight'
@@ -70,30 +71,34 @@ function Tools() {
   </>
 }
 
-const photoProjects = projects.filter(project => project.thumbnail)
-
-/** Abstract artwork, with the project's real visual underneath when it has one. */
-function ProjectArtwork({ active }: { active: number }) {
-  const project = projects[active]
-  return <div className="project-art" data-variant={active} data-project={project.slug} data-photo={project.thumbnail ? 'true' : undefined} aria-hidden="true">
-    {/* Real visuals stay mounted: switching projects crossfades, never shows a stale or loading image. */}
-    {photoProjects.map(item => <span key={item.slug} className="art-photo" data-project={item.slug} data-active={item === project}>
-      <img src={item.thumbnail} alt="" decoding="async" fetchPriority="low" />
-    </span>)}
-    <div className="art-grid" /><div className="art-form art-form-one" /><div className="art-form art-form-two" /><div className="art-form art-form-three" />
+/**
+ * The project's capture as a flat 16:9 image, wherever the 3D exhibit is not on view (reading route, portrait
+ * and narrow screens). Captures already shown stay mounted, so a change crossfades instead of reloading.
+ */
+function ProjectScreen({ active }: { active: number }) {
+  const [shown, setShown] = useState(() => new Set([active]))
+  if (!shown.has(active)) setShown(new Set(shown).add(active))
+  return <div className="project-screen" aria-hidden="true">
+    {projects.map((item, index) => shown.has(index) && <img key={item.slug} src={item.screen.mobile} srcSet={`${item.screen.mobile} 960w, ${item.screen.desktop} 1600w`} sizes="(max-width: 767px) calc(100vw - 48px), 50vw" alt="" loading="lazy" decoding="async" data-active={index === active} />)}
   </div>
 }
 
-// The selection survives in-app trips to a project page and back.
-let rememberedProject = 0
+/** A pointer target the scene lays over the exhibit's display; the "프로젝트 보기" link is the accessible route. */
+function ShowcaseLink() {
+  const [index, setIndex] = useState(projectSelection.get)
+  useEffect(() => projectSelection.subscribe(setIndex), [])
+  return <Link className="showcase-link" to={`/project/${projects[index].slug}`} tabIndex={-1} aria-hidden="true" />
+}
 
 function Projects() {
   const { state } = useLocation()
+  // The selection survives in-app trips to a project page and back.
   const [active, setActive] = useState(() => {
     const returned = projects.findIndex(item => item.slug === (state as { project?: string } | null)?.project)
-    return returned >= 0 ? returned : rememberedProject
+    return returned >= 0 ? returned : projectSelection.get()
   })
-  const select = (index: number) => { rememberedProject = index; setActive(index) }
+  useEffect(() => projectSelection.set(active), [active])
+  const select = (index: number) => setActive(index)
   const project = projects[active]
   return <>
     <h1 className="portfolio-heading" id="title-high-camp" tabIndex={-1}>Selected Work<span className="heading-accent">.</span></h1>
@@ -114,7 +119,7 @@ function Projects() {
             <Link className="project-open" to={`/project/${project.slug}`}>프로젝트 보기 <ArrowUpRight className="project-open-arrow" /></Link>
           </div>
         </div>
-        <Link className="project-media-link" to={`/project/${project.slug}`} aria-label={`${project.name} 프로젝트 보기`}><ProjectArtwork active={active} /></Link>
+        <Link className="project-media-link" to={`/project/${project.slug}`} tabIndex={-1} aria-hidden="true"><ProjectScreen active={active} /></Link>
       </article>
     </div>
   </>
@@ -139,5 +144,6 @@ export function CheckpointSections({ onExplore }: { onExplore: () => void }) {
   return <div className="checkpoint-sections"><Home onExplore={onExplore} />{checkpoints.slice(1).map((camp, index) => <section key={camp.id} id={camp.id} className={`checkpoint checkpoint-${camp.id}`} aria-labelledby={`title-${camp.id}`} data-checkpoint={index + 1}>
     <div className="panel-surface" aria-hidden="true" />
     <div className="spatial-panel"><div className="panel-content"><div className="panel-kicker"><span>{camp.index}</span><span>{camp.navigation}</span></div>{sections[index]}</div></div>
+    {camp.id === 'high-camp' && <ShowcaseLink />}
   </section>)}</div>
 }

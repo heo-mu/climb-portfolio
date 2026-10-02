@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { cameraPose, routePoint, seeded, terrainGeometry, TerrainSurface } from './terrain'
+import { cameraPose, routePoint, seeded, showcaseSite, terrainGeometry, TerrainSurface } from './terrain'
 import { rockGeometry, iceGeometry, tentGeometry, tentSeams, tentVestibule } from './props'
 import { contactPatch, groundPole, guideRoute, HangingRope, ROPE_RADIUS, seatOnGround } from './grounding'
 import { addSummit } from './summit'
@@ -12,7 +12,7 @@ import { scenePalette } from './scenePalette'
 
 const matte = (color: string) => new THREE.MeshStandardMaterial({ color, roughness: .94 })
 
-function contactMaterial() {
+export function contactMaterial() {
   const material = new THREE.MeshBasicMaterial({ color: '#233743', transparent: true, opacity: .28, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 })
   material.onBeforeCompile = shader => {
     shader.vertexShader = 'varying vec2 vContact;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvContact = uv;')
@@ -167,8 +167,11 @@ function addCamp(world: THREE.Group, surface: TerrainSurface, camp: CampSetup, p
   }
 }
 
+/** Builds the Projects exhibit on the rendered terrain; see ProjectShowcase. */
+export type ShowcaseBuilder = { build(world: THREE.Group, surface: TerrainSurface, shadow: () => THREE.Material): void }
+
 /** One bounded stage per idle callback. No extra loading surface blocks Home. */
-export function* environmentStages(parent: THREE.Object3D, wind: { value: number }) {
+export function* environmentStages(parent: THREE.Object3D, wind: { value: number }, showcase?: ShowcaseBuilder) {
   const world = new THREE.Group()
   parent.add(world)
   const snowMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .96 })
@@ -203,6 +206,9 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
   world.updateMatrixWorld(true)
   const campBounds = world.children.filter(object => object.name === 'camp-tent').map(object => new THREE.Box3().setFromObject(object).expandByScalar(.6))
   for (const arrival of world.children.filter(object => object.name.startsWith('arrival-'))) campBounds.push(new THREE.Box3().setFromObject(arrival).expandByScalar(.8))
+  // The levelled exhibit shelf at High Camp stays clear of loose boulders, with or without the exhibit built.
+  const { forward: [nearShelf, farShelf], right: [ropeSide, faceSide], soft } = showcaseSite.shelf
+  campBounds.push(new THREE.Box3().setFromPoints([nearShelf, farShelf].flatMap(f => [ropeSide, faceSide + soft.face].map(r => showcaseSite.toWorld(f, r)))).expandByVector(new THREE.Vector3(1, Infinity, 1)))
   for (const camp of [0, 1]) {
     const center = routePoint(camp / 4)
     campBounds.push(new THREE.Box3(
@@ -298,6 +304,10 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
   yield
   addSummit(world, surface, wind, shadowMaterial)
   yield
+  if (showcase) {
+    showcase.build(world, surface, contactMaterial)
+    yield
+  }
 
   const positions: number[] = [], indices: number[] = []
   for (let row = 0; row <= 30; row++) for (let col = 0; col <= 90; col++) {

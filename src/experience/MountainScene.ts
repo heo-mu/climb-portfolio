@@ -5,6 +5,8 @@ import type { ExpeditionFrame } from './progress'
 import { experienceConfig as config } from '../config/experience'
 import { alpineWind, worldMood } from './worldMood'
 import { SpatialSectionTransition } from './SpatialSectionTransition'
+import { ProjectShowcase } from './ProjectShowcase'
+import { projectSelection } from './projectSelection'
 
 type SceneOptions = { canvas: HTMLCanvasElement; root: HTMLElement; onLost: () => void }
 type SnowLayer = { points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>; speed: number; drift: number; fall: number }
@@ -42,6 +44,8 @@ export class MountainScene {
   private deferred = 0
   private idle = false
   private spatialTransition: SpatialSectionTransition
+  private showcase: ProjectShowcase
+  private unsubscribeSelection: () => void
 
   constructor(private options: SceneOptions) {
     this.spatialTransition = new SpatialSectionTransition(options.root)
@@ -54,7 +58,8 @@ export class MountainScene {
     this.keyLight.position.set(-180, 240, -90)
     this.fill.position.set(200, 100, 150)
     this.scene.add(this.keyLight, this.fill, this.ambient)
-    this.stages = environmentStages(this.scene, this.wind)
+    this.showcase = new ProjectShowcase(this.renderer, options.root)
+    this.stages = environmentStages(this.scene, this.wind, this.showcase)
     this.stages.next()
     this.skyMaterial = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false,
@@ -77,12 +82,14 @@ export class MountainScene {
     this.resizeObserver = new ResizeObserver(this.resize)
     this.resizeObserver.observe(options.canvas.parentElement!)
     this.resize()
+    this.showcase.select(projectSelection.get(), true)
+    this.unsubscribeSelection = projectSelection.subscribe(index => this.showcase.select(index))
     const advance = () => {
       if (this.disposed) return
       try {
         const stage = this.stages.next()
         this.lastProgress = -1
-        if (stage.done) { this.createSnow(mobile); this.resize(); return }
+        if (stage.done) { this.createSnow(mobile); this.resize(); void this.showcase.warmUp(this.scene, this.camera); return }
         schedule()
       } catch (error) {
         // Visitors get the reading route; development keeps the actual cause.
@@ -143,6 +150,7 @@ export class MountainScene {
     this.camera.fov = mobile ? config.camera.mobileFov : config.camera.desktopFov
     this.camera.updateProjectionMatrix()
     this.spatialTransition.resize(this.camera, width, height)
+    this.showcase.layout(this.camera, width, height)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.25 : 1.6))
     this.renderer.setSize(width, height, false)
     this.snow.forEach(layer => { layer.points.material.uniforms.uHeight.value = height * this.renderer.getPixelRatio() })
@@ -161,7 +169,9 @@ export class MountainScene {
     // Spatial UI follows every controller frame (docking settles while standing);
     // it returns immediately when nothing changed.
     this.spatialTransition.update(this.camera, frame)
-    const moving = frame.progress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion
+    // A project change moves only the exhibit: it renders every frame while it crosses over.
+    const exhibit = this.showcase.update(frame, this.camera) || this.showcase.drawWarmUp(this.camera)
+    const moving = frame.progress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit
     if (frame.reducedMotion && !moving) return
     if (!moving && frame.time - this.lastRender < 1 / 30) return
     const elapsed = Math.min(.1, Math.max(0, frame.time - this.lastRender))
@@ -200,6 +210,8 @@ export class MountainScene {
   dispose() {
     this.disposed = true
     this.spatialTransition.dispose()
+    this.unsubscribeSelection()
+    this.showcase.dispose()
     if (this.idle) window.cancelIdleCallback(this.deferred)
     else window.clearTimeout(this.deferred)
     this.stages.return()

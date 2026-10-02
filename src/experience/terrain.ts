@@ -54,7 +54,7 @@ const campShelves = arrivalCamps.flatMap(camp => Array.from({ length: camp.tents
   return { x: p.x + 7.2, z, height: surfaceHeight(7.2, z, p.y) }
 }))
 
-export function groundHeight(x: number, z: number) {
+function baseHeight(x: number, z: number) {
   const p = routePoint(-z / depth)
   // Beyond the summit the ground falls away, revealing the horizon.
   const extension = z < -depth ? -Math.max(0, -z - depth - 4) * 0.42 : 0
@@ -66,6 +66,39 @@ export function groundHeight(x: number, z: number) {
     height = THREE.MathUtils.lerp(height, shelf.height, blend)
   }
   return height
+}
+
+/**
+ * The Projects exhibit: a shelf levelled into the foot of the High Camp face, right of the guide rope, so the
+ * walked line and the rope stay clear. Coordinates are in the High Camp view: forward along the walked line,
+ * right across it (metres from the camp's eye position on the ground).
+ */
+export const showcaseSite = (() => {
+  const route = arrivalCamps.find(camp => camp.id === 'high-camp')!.route
+  const origin = routePoint(route), ahead = routePoint(route + experienceConfig.camera.lookAhead / depth)
+  const forward = new THREE.Vector3(ahead.x - origin.x, 0, ahead.z - origin.z).normalize()
+  const right = new THREE.Vector3(-forward.z, 0, forward.x)
+  // Soft edges: short on the rope side (the corridor and the rope keep their ground), longer at the ends and
+  // into the face, so the cut reads as a snow bench rather than a step.
+  const shelf = { forward: [8.5, 23] as const, right: [3.6, 13] as const, soft: { rope: .5, ends: 2.5, face: 3.2 } }
+  const toWorld = (f: number, r: number) => new THREE.Vector3(origin.x + forward.x * f + right.x * r, 0, origin.z + forward.z * f + right.z * r)
+  const center = toWorld(14, 0)
+  return { route, origin: new THREE.Vector3(origin.x, 0, origin.z), forward, right, shelf, toWorld, level: baseHeight(center.x, center.z) + .12 }
+})()
+
+/** 0 outside the levelled exhibit shelf, 1 on it: each side falls off over its own soft edge. */
+export function showcaseShelfBlend(x: number, z: number) {
+  const { origin, forward, right, shelf } = showcaseSite
+  const dx = x - origin.x, dz = z - origin.z
+  const f = dx * forward.x + dz * forward.z, r = dx * right.x + dz * right.z
+  const across = r < shelf.right[0] ? 1 - ease(0, shelf.soft.rope, shelf.right[0] - r) : r > shelf.right[1] ? 1 - ease(0, shelf.soft.face, r - shelf.right[1]) : 1
+  const along = 1 - ease(0, shelf.soft.ends, Math.max(shelf.forward[0] - f, 0, f - shelf.forward[1]))
+  return across * along
+}
+
+export function groundHeight(x: number, z: number) {
+  const height = baseHeight(x, z), blend = showcaseShelfBlend(x, z)
+  return blend ? THREE.MathUtils.lerp(height, showcaseSite.level, blend) : height
 }
 
 export function cameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3) {

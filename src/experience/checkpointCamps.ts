@@ -34,8 +34,9 @@ function addEquipment(group: THREE.Group, surface: TerrainSurface, position: THR
 }
 
 export function addCheckpointCamp(world: THREE.Group, surface: TerrainSurface, camp: typeof arrivalCamps[number], routeAnchors: THREE.Vector3[], wind: { value: number }, metal: THREE.Material, shadow: THREE.Material) {
-  const position = arrivalPosition(camp), support = groundPole(surface, position.x, position.z, camp.height, .08)
   const group = new THREE.Group(); group.name = `arrival-${camp.id}`
+  if (!camp.marker) { world.add(group); return group }
+  const position = arrivalPosition(camp), support = groundPole(surface, position.x, position.z, camp.height, .08)
   const marker = new THREE.Group(); marker.name = 'checkpoint-marker'
   marker.position.copy(support.foot); marker.quaternion.copy(support.rotation)
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(.024, .036, support.length, 12), metal)
