@@ -327,6 +327,24 @@ try {
       await settle(page)
     })
 
+    await step('project visuals: real thumbnails under the abstract forms, abstract art otherwise', async () => {
+      await goToCamp(page, 4)
+      for (const [index, project] of projects.entries()) {
+        await page.locator('.project-row').nth(index).click()
+        const file = project.thumbnail ? new URL(project.thumbnail).pathname.split('/').pop()!.replace(/\.\w+$/, '') : null
+        await expect.poll(() => page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>('#high-camp .art-photo')).filter(photo => Number(getComputedStyle(photo).opacity) > .99).map(photo => photo.querySelector('img')!.currentSrc)), { message: `${project.slug}: visible photo` })
+          .toEqual(file ? [expect.stringMatching(new RegExp(`${file}[^/]*\\.webp$`))] : [])
+        const art = await page.evaluate(() => {
+          const frame = document.querySelector('#high-camp .project-art')!, box = frame.getBoundingClientRect()
+          const img = frame.querySelector<HTMLImageElement>('.art-photo[data-active="true"] img')
+          return { ratio: box.width / box.height, forms: frame.querySelectorAll('.art-grid, .art-form').length, decoded: img ? img.complete && img.naturalWidth > 0 : null }
+        })
+        expect(art.ratio, `${project.slug}: 16:9 frame`).toBeCloseTo(16 / 9, 1)
+        expect(art.forms, `${project.slug}: abstract forms kept`).toBe(4)
+        if (file) expect(art.decoded, `${project.slug}: thumbnail decoded`).toBe(true)
+      }
+    })
+
     await step('Projects: selection, detail round trip and restored selection', async () => {
       await goToCamp(page, 4)
       for (const [index, project] of projects.entries()) {

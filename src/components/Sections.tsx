@@ -70,8 +70,18 @@ function Tools() {
   </>
 }
 
+const photoProjects = projects.filter(project => project.thumbnail)
+
+/** Abstract artwork, with the project's real visual underneath when it has one. */
 function ProjectArtwork({ active }: { active: number }) {
-  return <div className="project-art" data-variant={active} aria-hidden="true"><div className="art-grid" /><div className="art-form art-form-one" /><div className="art-form art-form-two" /><div className="art-form art-form-three" /></div>
+  const project = projects[active]
+  return <div className="project-art" data-variant={active} data-project={project.slug} data-photo={project.thumbnail ? 'true' : undefined} aria-hidden="true">
+    {/* Real visuals stay mounted: switching projects crossfades, never shows a stale or loading image. */}
+    {photoProjects.map(item => <span key={item.slug} className="art-photo" data-project={item.slug} data-active={item === project}>
+      <img src={item.thumbnail} alt="" decoding="async" fetchPriority="low" />
+    </span>)}
+    <div className="art-grid" /><div className="art-form art-form-one" /><div className="art-form art-form-two" /><div className="art-form art-form-three" />
+  </div>
 }
 
 // The selection survives in-app trips to a project page and back.

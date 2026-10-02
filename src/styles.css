@@ -194,6 +194,34 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 .project-art[data-variant="4"] { background: #c7d9ce; }
 .project-art[data-variant="4"] .art-form-one { border-radius: 50%; transform: rotate(-40deg) scale(.8); background: #e2ece5; }
 .project-art[data-variant="4"] .art-form-two { transform: rotate(35deg) scale(.8); background: #83a18d; }
+/* Real project visuals: pastel base → photo → the photo's own tone → the abstract shapes. The base shows
+   until an image decodes (no white flash); shapes move to each image's quiet areas and morph between projects. */
+.art-photo { position: absolute; inset: 0; opacity: 0; transition: opacity .32s var(--motion-ease-editorial); }
+.art-photo[data-active=true] { opacity: 1; }
+/* Into a photo (or photo to photo): forms clear the image first, then it fades in; a photo leaving for an
+   abstract project goes at once. Blend modes stay on each photo's own tone, which fades with it. */
+.project-art[data-photo] .art-photo { transition: opacity .3s .12s var(--motion-ease-editorial); }
+.project-art[data-photo] :is(.art-grid, .art-form) { transition-duration: .28s; }
+.art-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.art-photo::after { content: ''; position: absolute; inset: 0; }
+.art-grid { transition: inset .4s, transform .4s, border-color .4s, opacity .4s; }
+.art-form { transition: transform .4s, border-radius .4s, background .4s, inset .4s, opacity .4s, border-color .4s; }
+/* 들임: a bright, airy interior. The fridge, its measurements and the install card stay clear; a periwinkle
+   wash enters from the window side and the shapes gather on the floor and counter. */
+.art-photo[data-project="deurim"] img { object-position: 50% 46%; }
+.art-photo[data-project="deurim"]::after { background: linear-gradient(112deg, rgb(88 138 244 / 24%) 0%, rgb(88 138 244 / 8%) 30%, rgb(88 138 244 / 0%) 52%), linear-gradient(0deg, rgb(24 40 58 / 18%) 0%, rgb(24 40 58 / 0%) 32%); mix-blend-mode: multiply; }
+.project-art[data-photo][data-project="deurim"] .art-grid { inset: -30% 74% 34% -40%; border-color: rgb(255 255 255 / 46%); transform: rotate(-22deg) scaleX(1.05); }
+.project-art[data-photo][data-project="deurim"] .art-form-one { inset: 62% 72% -24% -6%; border-radius: 48% 48% 0 0; background: rgb(118 152 238 / 38%); transform: rotate(-9deg); }
+.project-art[data-photo][data-project="deurim"] .art-form-two { inset: 74% -8% -20% 82%; background: rgb(96 132 222 / 46%); transform: rotate(-24deg); }
+.project-art[data-photo][data-project="deurim"] .art-form-three { inset: 54% 74% -22% 4%; border-color: rgb(255 255 255 / 72%); transform: rotate(-24deg); }
+/* 삼성 BEES: a saturated sky crowded with data callouts. A light veil eases it toward the editorial
+   pastels; round forms (its abstract variant) sit only on the sky corners and the foreground wall. */
+.art-photo[data-project="samsung-bees"] img { object-position: 50% 50%; }
+.art-photo[data-project="samsung-bees"]::after { background: linear-gradient(180deg, rgb(232 240 248 / 22%) 0%, rgb(232 240 248 / 0%) 36%), linear-gradient(0deg, rgb(16 32 46 / 24%) 0%, rgb(16 32 46 / 0%) 28%); }
+.project-art[data-photo][data-project="samsung-bees"] .art-grid { inset: 10% 20% 14% 24%; border-color: rgb(255 255 255 / 30%); transform: rotate(-10deg) scaleX(1.12); }
+.project-art[data-photo][data-project="samsung-bees"] .art-form-one { inset: 72% 78% -25.3% -10%; border-radius: 50%; background: rgb(226 236 244 / 62%); transform: none; }
+.project-art[data-photo][data-project="samsung-bees"] .art-form-two { inset: -12% -4% 83.6% 88%; border-radius: 50%; background: rgb(115 141 167 / 48%); transform: none; }
+.project-art[data-photo][data-project="samsung-bees"] .art-form-three { inset: 62% 74% -1.1% 4%; border-radius: 50%; border-color: rgb(255 255 255 / 58%); transform: none; }
 .project-information { min-width: 0; }
 .project-media-link { margin-top: 16px; }
 /* Paint containment keeps entrance transforms out of the scrollable layout bounds. */
