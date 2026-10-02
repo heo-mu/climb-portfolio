@@ -201,7 +201,7 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 .project-preview-meta { display: flex; justify-content: space-between; gap: 12px; color: #a8bbc3; font-size: 10px; line-height: 16px; letter-spacing: .04em; }
 .project-information > p { font-size: 14px; line-height: 24px; color: #d6e0e1; word-break: keep-all; }
 .project-tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 12px 0; padding: 0; }
-.project-tags li { display: inline-flex; align-items: center; height: 24px; padding-inline: 8px; border: 1px solid rgb(217 233 240 / 18%); background: rgb(217 233 240 / 3%); border-radius: 2px; font-size: 10px; line-height: 16px; color: #c8d4d7; }
+.project-tags li { display: inline-flex; align-items: center; height: 24px; padding-inline: 8px; border: 1px solid rgb(217 233 240 / 18%); background: rgb(217 233 240 / 3%); border-radius: 2px; font-size: 11px; line-height: 16px; color: #c8d4d7; }
 .project-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 20px; margin-top: 18px; }
 .project-actions .project-tags { margin: 0; }
 .project-actions .project-open { flex: none; margin-left: auto; }
