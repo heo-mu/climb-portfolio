@@ -274,6 +274,9 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
   .about-stats { margin-top: 20px; padding-top: 16px; }
   .workflow { margin-top: 22px; }
   .workflow-step { min-height: 52px; padding-block: 16px; }
+  /* Six steps on a short laptop screen: below 662px of height, every 12px missing takes 1px from each row's top
+     and bottom (52px rows down to 44px), so the list fits without shrinking type or the open description. */
+  .workflow-step { min-height: 44px; padding-block: round(down, clamp(12px, (100svh - 470px) / 12, 16px), 1px); }
   .workflow { --workflow-space: 18px; }
 }
 @media (max-width: 1000px) {

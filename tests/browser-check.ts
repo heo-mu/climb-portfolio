@@ -27,7 +27,8 @@ if (!base) {
 }
 
 const desktop = { width: 1440, height: 900 }
-const viewports = [[1920, 1080], [1600, 900], [1440, 900], [1366, 768], [1280, 800], [1200, 800], [1024, 768], [768, 1024], [430, 932], [390, 844]] as const
+// 1280x600: a 1920x1080 laptop at 150% scaling, once the browser's own toolbars are taken off.
+const viewports = [[1920, 1080], [1600, 900], [1440, 900], [1366, 768], [1280, 800], [1280, 600], [1200, 800], [1024, 768], [768, 1024], [430, 932], [390, 844]] as const
 const camps = checkpoints.map((camp, order) => ({ ...camp, order }))
 const errors: string[] = []
 const passed: string[] = []

@@ -11,11 +11,15 @@ import slackIcon from '../../img/tools/Slack.png'
 export { checkpoints } from './checkpoints'
 export { profile } from './profile'
 
+// One working process: define before (01), divide the work during (02–05), verify after (06).
+// AI takes on repetition, search and checking; the product judgements stay with the designer.
 export const workflow = [
-  { name: '요구사항 나누기', description: ['기획을 기능·사용자·상태·예외로 나눠요.', '화면에 앞서 풀어야 할 문제를 정리해요.'] },
-  { name: '화면의 차이 찾기', description: ['비슷한 화면의 정책·권한·상태를 비교해요.', '중복을 줄이고 필요한 차이에 집중해요.'] },
-  { name: '반복 제작 줄이기', description: ['반복 작업은 코드와 AI로 빠르게 만들어요.', '아낀 시간으로 더 많은 상태를 확인해요.'] },
-  { name: '비주얼 다듬기', description: ['이미지와 아이콘은 AI로 빠르게 탐색해요.', '제품의 톤과 실제 화면에 맞게 다듬어요.'] },
+  { name: '문제와 제약 정의하기', description: ['무엇을 만들지보다 무엇을 해결할지 먼저 정리해요.', '목표와 변경 범위, 반드시 유지할 조건을 나눠 AI가 판단할 경계를 명확히 해요.'] },
+  { name: '반복은 AI에게, 판단은 내가', description: ['검색과 반복 수정은 AI에게 맡기고,', '정보 위계와 사용자 경험처럼 중요한 판단에 더 집중해요.'] },
+  { name: '한 화면보다 시스템을 고치기', description: ['하나의 예외만 고치지 않고,', 'AI로 같은 문제가 반복되는 패턴과 공통 규칙을 함께 찾아요.'] },
+  { name: '증상이 아닌 원인을 찾기', description: ['보이는 현상만 덮기보다 원인을 먼저 추적해요.', '다음 문제를 만들지 않는 수정 방법을 선택해요.'] },
+  { name: '작업에 맞는 AI 선택하기', description: ['작업의 복잡도에 따라 AI의 역할과 추론 수준도 다르게 선택해요.', '필요 이상으로 무거운 도구를 사용하지 않아요.'] },
+  { name: '결과를 다시 검증하기', description: ['AI의 완료를 그대로 믿지 않고 실제 화면과 동작으로 다시 확인해요.', '구현 → 확인 → 수정 → 검증의 과정을 반복해요.'] },
 ]
 
 export const inventory = [
