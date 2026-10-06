@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { ProjectShowcase } from '../src/experience/ProjectShowcase'
 import { SCREEN_HEIGHT } from '../src/experience/showcaseDevices'
 import { guideRoute } from '../src/experience/grounding'
-import { cameraPose, routePoint, showcaseShelfBlend, showcaseSite, terrainGeometry, TerrainSurface } from '../src/experience/terrain'
+import { cameraFieldOfView, exhibitionCameraPose, exhibitionFocus, groundHeight, routePoint, showcaseShelfBlend, showcaseSite, terrainGeometry, TerrainSurface } from '../src/experience/terrain'
 import { projects } from '../src/data/projects'
 
 const terrain = terrainGeometry(), surface = new TerrainSurface(terrain)
@@ -18,8 +18,8 @@ afterAll(() => {
 
 /** The camp's own view, where every route to Projects arrives. */
 function campCamera(width: number, height: number) {
-  const camera = new THREE.PerspectiveCamera(width / height < .95 ? 72 : 64, width / height, .08, 2400), target = new THREE.Vector3()
-  cameraPose(showcaseSite.route, camera.position, target); camera.lookAt(target); camera.updateMatrixWorld(true)
+  const camera = new THREE.PerspectiveCamera(cameraFieldOfView(showcaseSite.route, width / height, width), width / height, .08, 2400), target = new THREE.Vector3()
+  exhibitionCameraPose(showcaseSite.route, camera.position, target, width, width / height); camera.lookAt(target); camera.updateMatrixWorld(true)
   showcase.layout(camera, width, height)
   world.updateMatrixWorld(true)
   return camera
@@ -31,9 +31,9 @@ const screenCorners = (screen: THREE.Object3D) => [[-.5, -1], [.5, -1], [-.5, 1]
 describe('Projects exhibit', () => {
   it('builds one structure per project, each with its own silhouette', () => {
     campCamera(1920, 1080)
-    const { items, scale } = showcase.structures
+    const { items } = showcase.structures
     expect(items.map(item => item.slug)).toEqual(projects.map(project => project.slug))
-    const shapes = items.map(({ group }) => {
+    const shapes = items.map(({ group, scale }) => {
       const box = new THREE.Box3()
       group.traverse(object => { if (object instanceof THREE.Mesh && object.name !== 'showcase-screen') box.expandByObject(object) })
       const size = box.getSize(new THREE.Vector3()).divideScalar(scale)
@@ -58,9 +58,9 @@ describe('Projects exhibit', () => {
   it('seats each footing on the rendered terrain, outside the guide rope, clear of the face and of the walker', () => {
     for (const [width, height] of [[1920, 1080], [1440, 900], [1366, 768]]) {
       campCamera(width, height)
-      const { items, scale } = showcase.structures
+      const { items } = showcase.structures
       const rope = guideRoute(surface).poles.map(pole => pole.anchor).filter(anchor => forward(anchor) > 0 && forward(anchor) < 30)
-      for (const { slug, group, footing, bury } of items) {
+      for (const { slug, group, footing, bury, scale } of items) {
         const label = `${slug} @${width}`, positions = footing.getAttribute('position'), point = new THREE.Vector3()
         footing.computeBoundingBox()
         const threshold = footing.boundingBox!.min.y + (footing.boundingBox!.max.y - footing.boundingBox!.min.y) * .09
@@ -99,12 +99,12 @@ describe('Projects exhibit', () => {
         const label = `${slug} @${width}x${height}`
         for (const p of ndc) {
           expect(p.z, label).toBeLessThan(1)
-          // Without a page, the free span defaults to the middle of the view up to the trail lane.
-          expect(p.x, label).toBeGreaterThan(-.001)
+          // The editorial panel occupies the left third; the entire display clears it.
+          expect(p.x, label).toBeGreaterThan(-.321)
           expect(p.x, label).toBeLessThan(.725)
           expect(Math.abs(p.y), label).toBeLessThan(.86)
         }
-        expect(Math.max(...ndc.map(p => p.x)) - Math.min(...ndc.map(p => p.x)), `${label}: a hero, not a thumbnail`).toBeGreaterThan(.36)
+        expect(Math.max(...ndc.map(p => p.x)) - Math.min(...ndc.map(p => p.x)), `${label}: a hero, not a thumbnail`).toBeGreaterThan(.52)
       }
     }
   })
@@ -124,5 +124,20 @@ describe('Projects exhibit', () => {
     }
     const center = showcaseSite.toWorld(15, 7)
     expect(showcaseShelfBlend(center.x, center.z)).toBe(1)
+  })
+
+  it('confines the portrait lens and camera staging to Projects, with continuous approach and exit', () => {
+    for (const route of [0, .1, .25, .5, .69, .82, 1]) {
+      expect(exhibitionFocus(route)).toBe(0)
+      expect(cameraFieldOfView(route, 16 / 9, 1920)).toBe(64)
+    }
+    expect(cameraFieldOfView(.75, 16 / 9, 1920)).toBe(42)
+    expect(cameraFieldOfView(.75, 390 / 844, 390)).toBe(72)
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), target = new THREE.Vector3()
+    for (let route = .7; route < .815; route += .0001) {
+      exhibitionCameraPose(route, a, target, 1920, 16 / 9); exhibitionCameraPose(route + .0001, b, target, 1920, 16 / 9)
+      expect(a.distanceTo(b)).toBeLessThan(.35)
+      expect(a.y - groundHeight(a.x, a.z), `camera above ground at ${route}`).toBeGreaterThan(1)
+    }
   })
 })

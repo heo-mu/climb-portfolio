@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { projects } from '../data/projects'
 import { checkpoints } from '../data/checkpoints'
 import { buildDevice, SCREEN_HEIGHT, type ShowcaseDevice } from './showcaseDevices'
-import { cameraPose, showcaseSite, type TerrainSurface } from './terrain'
+import { cameraFieldOfView, exhibitionCameraPose, showcaseSite, type TerrainSurface } from './terrain'
 import { contactPatch, seatOnGround } from './grounding'
 import type { ExpeditionFrame } from './progress'
 
@@ -10,9 +10,9 @@ import type { ExpeditionFrame } from './progress'
 const FADE_OUT = .24, FADE_IN = .38, HANDOFF = .3, POWER_ON = .34
 const PROJECTS = checkpoints.findIndex(camp => camp.id === 'high-camp')
 /** Where the exhibit may stand, in the High Camp view (metres): ahead of the plateau the walker can rest on. */
-const ANCHOR = { forward: [15, 16.5, 18], right: 9 }
-/** Display width in metres: monumental, as the camp's landmark, within the space the shelf leaves. */
-const SCALE = { max: 10, min: 4.5 }
+const ANCHOR = { forward: [30, 36, 42], right: 38 }
+/** Display width search range in metres; final size is fitted independently in projected space. */
+const SCALE = { max: 52, min: 12 }
 /** Lateral limit for anything on the ground: the guide rope runs just inside it. */
 const ROPE_CLEARANCE = 3.3
 /** Below head height (m above the shelf), nothing may reach into the walked line. */
@@ -36,6 +36,7 @@ type Slot = ShowcaseDevice & {
   silhouette: THREE.Vector3[]
   /** Corners of every part held above the ground: none may meet the snow face. */
   hull: THREE.Vector3[]
+  groundHull: THREE.Vector3[]
   /** Forward distance of the structure's nearest point in the High Camp view, for the passing dissolve. */
   front: number
 }
@@ -128,9 +129,14 @@ export class ProjectShowcase {
         if (part.min.y > .1) hull.push(...corners(part))
       })
       // What the eye sees: the parts themselves, not the empty corners of the overall box.
-      const silhouette = [...hull, ...corners(device.footing.boundingBox!)]
+      const footingPoints = device.footing.getAttribute('position')
+      const groundHull = [...new Map(Array.from({ length: footingPoints.count }, (_, i) => {
+        const p = new THREE.Vector3().fromBufferAttribute(footingPoints, i)
+        return [p.toArray().map(n => n.toFixed(5)).join(','), p] as const
+      })).values()]
+      const silhouette = [...hull, ...groundHull]
       device.group.visible = shade.visible = core.visible = false
-      this.slots.push({ ...device, materials: [...device.materials, shadeMaterial, coreMaterial], presence: 0, texture: null, power: 0, shade, core, bury: -device.footing.boundingBox!.min.y + .014, rest: { position: new THREE.Vector3(), quaternion: new THREE.Quaternion(), scale: 1, matrix: new THREE.Matrix4() }, silhouette, hull, front: Infinity })
+      this.slots.push({ ...device, materials: [...device.materials, shadeMaterial, coreMaterial], presence: 0, texture: null, power: 0, shade, core, bury: -device.footing.boundingBox!.min.y + .014, rest: { position: new THREE.Vector3(), quaternion: new THREE.Quaternion(), scale: 1, matrix: new THREE.Matrix4() }, silhouette, hull, groundHull, front: Infinity })
       this.group.add(device.group, shade, core)
     }
     world.add(this.group)
@@ -142,42 +148,44 @@ export class ProjectShowcase {
     this.width = width; this.height = height
     if (!this.surface) return
     const view = this.view, target = new THREE.Vector3()
-    view.fov = camera.fov; view.aspect = camera.aspect; view.near = camera.near; view.far = camera.far
+    view.fov = cameraFieldOfView(showcaseSite.route, camera.aspect, width); view.aspect = camera.aspect; view.near = camera.near; view.far = camera.far
     view.updateProjectionMatrix()
-    cameraPose(showcaseSite.route, view.position, target)
+    exhibitionCameraPose(showcaseSite.route, view.position, target, width, camera.aspect)
     view.lookAt(target); view.updateMatrixWorld(true)
     const limits = this.limits = this.freeSpace(width)
-    type Placement = { anchor: THREE.Vector3; quaternion: THREE.Quaternion; facing: number }
+    type Placement = { anchor: THREE.Vector3; quaternion: THREE.Quaternion; facing: number; scale: number; size: number }
     // Each structure takes the nearest spot to the walked line where its footing clears the rope, nothing
     // meets the face or the walker, and its display stays between the text and the trail.
     const place = (slot: Slot, forward: number, scale: number): Placement | null => {
-      for (let right = ROPE_CLEARANCE; right <= ANCHOR.right; right += .25) {
+      for (let right = ROPE_CLEARANCE; right <= ANCHOR.right; right += .4) {
         const anchor = showcaseSite.toWorld(forward, right)
-        // Square on to the camp's eye: the display reads without foreshortening.
-        const facing = Math.atan2(view.position.x - anchor.x, view.position.z - anchor.z)
+        // A restrained three-quarter view exposes the chassis while keeping the capture readable.
+        const facing = Math.atan2(view.position.x - anchor.x, view.position.z - anchor.z) + .24
         const quaternion = new THREE.Quaternion().setFromAxisAngle(up, facing)
         const box = this.projectedBox(slot, anchor, quaternion, scale)
         // The rope and the walker are left behind by stepping right; the face and the trail only get closer.
         if (!box.clear || !box.walk) continue
-        if (!box.face || box.right > limits.right || box.top > .86) return null
-        if (box.screenLeft >= limits.left) return { anchor, quaternion, facing }
+        if (box.right > limits.right || box.top > .76 || box.bottom < -.86) continue
+        if (box.face && box.left >= limits.left && box.screenLeft >= limits.left + .025) return { anchor, quaternion, facing, scale, size: box.screenRight - box.screenLeft }
       }
       return null
     }
-    // One depth and one scale for all five, as large as the free space allows; the depth showing the
-    // displays largest wins.
-    let best: { placements: Placement[]; scale: number; size: number } | null = null
-    for (const forward of ANCHOR.forward) {
-      for (let scale = SCALE.max; scale >= SCALE.min && (!best || scale / forward > best.size); scale -= .1) {
-        const placements = this.slots.map(slot => place(slot, forward, scale))
-        if (placements.every(Boolean)) { best = { placements: placements as Placement[], scale, size: scale / forward }; break }
+    // Fit the actual silhouette of each exhibit independently. A tall layered display must never
+    // shrink the laptop or workstation; the projected capture, not world-unit scale, is the priority.
+    const placements = this.slots.map(slot => {
+      let best: Placement | null = null
+      for (const forward of ANCHOR.forward) {
+        for (let scale = SCALE.max; scale >= SCALE.min; scale -= .4) {
+          const candidate = place(slot, forward, scale)
+          if (candidate) { if (!best || candidate.size > best.size) best = candidate; break }
+        }
       }
-    }
+      return best
+    })
     // The same landscape condition the panel layout uses (styles.css): narrower screens show the flat capture.
-    this.enabled = width > 1000 && camera.aspect >= 1.2 && best !== null
-    const scale = best?.scale ?? SCALE.min
+    this.enabled = width > 1000 && camera.aspect >= 1.2 && placements.every(Boolean)
     for (const [index, slot] of this.slots.entries()) {
-      const { anchor, quaternion, facing } = best?.placements[index] ?? { anchor: showcaseSite.toWorld(ANCHOR.forward[0], ANCHOR.right), quaternion: new THREE.Quaternion(), facing: 0 }
+      const { anchor, quaternion, facing, scale } = placements[index] ?? { anchor: showcaseSite.toWorld(ANCHOR.forward[0], ANCHOR.right), quaternion: new THREE.Quaternion(), facing: 0, scale: SCALE.min }
       slot.group.position.copy(anchor); slot.group.quaternion.copy(quaternion); slot.group.scale.setScalar(scale)
       seatOnGround(slot.group, slot.footing, this.surface, slot.bury * scale)
       slot.rest.position.copy(slot.group.position); slot.rest.quaternion.copy(quaternion); slot.rest.scale = scale
@@ -203,10 +211,10 @@ export class ProjectShowcase {
     const labels = root ? Array.from(root.querySelectorAll<HTMLElement>('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect()).filter(rect => rect.width) : []
     const right = labels.length ? Math.min(...labels.map(rect => rect.left)) - 32 : width * .86
     const text = root?.querySelector<HTMLElement>('#high-camp .project-preview')
-    let left = width * .5
+    let left = width * .34
     if (text) {
       // Offsets ignore the spatial transforms the panel may be carrying right now.
-      left = text.offsetWidth + 36
+      left = text.offsetWidth + 24
       for (let node: HTMLElement | null = text; node; node = node.offsetParent as HTMLElement | null) left += node.offsetLeft
     }
     return { left: left / width * 2 - 1, right: right / width * 2 - 1 }
@@ -215,19 +223,25 @@ export class ProjectShowcase {
   private projectedBox(slot: Slot, anchor: THREE.Vector3, quaternion: THREE.Quaternion, scale: number) {
     const origin = anchor.clone().setY(showcaseSite.level - .014 * scale)
     const matrix = new THREE.Matrix4().compose(origin, quaternion, new THREE.Vector3(scale, scale, scale))
-    let right = -Infinity, top = -Infinity, screenLeft = Infinity
+    let right = -Infinity, top = -Infinity, left = Infinity, bottom = Infinity, screenLeft = Infinity, screenRight = -Infinity
     for (const point of slot.silhouette) {
       const p = this.corner.copy(point).applyMatrix4(matrix).project(this.view)
-      right = Math.max(right, p.x); top = Math.max(top, p.y)
+      right = Math.max(right, p.x); top = Math.max(top, p.y); left = Math.min(left, p.x); bottom = Math.min(bottom, p.y)
     }
     slot.group.updateMatrixWorld(true)
     const screenMatrix = slot.screen.matrixWorld.clone().premultiply(slot.group.matrixWorld.clone().invert()).premultiply(matrix)
-    for (const [x, y] of [[-.5, -SCREEN_HEIGHT / 2], [-.5, SCREEN_HEIGHT / 2]]) screenLeft = Math.min(screenLeft, this.corner.set(x, y, 0).applyMatrix4(screenMatrix).project(this.view).x)
+    for (const x of [-.5, .5]) for (const y of [-SCREEN_HEIGHT / 2, SCREEN_HEIGHT / 2]) {
+      const p = this.corner.set(x, y, 0).applyMatrix4(screenMatrix).project(this.view)
+      screenLeft = Math.min(screenLeft, p.x); screenRight = Math.max(screenRight, p.x)
+    }
+    if (right > this.limits.right || left < this.limits.left || top > .76 || bottom < -.86) {
+      return { right, top, left, bottom, screenLeft, screenRight, clear: false, face: false, walk: false }
+    }
     // Whatever stands on the ground keeps outside the guide rope; displays may reach over it, well above head height.
-    const footing = slot.footing.boundingBox!, { origin: site, right: across } = showcaseSite
+    const { origin: site, right: across } = showcaseSite
     let nearest = Infinity
-    for (const x of [footing.min.x, footing.max.x]) for (const z of [footing.min.z, footing.max.z]) {
-      const p = this.corner.set(x, 0, z).applyMatrix4(matrix)
+    for (const point of slot.groundHull) {
+      const p = this.corner.copy(point).applyMatrix4(matrix)
       nearest = Math.min(nearest, (p.x - site.x) * across.x + (p.z - site.z) * across.z)
     }
     // Above-ground parts keep clear of the shelf's rising edge and the face behind it, and of the walked line
@@ -239,7 +253,7 @@ export class ProjectShowcase {
       face &&= p.y >= this.surface!.heightAt(p.x, p.z) + .15
       walk &&= p.y - showcaseSite.level >= WALK.height || lateral >= WALK.clearance
     }
-    return { right, top, screenLeft, clear: nearest >= ROPE_CLEARANCE, face, walk }
+    return { right, top, left, bottom, screenLeft, screenRight, clear: nearest >= ROPE_CLEARANCE, face, walk }
   }
 
   select(index: number, instant = false) {
@@ -295,8 +309,8 @@ export class ProjectShowcase {
     // Leaving recedes a little and turns away; arriving settles from slightly nearer, turned the other way.
     const side = selected ? -1 : 1, rest = slot.rest
     behind.set(0, 0, -1).applyQuaternion(rest.quaternion)
-    slot.group.position.copy(rest.position).addScaledVector(behind, settle * .045 * rest.scale * side)
-    slot.group.quaternion.copy(rest.quaternion).multiply(turn.setFromAxisAngle(up, settle * .05 * side))
+    slot.group.position.copy(rest.position).addScaledVector(behind, settle * .065 * rest.scale * side)
+    slot.group.quaternion.copy(rest.quaternion).multiply(turn.setFromAxisAngle(up, settle * .075 * side))
     slot.group.scale.setScalar(rest.scale * (1 - settle * .015))
     for (const material of slot.materials) {
       // Base opacity lives in userData: the shadows and the glass sheen are always blended. At rest the
@@ -400,7 +414,7 @@ export class ProjectShowcase {
 
   /** The structures as laid out for this viewport, read-only, for checks. */
   get structures() {
-    return { enabled: this.enabled, scale: this.slots[0]?.rest.scale ?? 0, items: this.slots.map(({ slug, group, screen, footing, bury }) => ({ slug, group, screen, footing, bury })) }
+    return { enabled: this.enabled, items: this.slots.map(({ slug, group, screen, footing, bury, rest }) => ({ slug, group, screen, footing, bury, scale: rest.scale })) }
   }
 
   /** What the exhibit shows, on the root for the DOM and its checks: the settled project and whether its capture is lit. */

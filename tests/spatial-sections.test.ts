@@ -4,11 +4,13 @@ import { checkpoints } from '../src/data/expedition'
 import { campFog, SpatialAnchorProjection } from '../src/experience/SpatialAnchorProjection'
 import { ArrivalDock } from '../src/experience/SpatialSectionTransition'
 import { campZones, routeProgress } from '../src/experience/progress'
-import { cameraPose } from '../src/experience/terrain'
+import { cameraFieldOfView, exhibitionCameraPose } from '../src/experience/terrain'
 
-function pose(camera: PerspectiveCamera, progress: number) {
+function pose(camera: PerspectiveCamera, progress: number, width = 1440) {
   const target = new Vector3()
-  cameraPose(routeProgress(progress), camera.position, target)
+  exhibitionCameraPose(routeProgress(progress), camera.position, target, width, camera.aspect)
+  camera.fov = cameraFieldOfView(routeProgress(progress), camera.aspect, width)
+  camera.updateProjectionMatrix()
   camera.lookAt(target)
   camera.updateMatrixWorld()
 }
@@ -24,17 +26,17 @@ describe.each(checkpoints.slice(1).map((camp, i) => ({ ...camp, index: i + 1 }))
     for (const boundary of plateau) {
       const projection = new SpatialAnchorProjection(routeProgress(boundary), campFog)
       projection.resize(camera, width, height)
-      pose(camera, boundary)
+      pose(camera, boundary, width)
       projection.update(camera)
       const initial = projection.matrix.clone()
       for (const p of [boundary - .018, boundary + .018, boundary - .018].map(p => Math.max(0, Math.min(1, p)))) {
-        pose(camera, p)
+        pose(camera, p, width)
         projection.update(camera)
         expect(projection.matrix.elements.every(Number.isFinite)).toBe(true)
         if (p !== boundary) expect(projection.distance).toBeGreaterThan(0)
         expect(projection.blur).toBeLessThanOrEqual(2)
       }
-      pose(camera, boundary)
+      pose(camera, boundary, width)
       projection.update(camera)
       expect(projection.matrix.equals(initial)).toBe(true)
       expect(projection.opacity).toBe(1)

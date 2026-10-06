@@ -7,8 +7,8 @@ import { scenePalette } from './scenePalette'
 /**
  * Five exhibit structures with one material language. Units are the display width (the project captures are
  * 16:9 and are never cropped or stretched); the origin is the centre of the footing on the ground, the display
- * faces +z. Footings start no further left than x -.21, so the structure stands between the guide rope and the
- * face while its display reaches out over the walked line, well above head height. Each structure owns its
+ * faces +z. Each footing is fitted to the exhibition shelf from its actual hull, while the screen retains
+ * the capture's full aspect ratio. Each structure owns its
  * materials, so it can fade on its own.
  */
 export const SCREEN_HEIGHT = 9 / 16
@@ -48,13 +48,13 @@ function materialKit(environment: THREE.Texture | null, placeholder: THREE.Textu
   const metal = (color: string, roughness: number, metalness = .72) => new THREE.MeshStandardMaterial({ color, roughness, metalness, envMap: environment, envMapIntensity: .9 })
   return {
     // Anodised graphite aluminium, a darker anodised trim, glossy black cover glass.
-    shell: metal('#5b646a', .34),
+    shell: metal('#87939c', .27),
     trim: metal('#2c3338', .42, .6),
     glass: new THREE.MeshStandardMaterial({ color: '#050708', roughness: .14, metalness: .2, envMap: environment, envMapIntensity: .6 }),
     steel: metal('#626c72', .48, .55),
     matte: new THREE.MeshStandardMaterial({ color: '#30373c', roughness: .78, metalness: .15, envMap: environment, envMapIntensity: .35 }),
     concrete: new THREE.MeshStandardMaterial({ color: '#8d969b', roughness: .96 }),
-    stone: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .98, flatShading: true }),
+    stone: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .92, flatShading: true }),
     line: new THREE.MeshBasicMaterial({ color: '#4a5c66', toneMapped: false }),
     screen: new THREE.MeshBasicMaterial({ color: '#ffffff', map: placeholder, toneMapped: false }),
     // The cover glass over the capture: a faint, fixed reflection, added light only.
@@ -101,7 +101,7 @@ function display(kit: Kit, width: number, height: number, depth: number, radius:
   glass.position.z = depth / 2 + .0003
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(1, SCREEN_HEIGHT), kit.screen)
   screen.position.set(0, screenOffsetY, depth / 2 + .0007)
-  const reflection = new THREE.Mesh(new THREE.PlaneGeometry(width - .006, height - .006), kit.sheen)
+  const reflection = new THREE.Mesh(new THREE.ShapeGeometry(roundedRect(width - .006, height - .006, Math.max(radius - .003, .001)), 6), kit.sheen)
   reflection.position.z = depth / 2 + .0011
   group.add(glass, screen, reflection)
   return { group, screen, front: depth / 2 + .0013 }
@@ -112,7 +112,7 @@ function display(kit: Kit, width: number, height: number, depth: number, radius:
  * the cut face bare stone, the remaining snow cap kept on the outer rim. Normalised to a unit footprint.
  */
 function plinthGeometry(variant: number, cut: number) {
-  const geometry = rockGeometry(variant)
+  const geometry = rockGeometry(variant, 5)
   geometry.computeBoundingBox()
   const { min, max } = geometry.boundingBox!
   const level = min.y + (max.y - min.y) * cut
@@ -144,15 +144,21 @@ function footingOf(group: THREE.Group, parts: THREE.Mesh[]) {
 /** 들임: a thin premium laptop on a stone plinth, the product UI as the subject. */
 function laptopOnStone(kit: Kit) {
   const group = new THREE.Group()
-  // Unit plinth: top at 0, bottom at -1. Scaled to a .62 x .74 footprint, its top just below eye height, so
-  // the deck reads from slightly above.
-  const top = .12, stone = place(new THREE.Mesh(plinthGeometry(2, .74), kit.stone), .17, top, -.1)
-  stone.scale.set(.76, top + .16, .96)
+  // A broad fractured crown supports the deck; the higher rock face anchors the hero in the snow.
+  const top = .28, stone = place(new THREE.Mesh(plinthGeometry(2, .74), kit.stone), 0, top, -.02)
+  stone.scale.set(1.16, top + .24, .88)
   const width = 1.05, chin = .046, brow = .03, lidHeight = SCREEN_HEIGHT + chin + brow, lidDepth = .014
   const deckDepth = .7, deckHeight = .017
   const laptop = place(new THREE.Group(), 0, top, .04)
   const deck = place(new THREE.Mesh(slab(width, deckDepth, deckHeight, .022), kit.shell), 0, deckHeight / 2, 0, -Math.PI / 2)
   const well = place(new THREE.Mesh(new THREE.ShapeGeometry(roundedRect(.88, .3, .012), 4), kit.trim), 0, deckHeight + .0004, -.13, -Math.PI / 2)
+  // Individually bevelled keycaps, merged into one draw: visible physical detail at hero distance.
+  const key = box(.056, .005, .041, .003), keyParts: THREE.BufferGeometry[] = []
+  for (let row = 0; row < 5; row++) for (let col = 0; col < 13; col++) {
+    keyParts.push(key.clone().translate((col - 6) * .065, deckHeight + .003, -.245 + row * .052))
+  }
+  const keys = new THREE.Mesh(mergeGeometries(keyParts), kit.matte)
+  key.dispose(); keyParts.forEach(part => part.dispose())
   const pad = place(new THREE.Mesh(new THREE.ShapeGeometry(roundedRect(.34, .2, .014), 4), kit.glass), 0, deckHeight + .0004, .2, -Math.PI / 2)
   const hinge = place(new THREE.Mesh(new THREE.CylinderGeometry(.0095, .0095, .86, 16), kit.trim), 0, deckHeight + .004, -deckDepth / 2 + .012)
   hinge.rotation.z = Math.PI / 2
@@ -163,9 +169,9 @@ function laptopOnStone(kit: Kit) {
   const camera = place(new THREE.Mesh(new THREE.CircleGeometry(.0045, 12), kit.trim), 0, lidHeight - brow / 2, front - lidDepth / 2 + .002)
   const indicator = place(new THREE.Mesh(new THREE.CircleGeometry(.0018, 8), kit.accent), .012, lidHeight - brow / 2, front - lidDepth / 2 + .002)
   lid.add(panel, camera, indicator)
-  laptop.add(deck, well, pad, hinge, lid)
+  laptop.add(deck, well, keys, pad, hinge, lid)
   group.add(stone, laptop)
-  return { group, screen, footing: footingOf(group, [stone]), shadow: { width: 1, depth: 1.15, x: .17, z: -.1 } }
+  return { group, screen, footing: footingOf(group, [stone]), shadow: { width: 1.35, depth: 1.2, x: 0, z: -.02 } }
 }
 
 /** 삼성 BEES: a wide industrial display on steel posts set in a concrete footing. */
@@ -206,14 +212,14 @@ function layeredPanels(kit: Kit) {
   // A single fin rises from the plinth through both layers.
   const fin = place(new THREE.Mesh(box(.085, .78, .03, .008), kit.shell), .1, plinthTop + .39, -.11)
   // The plate behind: smoked glass in a thin frame, etched with the earlier abstract forms as quiet lines.
-  const plate = place(new THREE.Group(), -.16, .6, -.2, lean)
+  const plate = place(new THREE.Group(), -.13, .48, -.22, lean)
   const plateWidth = .96, plateHeight = .6
   const frame = place(new THREE.Mesh(slab(plateWidth, plateHeight, .016, .012), kit.trim), 0, plateHeight / 2, 0)
   const face = place(new THREE.Mesh(new THREE.ShapeGeometry(roundedRect(plateWidth - .02, plateHeight - .02, .006), 4), kit.glass), 0, plateHeight / 2, .0085)
   const etch = new THREE.Group()
   etch.position.set(0, plateHeight / 2, .0093)
-  const ring = new THREE.Mesh(new THREE.RingGeometry(.2, .204, 96), kit.line); ring.scale.set(1.3, 1, 1); ring.rotation.z = -.38
-  ring.position.set(.12, .1, 0)
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.18, .183, 96), kit.line); ring.scale.set(1.3, 1, 1); ring.rotation.z = -.38
+  ring.position.set(.12, .04, 0)
   etch.add(ring)
   for (const [x, w] of [[-.28, .14], [-.08, .2], [.16, .1]] as const) etch.add(place(new THREE.Mesh(new THREE.PlaneGeometry(w, .0035), kit.line), x, .22, 0))
   plate.add(frame, face, etch)

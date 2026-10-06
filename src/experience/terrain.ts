@@ -80,7 +80,7 @@ export const showcaseSite = (() => {
   const right = new THREE.Vector3(-forward.z, 0, forward.x)
   // Soft edges: short on the rope side (the corridor and the rope keep their ground), longer at the ends and
   // into the face, so the cut reads as a snow bench rather than a step.
-  const shelf = { forward: [8.5, 23] as const, right: [3.6, 13] as const, soft: { rope: .5, ends: 2.5, face: 3.2 } }
+  const shelf = { forward: [6, 58] as const, right: [3.6, 48] as const, soft: { rope: .5, ends: 8, face: 14 } }
   const toWorld = (f: number, r: number) => new THREE.Vector3(origin.x + forward.x * f + right.x * r, 0, origin.z + forward.z * f + right.z * r)
   const center = toWorld(14, 0)
   return { route, origin: new THREE.Vector3(origin.x, 0, origin.z), forward, right, shelf, toWorld, level: baseHeight(center.x, center.z) + .12 }
@@ -93,12 +93,22 @@ export function showcaseShelfBlend(x: number, z: number) {
   const f = dx * forward.x + dz * forward.z, r = dx * right.x + dz * right.z
   const across = r < shelf.right[0] ? 1 - ease(0, shelf.soft.rope, shelf.right[0] - r) : r > shelf.right[1] ? 1 - ease(0, shelf.soft.face, r - shelf.right[1]) : 1
   const along = 1 - ease(0, shelf.soft.ends, Math.max(shelf.forward[0] - f, 0, f - shelf.forward[1]))
-  return across * along
+  // The wider exhibition bench follows the curved corridor's exclusion, not only the camp's tangent.
+  const corridor = ease(3.2, 5, Math.abs(x - routePoint(-z / depth).x))
+  return across * along * corridor
 }
 
 export function groundHeight(x: number, z: number) {
   const height = baseHeight(x, z), blend = showcaseShelfBlend(x, z)
   return blend ? THREE.MathUtils.lerp(height, showcaseSite.level, blend) : height
+}
+
+export const exhibitionFocus = (route: number) => ease(.705, .738, route) * (1 - ease(.77, .81, route))
+
+/** A portrait lens only around the exhibition; the rest of the ascent keeps its wide walking view. */
+export function cameraFieldOfView(route: number, aspect: number, width: number) {
+  const base = aspect < .95 ? experienceConfig.camera.mobileFov : experienceConfig.camera.desktopFov
+  return width > 1000 && aspect >= 1.2 ? THREE.MathUtils.lerp(base, 42, exhibitionFocus(route)) : base
 }
 
 export function cameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3) {
@@ -112,6 +122,19 @@ export function cameraPose(route: number, position: THREE.Vector3, target: THREE
     target.y = routePoint(1).y
   }
   target.y += experienceConfig.camera.eyeHeight + experienceConfig.camera.lookLift
+}
+
+/** Render-only staging: route distance, altitude and arrival semantics retain the walking rail. */
+export function exhibitionCameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3, width: number, aspect: number) {
+  cameraPose(route, position, target)
+  if (width <= 1000 || aspect < 1.2) return
+  // A local overlook at Projects exposes the devices' decks and their stone footings.
+  // Both shoulders blend back into the original walking camera, including in reverse.
+  const exhibition = exhibitionFocus(route)
+  position.y += exhibition * 8
+  target.y += exhibition * 7
+  position.addScaledVector(showcaseSite.right, exhibition * 8)
+  target.addScaledVector(showcaseSite.right, exhibition * 8)
 }
 
 export function terrainGeometry(detailStep = 1) {

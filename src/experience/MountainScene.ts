@@ -1,5 +1,5 @@
 ﻿import * as THREE from 'three'
-import { cameraPose, seeded } from './terrain'
+import { cameraFieldOfView, exhibitionCameraPose, seeded } from './terrain'
 import { environmentStages } from './environment'
 import type { ExpeditionFrame } from './progress'
 import { experienceConfig as config } from '../config/experience'
@@ -147,7 +147,7 @@ export class MountainScene {
     const width = Math.max(1, rect.width), height = Math.max(1, rect.height)
     const mobile = width / height < 0.95
     this.camera.aspect = width / height
-    this.camera.fov = mobile ? config.camera.mobileFov : config.camera.desktopFov
+    this.camera.fov = cameraFieldOfView(Math.max(0, this.poseRoute), this.camera.aspect, width)
     this.camera.updateProjectionMatrix()
     this.spatialTransition.resize(this.camera, width, height)
     this.showcase.layout(this.camera, width, height)
@@ -155,16 +155,19 @@ export class MountainScene {
     this.renderer.setSize(width, height, false)
     this.snow.forEach(layer => { layer.points.material.uniforms.uHeight.value = height * this.renderer.getPixelRatio() })
     this.lastProgress = -1
+    this.poseRoute = -1
   }
 
   update = (frame: ExpeditionFrame) => {
     if (this.disposed) return
     if (frame.route !== this.poseRoute) {
       this.poseRoute = frame.route
-      cameraPose(frame.route, this.position, this.target)
+      exhibitionCameraPose(frame.route, this.position, this.target, this.options.canvas.clientWidth, this.camera.aspect)
       this.camera.position.copy(this.position)
       this.camera.lookAt(this.target)
       this.camera.updateMatrixWorld()
+      this.camera.fov = cameraFieldOfView(frame.route, this.camera.aspect, this.options.canvas.clientWidth)
+      this.camera.updateProjectionMatrix()
     }
     // Spatial UI follows every controller frame (docking settles while standing);
     // it returns immediately when nothing changed.

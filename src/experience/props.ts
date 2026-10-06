@@ -2,8 +2,8 @@ import * as THREE from 'three'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { noise2 } from './noise'
 
-export function rockGeometry(seed: number) {
-  const source = new THREE.IcosahedronGeometry(1, 2)
+export function rockGeometry(seed: number, detail = 2) {
+  const source = new THREE.IcosahedronGeometry(1, detail)
   source.deleteAttribute('normal'); source.deleteAttribute('uv')
   const geometry = mergeVertices(source)
   source.dispose()
