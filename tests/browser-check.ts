@@ -193,9 +193,14 @@ try {
   // ───────────────────────────── Journey (desktop) ─────────────────────────────
   {
     const { context, page } = await open()
-    // The project captures (the only WebP assets) load near Projects, never with Home.
+    // Match both original dev URLs and fingerprinted production capture filenames.
     const captureRequests: string[] = []
-    page.on('request', request => { if (/\.webp(\?|$)/.test(request.url())) captureRequests.push(request.url()) })
+    page.on('request', request => { if (projects.some(project => {
+      const source = new URL(project.screen.desktop).pathname.split('/').at(-1)!
+      const name = new URL(request.url()).pathname.split('/').at(-1)!
+      const dot = source.lastIndexOf('.')
+      return name === source || (name.startsWith(source.slice(0, dot) + '-') && name.endsWith(source.slice(dot)))
+    })) captureRequests.push(request.url()) })
     await page.goto(base, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('#title-base-camp')).toBeVisible()
     await ready(page)
@@ -349,7 +354,7 @@ try {
       await settle(page)
     })
 
-    await step('project exhibit: each project lit on its own 3D structure, clear of the text and the HUD', async () => {
+    await step('project exhibit: each original capture lit on the shared display, clear of the text and the HUD', async () => {
       await goToCamp(page, 4)
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '3d')
       expect(captureRequests.length, 'captures loaded on the way to Projects').toBe(projects.length)
@@ -370,7 +375,7 @@ try {
           }
         })
         expect(layout, project.slug).toMatchObject({ shown: 'visible', text: false, hud: false, inside: true })
-        expect(layout.share, `${project.slug}: a hero, not a thumbnail`).toBeGreaterThan(.18)
+        expect(layout.share, `${project.slug}: a hero, not a thumbnail`).toBeGreaterThan(.35)
       }
     })
 
@@ -443,6 +448,8 @@ try {
     await page.keyboard.press('Enter')
     await expect(page.locator('#title-high-camp')).toBeFocused()
     await expectArrived(page, 4)
+    await page.keyboard.press('Tab')
+    await expect(page.locator('.project-open')).toBeFocused()
     await page.keyboard.press('Tab')
     await expect(page.locator('.project-row').first()).toBeFocused()
     for (let i = 0; i < 30; i++) {
@@ -542,7 +549,7 @@ try {
     // Phones show the capture itself, flat and whole, instead of the 3D exhibit.
     await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '2d')
     await page.locator('.project-row').nth(1).tap()
-    await expect.poll(() => page.evaluate(() => { const img = document.querySelector<HTMLImageElement>('#high-camp .project-screen img[data-active="true"]'); return img ? img.complete && img.naturalWidth > 0 && /samsung-bees/.test(img.currentSrc) : false })).toBe(true)
+    await expect.poll(() => page.evaluate(() => { const img = document.querySelector<HTMLImageElement>('#high-camp .project-screen img[data-active="true"]'); return img ? img.complete && img.naturalWidth > 0 && /bees-dashboard/.test(img.currentSrc) : false })).toBe(true)
     await page.locator('.project-open').tap()
     await expect(page.locator('.detail-title')).toHaveText(projects[1].name)
     await context.close()

@@ -72,14 +72,17 @@ function Tools() {
 }
 
 /**
- * The project's capture as a flat 16:9 image, wherever the 3D exhibit is not on view (reading route, portrait
- * and narrow screens). Captures already shown stay mounted, so a change crossfades instead of reloading.
+ * Original captures in a stable, uncropped frame on reading, portrait and narrow screens.
+ * Keep the last loaded image visible while the newly selected capture decodes.
  */
 function ProjectScreen({ active }: { active: number }) {
   const [shown, setShown] = useState(() => new Set([active]))
+  const [loaded, setLoaded] = useState<Set<number>>(() => new Set())
+  const [displayed, setDisplayed] = useState(active)
   if (!shown.has(active)) setShown(new Set(shown).add(active))
+  if (loaded.has(active) && displayed !== active) setDisplayed(active)
   return <div className="project-screen" aria-hidden="true">
-    {projects.map((item, index) => shown.has(index) && <img key={item.slug} src={item.screen.mobile} srcSet={`${item.screen.mobile} 960w, ${item.screen.desktop} 1600w`} sizes="(max-width: 767px) calc(100vw - 48px), 50vw" alt="" loading="lazy" decoding="async" data-active={index === active} />)}
+    {projects.map((item, index) => shown.has(index) && <img key={item.slug} src={item.screen.desktop} width={item.screen.width} height={item.screen.height} alt="" loading="lazy" decoding="async" onLoad={() => setLoaded(previous => new Set(previous).add(index))} data-active={index === displayed} />)}
   </div>
 }
 
@@ -104,23 +107,21 @@ function Projects() {
     <h1 className="portfolio-heading" id="title-high-camp" tabIndex={-1}>Selected Work<span className="heading-accent">.</span></h1>
     <p className="body-copy section-intro">복잡한 문제를 구조화하고 실제 제품으로 만든 작업을 모았어요.</p>
     <div className="panel-body projects-layout">
-      <div className="project-index" role="group" aria-label="프로젝트 선택">{projects.map((item, index) => <button type="button" key={item.slug} onClick={() => select(index)} className="project-row" data-active={active === index} aria-pressed={active === index} aria-controls="selected-project">
-        <span className="project-number">{item.number}</span><span className="project-label"><strong>{item.name}</strong><span>{item.type}</span></span>
-      </button>)}</div>
+      <Link className="project-media-link" to={`/project/${project.slug}`} tabIndex={-1} aria-hidden="true"><ProjectScreen active={active} /></Link>
       <article className="project-preview" id="selected-project" aria-label="선택한 프로젝트">
-        <header className="project-preview-header">
-          <div className="project-preview-meta"><span>{project.type}</span><span>{project.period}</span></div>
-          <h2>{project.name}</h2>
-        </header>
-        <div className="project-information" key={project.slug}>
+        <div className="project-information" key={project.slug} aria-live="polite" aria-atomic="true">
+          <header className="project-preview-header"><span className="project-selected-number">{project.number} / 05</span><h2>{project.name}</h2></header>
           <p>{project.summary}</p>
+          <div className="project-preview-meta"><span>{project.type}</span><span>{project.period}</span></div>
           <div className="project-actions">
             <ul className="project-tags" aria-label="프로젝트 키워드">{project.tags.map(tag => <li key={tag}>#{tag}</li>)}</ul>
             <Link className="project-open" to={`/project/${project.slug}`}>프로젝트 보기 <ArrowUpRight className="project-open-arrow" /></Link>
           </div>
         </div>
-        <Link className="project-media-link" to={`/project/${project.slug}`} tabIndex={-1} aria-hidden="true"><ProjectScreen active={active} /></Link>
       </article>
+      <div className="project-index" role="group" aria-label="프로젝트 선택">{projects.map((item, index) => <button type="button" key={item.slug} onClick={() => select(index)} className="project-row" data-active={active === index} aria-pressed={active === index} aria-controls="selected-project" aria-label={`${item.number} ${item.name}`} title={item.name}>
+        <span className="project-number">{item.number}</span>
+      </button>)}</div>
     </div>
   </>
 }

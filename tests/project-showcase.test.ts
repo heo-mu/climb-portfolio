@@ -1,15 +1,17 @@
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it, vi } from 'vitest'
 import * as THREE from 'three'
 import { ProjectShowcase } from '../src/experience/ProjectShowcase'
-import { SCREEN_HEIGHT } from '../src/experience/showcaseDevices'
+import { SCREEN_HEIGHT, captureFit } from '../src/experience/showcaseDevices'
 import { guideRoute } from '../src/experience/grounding'
 import { cameraFieldOfView, exhibitionCameraPose, exhibitionFocus, groundHeight, routePoint, showcaseShelfBlend, showcaseSite, terrainGeometry, TerrainSurface } from '../src/experience/terrain'
 import { projects } from '../src/data/projects'
+import type { ExpeditionFrame } from '../src/experience/progress'
 
 const terrain = terrainGeometry(), surface = new TerrainSurface(terrain)
 const world = new THREE.Group(), showcase = new ProjectShowcase()
 showcase.build(world, surface, () => new THREE.MeshBasicMaterial({ transparent: true }))
 afterAll(() => {
+  showcase.dispose()
   terrain.dispose()
   world.traverse(object => {
     if (object instanceof THREE.Mesh) { object.geometry.dispose(); (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => material.dispose()) }
@@ -29,29 +31,98 @@ const forward = (p: THREE.Vector3) => (p.x - showcaseSite.origin.x) * showcaseSi
 const screenCorners = (screen: THREE.Object3D) => [[-.5, -1], [.5, -1], [-.5, 1], [.5, 1]].map(([x, y]) => new THREE.Vector3(x, y * SCREEN_HEIGHT / 2, 0).applyMatrix4(screen.matrixWorld))
 
 describe('Projects exhibit', () => {
-  it('builds one structure per project, each with its own silhouette', () => {
-    campCamera(1920, 1080)
-    const { items } = showcase.structures
-    expect(items.map(item => item.slug)).toEqual(projects.map(project => project.slug))
-    const shapes = items.map(({ group, scale }) => {
-      const box = new THREE.Box3()
-      group.traverse(object => { if (object instanceof THREE.Mesh && object.name !== 'showcase-screen') box.expandByObject(object) })
-      const size = box.getSize(new THREE.Vector3()).divideScalar(scale)
-      return [size.x, size.y, Math.hypot(size.x, size.z) - size.x]
+  it('holds the loaded capture, crossfades only the screen and settles rapid changes on the final selection', async () => {
+    const pending = new Map<string, () => void>()
+    vi.stubGlobal('Image', class {
+      src = ''
+      decode() { return new Promise<void>(resolve => pending.set(this.src, resolve)) }
     })
-    // Pairwise, every two structures differ clearly in width, height or depth (display widths).
-    for (let i = 0; i < shapes.length; i++) for (let j = i + 1; j < shapes.length; j++) {
-      expect(Math.max(...shapes[i].map((value, axis) => Math.abs(value - shapes[j][axis]))), `${items[i].slug} vs ${items[j].slug}`).toBeGreaterThan(.06)
+    vi.stubGlobal('window', { requestIdleCallback: (callback: () => void) => callback() })
+    const exhibit = new ProjectShowcase(), scene = new THREE.Group()
+    const camera = campCamera(1440, 900)
+    exhibit.build(scene, surface, () => new THREE.MeshBasicMaterial({ transparent: true }))
+    exhibit.layout(camera, 1440, 900)
+    const { group, screen } = exhibit.structures.items[0], pose = group.matrixWorld.toArray()
+    const uniforms = screen.material.uniforms
+    let time = 0
+    const tick = (reducedMotion = false) => {
+      time += .04
+      exhibit.update({ time, progress: .75, route: .75, destination: 4, reducedMotion, returningHome: false, sections: [] } as unknown as ExpeditionFrame, camera)
+      scene.updateMatrixWorld(true)
+      expect(group.matrixWorld.toArray()).toEqual(pose)
+      expect(group.visible).toBe(true)
     }
+    const decode = async (index: number) => {
+      await vi.waitFor(() => expect(pending.has(projects[index].screen.desktop)).toBe(true))
+      pending.get(projects[index].screen.desktop)!()
+      // decode, idle and upload each continue on the microtask queue.
+      for (let i = 0; i < 6; i++) await Promise.resolve()
+    }
+    try {
+      tick()
+      await decode(0)
+      for (let i = 0; i < 9; i++) tick()
+      const original = uniforms.toMap.value
+      expect(original.image.src).toBe(projects[0].screen.desktop)
+      expect(original.colorSpace).toBe(THREE.SRGBColorSpace)
+      exhibit.select(1)
+      for (let i = 0; i < 12; i++) tick()
+      expect(uniforms.toMap.value).toBe(original)
+      expect(uniforms.mixAmount.value).toBe(1)
+      await decode(1)
+      tick()
+      expect(uniforms.fromMap.value).toBe(original)
+      expect(uniforms.mixAmount.value).toBeGreaterThan(0)
+      expect(uniforms.mixAmount.value).toBeLessThan(1)
+      exhibit.select(2); exhibit.select(4)
+      await decode(2); await decode(3); await decode(4)
+      for (let i = 0; i < 18; i++) tick()
+      expect(uniforms.toMap.value.image.src).toBe(projects[4].screen.desktop)
+      expect(uniforms.mixAmount.value).toBe(1)
+      exhibit.select(0)
+      tick(true)
+      expect(uniforms.toMap.value).toBe(original)
+      expect(uniforms.mixAmount.value).toBe(1)
+    } finally {
+      exhibit.dispose()
+      scene.traverse(object => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => material.dispose()) } })
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('keeps one frame and its pose across every project selection', () => {
+    campCamera(1920, 1080)
+    expect(showcase.structures.items).toHaveLength(1)
+    const { group, screen } = showcase.structures.items[0]
+    const pose = group.matrixWorld.toArray()
+    for (let i = 0; i < projects.length; i++) {
+      showcase.select(i)
+      world.updateMatrixWorld(true)
+      expect(showcase.structures.items[0].group).toBe(group)
+      expect(group.matrixWorld.toArray()).toEqual(pose)
+      expect(screen.material.toneMapped).toBe(false)
+      expect(screen.material.fog).toBe(false)
+      expect(screen.renderOrder).toBeGreaterThan(0)
+    }
+  })
+
+  it('contains the full source at its native aspect ratio', () => {
+    for (const { screen } of projects) {
+      const fit = captureFit(screen.width, screen.height)
+      expect(fit.x / (fit.y * SCREEN_HEIGHT)).toBeCloseTo(screen.width / screen.height, 8)
+      expect(Math.max(fit.x, fit.y)).toBe(1)
+    }
+    expect(captureFit(1000, 1000).toArray()).toEqual([9 / 16, 1])
+    expect(captureFit(2000, 500).toArray()).toEqual([1, 4 / 9])
   })
 
   it('shows every capture as an exact, unstretched 16:9 plane', () => {
     campCamera(1440, 900)
-    for (const { slug, screen } of showcase.structures.items) {
+    for (const { screen } of showcase.structures.items) {
       const [a, b, c] = screenCorners(screen)
-      expect(a.distanceTo(b) / a.distanceTo(c), slug).toBeCloseTo(16 / 9, 6)
+      expect(a.distanceTo(b) / a.distanceTo(c), 'display').toBeCloseTo(16 / 9, 6)
       const uv = screen.geometry.getAttribute('uv')
-      expect([Math.min(...uv.array), Math.max(...uv.array)], `${slug}: whole capture`).toEqual([0, 1])
+      expect([Math.min(...uv.array), Math.max(...uv.array)], `display: whole capture`).toEqual([0, 1])
     }
   })
 
@@ -60,8 +131,8 @@ describe('Projects exhibit', () => {
       campCamera(width, height)
       const { items } = showcase.structures
       const rope = guideRoute(surface).poles.map(pole => pole.anchor).filter(anchor => forward(anchor) > 0 && forward(anchor) < 30)
-      for (const { slug, group, footing, bury, scale } of items) {
-        const label = `${slug} @${width}`, positions = footing.getAttribute('position'), point = new THREE.Vector3()
+      for (const { group, footing, bury, scale } of items) {
+        const label = `display @${width}`, positions = footing.getAttribute('position'), point = new THREE.Vector3()
         footing.computeBoundingBox()
         const threshold = footing.boundingBox!.min.y + (footing.boundingBox!.max.y - footing.boundingBox!.min.y) * .09
         let lowest = Infinity, nearest = Infinity
@@ -94,9 +165,9 @@ describe('Projects exhibit', () => {
     for (const [width, height] of [[1920, 1080], [1600, 900], [1440, 900], [1366, 768]]) {
       const camera = campCamera(width, height)
       expect(showcase.structures.enabled).toBe(true)
-      for (const { slug, screen } of showcase.structures.items) {
+      for (const { screen } of showcase.structures.items) {
         const ndc = screenCorners(screen).map(corner => corner.project(camera))
-        const label = `${slug} @${width}x${height}`
+        const label = `display @${width}x${height}`
         for (const p of ndc) {
           expect(p.z, label).toBeLessThan(1)
           // The editorial panel occupies the left third; the entire display clears it.
@@ -104,7 +175,7 @@ describe('Projects exhibit', () => {
           expect(p.x, label).toBeLessThan(.725)
           expect(Math.abs(p.y), label).toBeLessThan(.86)
         }
-        expect(Math.max(...ndc.map(p => p.x)) - Math.min(...ndc.map(p => p.x)), `${label}: a hero, not a thumbnail`).toBeGreaterThan(.52)
+        expect(Math.max(...ndc.map(p => p.x)) - Math.min(...ndc.map(p => p.x)), `${label}: a hero, not a thumbnail`).toBeGreaterThan(.7)
       }
     }
   })

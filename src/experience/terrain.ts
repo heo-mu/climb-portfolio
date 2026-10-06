@@ -108,7 +108,7 @@ export const exhibitionFocus = (route: number) => ease(.705, .738, route) * (1 -
 /** A portrait lens only around the exhibition; the rest of the ascent keeps its wide walking view. */
 export function cameraFieldOfView(route: number, aspect: number, width: number) {
   const base = aspect < .95 ? experienceConfig.camera.mobileFov : experienceConfig.camera.desktopFov
-  return width > 1000 && aspect >= 1.2 ? THREE.MathUtils.lerp(base, 42, exhibitionFocus(route)) : base
+  return width > 1024 && aspect >= 1.2 ? THREE.MathUtils.lerp(base, 42, exhibitionFocus(route)) : base
 }
 
 export function cameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3) {
@@ -127,7 +127,7 @@ export function cameraPose(route: number, position: THREE.Vector3, target: THREE
 /** Render-only staging: route distance, altitude and arrival semantics retain the walking rail. */
 export function exhibitionCameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3, width: number, aspect: number) {
   cameraPose(route, position, target)
-  if (width <= 1000 || aspect < 1.2) return
+  if (width <= 1024 || aspect < 1.2) return
   // A local overlook at Projects exposes the devices' decks and their stone footings.
   // Both shoulders blend back into the original walking camera, including in reverse.
   const exhibition = exhibitionFocus(route)
