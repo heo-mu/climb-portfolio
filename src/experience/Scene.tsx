@@ -13,7 +13,7 @@ export function Scene({ controller, onFallback }: { controller: ScrollController
       try {
         const { MountainScene } = await import('./MountainScene')
         if (cancelled || !canvas.current) return
-        const scene = new MountainScene({ canvas: canvas.current, root: canvas.current.closest<HTMLElement>('.expedition')!, onLost: onFallback })
+        const scene = new MountainScene({ canvas: canvas.current, root: canvas.current.closest<HTMLElement>('.expedition')!, onLost: onFallback, onProjectsReady: controller.setProjectsReady })
         const unsubscribe = controller.subscribe(scene.update)
         dispose = () => { unsubscribe(); scene.dispose() }
         setReady(true)

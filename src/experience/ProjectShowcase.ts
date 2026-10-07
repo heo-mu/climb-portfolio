@@ -4,7 +4,7 @@ import { checkpoints } from '../data/checkpoints'
 import { buildDisplay, captureFit, SCREEN_HEIGHT, type ShowcaseDevice } from './showcaseDevices'
 import { cameraFieldOfView, exhibitionCameraPose, showcaseSite, type TerrainSurface } from './terrain'
 import { contactPatch, seatOnGround } from './grounding'
-import type { ExpeditionFrame } from './progress'
+import { projectsPresentation, type ExpeditionFrame } from './progress'
 import { loadProjectCapture } from './projectCaptures'
 
 const CROSSFADE = .22
@@ -18,12 +18,6 @@ const GROUND_EMBED = .003
 const ROPE_CLEARANCE = 3.3
 /** Below head height (m above the shelf), nothing may reach into the walked line. */
 const WALK = { height: 2.3, clearance: 1.1 }
-/** Walking on past the exhibit, it dissolves into the weather like the camp panels, before the walker reaches it (m). */
-const PASSING = { start: 6.5, end: 2.5 }
-/** NDC: as the nearing exhibit would slide under the trail navigation, it yields over this much overflow; the
-    first sliver (still within the 32 px kept before the labels) absorbs seating and rounding differences. */
-const YIELD = { after: .02, over: .35 }
-
 type Exhibit = ShowcaseDevice & {
   /** Contact shadow: a wide soft patch and a tight core where the footing meets the snow. */
   shade: THREE.Mesh
@@ -136,6 +130,8 @@ export class ProjectShowcase {
     this.width = width; this.height = height
     const slot = this.exhibit
     if (!this.surface || !slot) return
+    // Measure the destination layout, not the previous viewport's 2D grid.
+    if (this.root) this.root.dataset.showcase = width > 1024 && camera.aspect >= 1.2 ? '3d' : '2d'
     const view = this.view, target = new THREE.Vector3()
     view.fov = cameraFieldOfView(showcaseSite.route, camera.aspect, width); view.aspect = camera.aspect; view.near = camera.near; view.far = camera.far
     view.updateProjectionMatrix()
@@ -273,16 +269,11 @@ export class ProjectShowcase {
     // Captures load on the way up (or as soon as Projects is the destination), never at Home.
     if (this.enabled && !this.loading && (frame.progress > .38 || frame.destination >= PROJECTS)) void this.loadCaptures()
     let moving = false
-    // Nearing the exhibit on the way up, it yields as it would slide under the trail, and clears before the
-    // walker would reach it; walking back, it returns the same way. Only the camera position decides.
+    // Camera staging and presence share the same arrival envelope, in either direction.
     if (this.enabled && (frame.route !== this.poseRoute || this.dirty)) {
       this.poseRoute = frame.route
-      const ahead = slot.front - ((camera.position.x - showcaseSite.origin.x) * showcaseSite.forward.x + (camera.position.z - showcaseSite.origin.z) * showcaseSite.forward.z)
-      let right = -Infinity
-      // Far down the route the exhibit is a small shape ahead; only near the camp can it reach the trail.
-      if (ahead < 60) for (const point of slot.silhouette) right = Math.max(right, this.corner.copy(point).applyMatrix4(slot.rest.matrix).project(camera).x)
-      const approach = THREE.MathUtils.smoothstep(frame.route, .735, .747)
-      const nearness = Math.min(approach > 0 ? this.clearance(camera) * approach : 0, THREE.MathUtils.smoothstep(ahead, PASSING.end, PASSING.start), 1 - THREE.MathUtils.smoothstep(right - this.limits.right - YIELD.after, 0, YIELD.over))
+      const { presence } = projectsPresentation(frame.route)
+      const nearness = (this.displayed >= 0 || this.textures[this.selected]) && presence > 0 ? this.clearance(camera) * presence : 0
       if (nearness !== this.nearness) { this.nearness = nearness; this.apply(slot) }
     }
     const screen = slot.screen.material.uniforms
@@ -292,8 +283,9 @@ export class ProjectShowcase {
       screen.toMap.value = this.textures[this.selected]
       const { width, height } = projects[this.selected].screen
       screen.toFit.value.copy(captureFit(width, height))
+      this.transition = this.displayed < 0 ? 1 : 0
       this.displayed = this.selected
-      this.transition = 0
+      screen.mixAmount.value = this.transition
     }
     if (this.transition < 1) {
       this.transition = frame.reducedMotion ? 1 : Math.min(1, this.transition + delta / CROSSFADE)
@@ -444,8 +436,11 @@ export class ProjectShowcase {
     return { enabled: this.enabled, items: slot ? [{ group: slot.group, screen: slot.screen, footing: slot.footing, bury: slot.bury, scale: slot.rest.scale }] : [] }
   }
 
+  get ready() { return !!this.exhibit && (!this.enabled || this.displayed >= 0) }
+
   /** What the exhibit shows, on the root for the DOM and its checks: the settled project and whether its capture is lit. */
   private report() {
+    if (this.root) this.root.dataset.showcasePresence = String(this.enabled ? this.nearness : 0)
     const settled = this.displayed === this.selected && this.transition === 1
     const state = this.enabled ? `${settled ? projects[this.selected].slug : ''}|${settled}` : ''
     if (state === this.reported || !this.root) return

@@ -9,6 +9,13 @@ import { Vector3 } from 'three'
 const eye = (progress: number) => new Vector3(...routeEyeAt(routeProgress(progress)))
 
 describe('spatial arrival', () => {
+  it('waits for the first Projects capture without enabling empty content', () => {
+    for (const progress of campZones[4].arrival) {
+      expect(sectionUIAt(progress, false, false)[4].interactive).toBe(false)
+      expect(sectionUIAt(progress, false, true)[4].interactive).toBe(true)
+    }
+    expect(sectionUIAt(checkpoints[3].progress, false, false)[3].interactive).toBe(true)
+  })
   it('derives every arrival zone from the walker’s real distance to its reading plateau', () => {
     const { arrivalDistance, homeDockDistance } = experienceConfig.content
     campZones.forEach(({ plateau, arrival, dock }, index) => {

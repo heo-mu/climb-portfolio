@@ -48,6 +48,7 @@ async function open(options: BrowserContextOptions = {}, allow: RegExp[] = [], i
 }
 
 async function step(name: string, run: () => Promise<void>) {
+  if (process.env.ASCENT_CHECKS && !new RegExp(process.env.ASCENT_CHECKS, 'i').test(name)) return
   const start = Date.now()
   await run()
   passed.push(name)
@@ -124,7 +125,8 @@ const sweep = (page: Page, from: number, to: number, ms: number) => page.evaluat
     if (t < 1) window.scrollTo({ top: (from + (to - from) * t) * range, behavior: 'instant' })
     frames++
     const seen = new Set<string>()
-    const header = document.querySelector('.current-location strong')!.textContent
+    const location = document.querySelector('.current-location')!
+    const header = (location as HTMLElement).style.visibility === 'hidden' ? undefined : location.querySelector('strong')!.textContent
     const trail = document.querySelector('.trail-checkpoint[aria-current]')?.getAttribute('aria-label')?.replace(/^\d+ /, '')
     sections.forEach(section => {
       const composition = section.querySelector<HTMLElement>('.spatial-panel, .home-layout')!
@@ -133,7 +135,7 @@ const sweep = (page: Page, from: number, to: number, ms: number) => page.evaluat
       const presence = measured.getBoundingClientRect().width / measured.offsetWidth
       const name = section.querySelector('.panel-kicker span:last-child')?.textContent ?? 'Home'
       const at = `${Math.round(now - start)}ms scroll=${(scrollY / range).toFixed(4)}`
-      if (section.inert && visible > .5 && presence > .85) { seen.add(`ghost-${name}`); flag(`ghost-${name}`, `${at}: ${name} looks arrived (presence ${presence.toFixed(2)}, opacity ${visible.toFixed(2)}) but is inert`) }
+      if (section.inert && visible > .5 && presence > .85 && !(section.id === 'high-camp' && visible < 1)) { seen.add(`ghost-${name}`); flag(`ghost-${name}`, `${at}: ${name} looks arrived (presence ${presence.toFixed(2)}, opacity ${visible.toFixed(2)}) but is inert`) }
       if (!section.inert && visible < .5) { seen.add(`blind-${name}`); flag(`blind-${name}`, `${at}: ${name} is interactive while invisible`) }
       if (!section.inert && header !== name) { seen.add(`hud-${name}`); flag(`hud-${name}`, `${at}: ${name} arrived but the location reads ${header}`) }
     })
@@ -238,17 +240,19 @@ try {
           const edge = camp.progress + direction * readableRange
           if (edge >= 1) continue
           let inside = 0, outside = 0
-          for (let k = 1; k <= 5; k++) {
+          // The first leg slows more strongly near About, so 5 metres span more scroll.
+          for (let k = 1; k <= 40; k++) {
             await scrollToProgress(page, edge + direction * k * .002)
             await settle(page)
             const state = (await campStates(page))[camp.order]
             if (state.inert) {
               outside++
-              expect(state.visibility === 'hidden' || Number(state.opacity) < .5 || state.presence < .85, `${camp.navigation} ${direction < 0 ? 'approach' : 'departure'} +${k}: inert but presence ${state.presence.toFixed(2)}`).toBe(true)
+              expect(state.visibility === 'hidden' || Number(state.opacity) < .5 || state.presence < .85 || (camp.order === 4 && Number(state.opacity) < 1), `${camp.navigation} ${direction < 0 ? 'approach' : 'departure'} +${k}: inert but presence ${state.presence.toFixed(2)}`).toBe(true)
             } else {
               inside++
               expect(state, `${camp.navigation} docked at +${k}`).toMatchObject({ spatial: 'readable', transform: 'none', opacity: '1' })
             }
+            if (outside >= 2) break
           }
           expect(outside, `${camp.navigation} ${direction < 0 ? 'approach' : 'departure'} leaves the zone`).toBeGreaterThan(0)
           if (camp.order > 1 || direction > 0) expect(inside, `${camp.navigation} ${direction < 0 ? 'approach' : 'departure'} fringe`).toBeGreaterThan(0)
@@ -354,6 +358,65 @@ try {
       await settle(page)
     })
 
+    await step('Projects boundaries, responsive badges and Trail nodes', async () => {
+      await goToCamp(page, 4)
+      await page.locator('.project-row').nth(2).click()
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[2].slug)
+      await goToCamp(page, 5)
+      await goToCamp(page, 4)
+      await expect(page.locator('.project-row').nth(2)).toHaveAttribute('aria-selected', 'true')
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[2].slug)
+      // Sample the whole reading dwell from both sides, not only the camp centre.
+      for (const progress of [.75, .7715, .78, .8, .824, .8284, .85, .8284, .824, .8, .78, .7715, .75]) {
+        await scrollToProgress(page, progress)
+        await settle(page)
+        const arrived = !await page.locator('#high-camp').evaluate((element: HTMLElement) => element.inert)
+        if (arrived) {
+          await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-presence', '1')
+          expect(await exhibitIssues(page, projects[2].slug)).toEqual([])
+          await expect(page.locator('.trail-checkpoint').nth(4)).toHaveAttribute('aria-current', 'step')
+        } else await expect(page.locator('.trail-checkpoint').nth(4)).not.toHaveAttribute('aria-current', 'step')
+      }
+      const sizes = [[1920, 1080], [1600, 900], [1440, 900], [1366, 768], [1280, 800], [1024, 768], [430, 932], [390, 844]]
+      for (const [width, height] of sizes) {
+        await page.setViewportSize({ width, height })
+        await goToCamp(page, 4)
+        for (const [index, project] of projects.entries()) {
+          await page.locator('.project-row').nth(index).click()
+          await expect(page.locator('.project-preview h2')).toHaveText(project.name)
+          await expect(page.locator('.project-tags li')).toHaveText(project.tags.map(tag => `#${tag}`))
+          expect(await layoutIssues(page, 4), `${width}: ${project.slug}`).toEqual([])
+          expect(await exhibitIssues(page, project.slug), `${width}: ${project.slug}`).toEqual([])
+          if (width >= 1440) expect(await page.locator('#high-camp .panel-content').evaluate(element => element.scrollHeight <= element.clientHeight + 1)).toBe(true)
+        }
+        const nodes = await page.evaluate(() => {
+          const svg = document.querySelector<SVGSVGElement>('.trail-map')!, path = svg.querySelector<SVGPathElement>('.trail-remaining')!
+          const matrix = svg.getScreenCTM()!, length = path.getTotalLength()
+          return Array.from(document.querySelectorAll<HTMLElement>('.trail-node')).map(node => {
+            const rect = node.getBoundingClientRect(), style = getComputedStyle(node)
+            let distance = Infinity
+            for (let offset = 0; offset <= length; offset += .25) {
+              const point = path.getPointAtLength(offset), screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
+              distance = Math.min(distance, Math.hypot(screen.x - rect.x - rect.width / 2, screen.y - rect.y - rect.height / 2))
+            }
+            return { size: rect.width, active: !!node.closest('[aria-current]'), opacity: Number(style.opacity), distance }
+          })
+        })
+        for (const node of nodes) {
+          expect(node.size).toBe(node.active ? 6 : 4)
+          expect(node.opacity).toBeGreaterThanOrEqual(.4)
+          expect(node.distance, `node on path @${width}`).toBeLessThan(.3)
+        }
+        expect(await page.locator('.project-tags li').first().evaluate(element => getComputedStyle(element).fontSize)).toBe('11px')
+      }
+      await page.setViewportSize(desktop)
+      await settle(page)
+      await goToCamp(page, 0)
+      await goToCamp(page, 4)
+      await expect(page.locator('.project-preview h2')).toHaveText(projects[4].name)
+      await page.locator('.project-row').first().click()
+    })
+
     await step('project exhibit: each original capture lit on the shared display, clear of the text and the HUD', async () => {
       await goToCamp(page, 4)
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '3d')
@@ -380,8 +443,8 @@ try {
     })
 
     await step('Projects: selection, detail round trip and restored selection', async () => {
-      await goToCamp(page, 3)
       await goToCamp(page, 4)
+      await page.locator('.project-row').first().click()
       await expect(page.locator('.project-preview h2')).toHaveText(projects[0].name)
       await expect(page.locator('.project-row').first()).toHaveAttribute('aria-selected', 'true')
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[0].slug)
@@ -538,6 +601,25 @@ try {
   })
 
   // ───────────────────────── Reduced motion, touch, DPR 3 ─────────────────────────
+  await step('Projects capture readiness: a fast visit never activates an empty exhibit', async () => {
+    const { context, page } = await open({ reducedMotion: 'reduce' })
+    let release = () => {}
+    const captureGate = new Promise<void>(resolve => { release = resolve })
+    await page.route(/deurim.*\.webp/, async route => { await captureGate; await route.continue() })
+    try {
+      await page.goto(base)
+      await ready(page)
+      await scrollToProgress(page, checkpoints[4].progress)
+      await settle(page)
+      await expect(page.locator('#high-camp')).toHaveAttribute('aria-hidden', 'true')
+      await expect(page.locator('.trail-checkpoint').nth(4)).not.toHaveAttribute('aria-current', 'step')
+      release()
+      await expectArrived(page, 4)
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-presence', '1')
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[0].slug)
+    } finally { release(); await context.close() }
+  })
+
   await step('reduced motion: no spatial transforms, no ripple, instant arrival', async () => {
     const { context, page } = await open({ reducedMotion: 'reduce' })
     await page.goto(base)

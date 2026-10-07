@@ -67,6 +67,20 @@ export const campZones: CampZone[] = checkpoints.map((camp, index) => {
 
 const within = (progress: number, [from, to]: Span) => progress >= from - Number.EPSILON && progress <= to + Number.EPSILON
 
+// One reversible presentation envelope, derived from the actual Projects arrival.
+// Park the overlook before revealing the display; finish the reveal before input opens.
+const projectsArrival = campZones[4].arrival.map(routeProgress)
+const projectsShoulder = projectsArrival[1] - projectsArrival[0]
+export function projectsPresentation(route: number) {
+  const [entry, exit] = projectsArrival
+  const ramp = (from: number, to: number) => smoothstep((route - from) / (to - from))
+  const focus = ramp(entry - projectsShoulder, entry - projectsShoulder * .15)
+    * (1 - ramp(exit + projectsShoulder * .15, exit + projectsShoulder))
+  const presence = ramp(entry - projectsShoulder * .15, entry)
+    * (1 - ramp(exit, exit + projectsShoulder * .15))
+  return { focus, presence }
+}
+
 // Arrival is spatial, never dependent on a second animation clock.
 export function readableCheckpoint(progress: number) {
   return campZones.findIndex(({ arrival }) => within(progress, arrival))
@@ -88,13 +102,13 @@ export type SectionUIState = { phase: 'hidden' | 'active'; interactive: boolean 
 
 // Shared, immutable states: consumers can skip DOM work when the reference is unchanged.
 const sectionStates = new Map<string, readonly SectionUIState[]>()
-export function sectionUIAt(progress: number, returningHome = false): readonly SectionUIState[] {
-  const arrived = readableCheckpoint(progress), key = `${arrived}:${returningHome}`
+export function sectionUIAt(progress: number, returningHome = false, projectsReady = true): readonly SectionUIState[] {
+  const arrived = readableCheckpoint(progress), key = `${arrived}:${returningHome}:${projectsReady}`
   let states = sectionStates.get(key)
   if (!states) {
     // Home return passes through camps without activating them.
     states = checkpoints.map((_, index) => {
-      const interactive = arrived === index && (!returningHome || index === 0)
+      const interactive = arrived === index && (!returningHome || index === 0) && (index !== 4 || projectsReady)
       return { phase: interactive ? 'active' : 'hidden', interactive } as const
     })
     sectionStates.set(key, states)
@@ -106,10 +120,12 @@ export function sectionUIAt(progress: number, returningHome = false): readonly S
 const WHEEL_GESTURE_GAP = 180
 
 /** `destination`: the camp whose dock holds the scroll target, where the walker will stand. */
-export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
+export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; projectsReady?: boolean; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
 type Listener = (frame: ExpeditionFrame) => void
 
 export class ScrollController {
+  private projectsReady = false
+  setProjectsReady = (ready: boolean) => { this.projectsReady = ready }
   private listeners = new Set<Listener>()
   private target = 0
   private current = 0
@@ -120,7 +136,7 @@ export class ScrollController {
   private media = window.matchMedia('(prefers-reduced-motion: reduce)')
   private started = false
   private returningHome = false
-  private frame: ExpeditionFrame = { progress: 0, route: 0, altitude: checkpoints[0].altitude, active: 0, destination: 0, sections: sectionUIAt(0), returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
+  private frame: ExpeditionFrame = { progress: 0, route: 0, altitude: checkpoints[0].altitude, active: 0, destination: 0, sections: sectionUIAt(0), projectsReady: false, returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener)
@@ -169,7 +185,7 @@ export class ScrollController {
     this.returningHome = false
     // Stopped mid-descent: name the camp last passed, as an uphill walk would.
     const passed = checkpoints.findIndex(camp => camp.progress >= this.current)
-    this.frame = { ...this.frame, returningHome: false, sections: sectionUIAt(this.current), active: activeCheckpoint(this.current, passed < 0 ? checkpoints.length - 1 : passed) }
+    this.frame = { ...this.frame, returningHome: false, sections: sectionUIAt(this.current, false, this.projectsReady), active: activeCheckpoint(this.current, passed < 0 ? checkpoints.length - 1 : passed) }
     window.scrollTo({ top: window.scrollY, behavior: 'instant' })
   }
   private onKey = (event: KeyboardEvent) => {
@@ -200,10 +216,10 @@ export class ScrollController {
     const returningHome = this.returningHome
     // The rendered approach reveals the composition; arrival makes it settled,
     // interactive and current in the same frame, with no second fade clock.
-    const sections = sectionUIAt(this.current, returningHome)
+    const sections = sectionUIAt(this.current, returningHome, this.projectsReady)
     // Returning Home names its destination at once; the marker shows the descent.
     const active = returningHome ? 0 : activeCheckpoint(this.current, this.frame.active)
-    this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active, destination: dockingCheckpoint(this.target), sections, returningHome, delta, time: time / 1000, reducedMotion }
+    this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active, destination: dockingCheckpoint(this.target), sections, projectsReady: this.projectsReady, returningHome, delta, time: time / 1000, reducedMotion }
     this.emit()
     this.raf = requestAnimationFrame(this.tick)
   }
@@ -213,7 +229,7 @@ export class ScrollController {
     this.started = true
     this.measure()
     this.current = this.target = clamp(initialProgress)
-    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current) }
+    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current, false, this.projectsReady), projectsReady: this.projectsReady }
     window.scrollTo({ top: this.current * this.range, behavior: 'instant' })
     window.addEventListener('scroll', this.onScroll, { passive: true })
     window.addEventListener('resize', this.onResize)
@@ -228,7 +244,7 @@ export class ScrollController {
     this.measure()
     this.returningHome = progress === 0 && this.current > 0
     this.trailingWheel = this.returningHome && performance.now() - this.lastWheel < WHEEL_GESTURE_GAP
-    this.frame = { ...this.frame, returningHome: this.returningHome, sections: sectionUIAt(this.current, this.returningHome), active: this.returningHome ? 0 : this.frame.active }
+    this.frame = { ...this.frame, returningHome: this.returningHome, sections: sectionUIAt(this.current, this.returningHome, this.projectsReady), active: this.returningHome ? 0 : this.frame.active }
     this.emit()
     if (instant || this.media.matches) this.current = this.target = clamp(progress)
     window.scrollTo({ top: clamp(progress) * this.range, behavior: instant || this.media.matches ? 'instant' : 'smooth' })

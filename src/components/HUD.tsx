@@ -31,7 +31,8 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
       if (altitude.current && value !== previousAltitude) altitude.current.textContent = previousAltitude = value
       // The climb is shown from the moment the walker has left Home behind.
       setAltitudeVisible(!frame.sections[0].interactive)
-      setActive(frame.active)
+      // A departed Projects camp is history, not an active exhibit.
+      setActive(frame.active === 4 && !frame.sections[4].interactive ? -1 : frame.active)
       setHomeVisible(frame.progress > experienceConfig.home.exitRange)
     })
   }, [controller, fallback])
@@ -48,7 +49,7 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
   return <>
     <div className="altitude-hud" data-visible={!fallback && altitudeVisible} aria-hidden="true"><span className="altitude-number" ref={altitude}>{formatAltitude(checkpoints[0].altitude)}</span><span className="altitude-unit">m</span></div>
     <div className="hud" data-home={!homeVisible} inert={!homeVisible} aria-hidden={!homeVisible}>
-    <div className="current-location" aria-live="polite" aria-atomic="true"><span>{checkpoints[active].index}</span><span className="current-rule" /><strong>{checkpoints[active].navigation}</strong></div>
+    <div className="current-location" style={{ visibility: active < 0 ? 'hidden' : undefined }} aria-live="polite" aria-atomic="true"><span>{checkpoints[Math.max(0, active)].index}</span><span className="current-rule" /><strong>{checkpoints[Math.max(0, active)].navigation}</strong></div>
     <TrailNavigation controller={controller} active={active} fallback={fallback} navigate={navigate} />
     </div>
     <button type="button" className="journey-home" data-visible={homeVisible} inert={!homeVisible} tabIndex={homeVisible ? 0 : -1} onClick={returnHome} aria-label="여정의 출발점인 Home으로 돌아가요">

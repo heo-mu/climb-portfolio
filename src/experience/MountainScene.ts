@@ -8,7 +8,7 @@ import { SpatialSectionTransition } from './SpatialSectionTransition'
 import { ProjectShowcase } from './ProjectShowcase'
 import { projectSelection } from './projectSelection'
 
-type SceneOptions = { canvas: HTMLCanvasElement; root: HTMLElement; onLost: () => void }
+type SceneOptions = { canvas: HTMLCanvasElement; root: HTMLElement; onLost: () => void; onProjectsReady: (ready: boolean) => void }
 type SnowLayer = { points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>; speed: number; drift: number; fall: number }
 
 export class MountainScene {
@@ -176,6 +176,7 @@ export class MountainScene {
     this.spatialTransition.update(this.camera, frame)
     // A project change moves only the exhibit: it renders every frame while it crosses over.
     const exhibit = this.showcase.update(frame, this.camera) || this.showcase.drawWarmUp(this.camera)
+    this.options.onProjectsReady(this.showcase.ready)
     const moving = frame.progress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit
     if (frame.reducedMotion && !moving) return
     if (!moving && frame.time - this.lastRender < 1 / 30) return

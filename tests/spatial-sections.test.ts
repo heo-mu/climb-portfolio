@@ -3,7 +3,7 @@ import { PerspectiveCamera, Vector3 } from 'three'
 import { checkpoints } from '../src/data/expedition'
 import { campFog, SpatialAnchorProjection } from '../src/experience/SpatialAnchorProjection'
 import { ArrivalDock } from '../src/experience/SpatialSectionTransition'
-import { campZones, routeProgress } from '../src/experience/progress'
+import { campZones, projectsPresentation, routeProgress } from '../src/experience/progress'
 import { cameraFieldOfView, exhibitionCameraPose } from '../src/experience/terrain'
 
 function pose(camera: PerspectiveCamera, progress: number, width = 1440) {
@@ -33,7 +33,8 @@ describe.each(checkpoints.slice(1).map((camp, i) => ({ ...camp, index: i + 1 }))
         pose(camera, p, width)
         projection.update(camera)
         expect(projection.matrix.elements.every(Number.isFinite)).toBe(true)
-        if (p !== boundary) expect(projection.distance).toBeGreaterThan(0)
+        if (camp.index === 4 && width > 1024) expect(projection.distance).toBeGreaterThanOrEqual(0)
+        else if (p !== boundary) expect(projection.distance).toBeGreaterThan(0)
         expect(projection.blur).toBeLessThanOrEqual(2)
       }
       pose(camera, boundary, width)
@@ -55,7 +56,11 @@ describe.each(checkpoints.slice(1).map((camp, i) => ({ ...camp, index: i + 1 }))
     approach.resize(camera, 1440, 900)
     pose(camera, arrival[0] - .0005)
     approach.update(camera)
-    expect(scaleOf(approach, 1440, 900)).toBeLessThan(.8)
+    if (camp.index === 4) {
+      // The overlook is already parked; the shared reveal still precedes arrival.
+      expect(scaleOf(approach, 1440, 900)).toBeCloseTo(1)
+      expect(projectsPresentation(routeProgress(arrival[0] - .0005)).presence).toBeLessThan(1)
+    } else expect(scaleOf(approach, 1440, 900)).toBeLessThan(.8)
   })
 
   it('has dissolved before a neighbouring camp is reached', () => {

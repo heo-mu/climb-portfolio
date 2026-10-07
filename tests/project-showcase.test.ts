@@ -5,7 +5,7 @@ import { SCREEN_HEIGHT, captureFit } from '../src/experience/showcaseDevices'
 import { guideRoute } from '../src/experience/grounding'
 import { cameraFieldOfView, exhibitionCameraPose, exhibitionFocus, groundHeight, routePoint, showcaseShelfBlend, showcaseSite, terrainGeometry, TerrainSurface } from '../src/experience/terrain'
 import { projects } from '../src/data/projects'
-import type { ExpeditionFrame } from '../src/experience/progress'
+import { campZones, routeProgress, type ExpeditionFrame } from '../src/experience/progress'
 
 const terrain = terrainGeometry(), surface = new TerrainSurface(terrain)
 const world = new THREE.Group(), showcase = new ProjectShowcase()
@@ -50,7 +50,7 @@ describe('Projects exhibit', () => {
       exhibit.update({ time, progress: .75, route: .75, destination: 4, reducedMotion, returningHome: false, sections: [] } as unknown as ExpeditionFrame, camera)
       scene.updateMatrixWorld(true)
       expect(group.matrixWorld.toArray()).toEqual(pose)
-      expect(group.visible).toBe(true)
+      expect(group.visible).toBe(exhibit.ready)
     }
     const decode = async (index: number) => {
       await vi.waitFor(() => expect(pending.has(projects[index].screen.desktop)).toBe(true))
@@ -193,7 +193,11 @@ describe('Projects exhibit', () => {
     expect(showcase.structures.enabled).toBe(true)
   })
 
-  it('hides the incomplete approach, then reveals the whole exhibit reversibly', () => {
+  it('has the complete exhibit visible throughout shared arrival, and fades reversibly outside it', async () => {
+    vi.stubGlobal('window', { requestIdleCallback: (callback: () => void) => callback() })
+    vi.stubGlobal('Image', class { src = ''; decode() { return Promise.resolve() } })
+    showcase.select(0); await showcase.prepare(0)
+    vi.unstubAllGlobals()
     for (const [width, height] of [[1920, 1080], [1600, 900], [1440, 900], [1366, 768], [1280, 800]]) {
       const camera = campCamera(width, height), target = new THREE.Vector3()
       const { group, screen } = showcase.structures.items[0]
@@ -203,11 +207,12 @@ describe('Projects exhibit', () => {
         showcase.update({ route, time: route, progress: 0, destination: 0, sections: [] } as unknown as ExpeditionFrame, camera)
         return screen.material.uniforms.presence.value as number
       }
-      for (const route of [.6, .69, .72, .735]) { expect(presence(route)).toBe(0); expect(group.visible).toBe(false) }
-      expect(presence(.75), `whole exhibit @${width}`).toBe(1)
-      const values = Array.from({ length: 151 }, (_, i) => presence(.735 + i * .0001))
+      for (const route of [.6, .69, .72]) { expect(presence(route)).toBe(0); expect(group.visible).toBe(false) }
+      const [entry, exit] = campZones[4].arrival.map(routeProgress)
+      for (let i = 0; i <= 20; i++) expect(presence(entry + (exit - entry) * i / 20), `whole exhibit @${width}, sample ${i}`).toBe(1)
+      const values = Array.from({ length: 151 }, (_, i) => presence(.72 + i * .0004))
       expect(values.some(value => value > 0 && value < 1), `spatial fade @${width}`).toBe(true)
-      for (let i = 150; i >= 0; i--) expect(presence(.735 + i * .0001)).toBeCloseTo(values[i], 8)
+      for (let i = 150; i >= 0; i--) expect(presence(.72 + i * .0004)).toBeCloseTo(values[i], 8)
     }
   })
 

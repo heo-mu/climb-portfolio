@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { checkpoints } from '../data/expedition'
-import type { ScrollController } from '../experience/progress'
+import { projectsPresentation, type ScrollController } from '../experience/progress'
 import { createTrailMap } from '../experience/trailMap'
 
 export function TrailNavigation({ controller, active, fallback, navigate }: {
@@ -30,15 +30,20 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
       completed.current?.setAttribute('stroke-dashoffset', String(map.length - point.length))
       marker.current?.setAttribute('cx', String(point.x))
       marker.current?.setAttribute('cy', String(point.y))
+      const overlaps = checkpoints.some(camp => { const node = map.at(camp.route); return Math.hypot(point.x - node.x, point.y - node.y) < 7 })
+      marker.current?.setAttribute('opacity', overlaps ? '0' : '1')
     }
-    update(fallback ? checkpoints[active].route : currentRoute.current)
-    if (!fallback) return controller.subscribe(frame => update(frame.route))
+    update(fallback ? checkpoints[Math.max(0, active)].route : currentRoute.current)
+    if (!fallback) return controller.subscribe(frame => {
+      const focus = projectsPresentation(frame.route).focus
+      update(frame.route + (checkpoints[4].route - frame.route) * focus)
+    })
   }, [controller, map, fallback, active])
   return <nav ref={root} className="checkpoint-nav trail-nav" aria-label="포트폴리오 등반 경로">
     <svg className="trail-map" viewBox={`0 0 ${map.width} ${map.height}`} aria-hidden="true">
       <path className="trail-remaining" d={map.path} />
       <path ref={completed} className="trail-completed" d={map.path} strokeDasharray={map.length} strokeDashoffset={map.length} />
-      <circle ref={marker} className="trail-current" cx={map.at(currentRoute.current).x} cy={map.at(currentRoute.current).y} r="2" />
+      <circle ref={marker} className="trail-current" cx={map.at(currentRoute.current).x} cy={map.at(currentRoute.current).y} r="3.5" />
     </svg>
     {checkpoints.map((camp, index) => {
       const point = map.at(camp.route)
@@ -47,6 +52,6 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
         <span className="nav-label">{camp.navigation}</span><span className="trail-node" aria-hidden="true" />
       </button>
     })}
-    <span className="trail-mobile-label" aria-hidden="true">{active >= 0 ? checkpoints[active].navigation : 'Home'}</span>
+    <span className="trail-mobile-label" aria-hidden="true">{active >= 0 ? checkpoints[active].navigation : ''}</span>
   </nav>
 }

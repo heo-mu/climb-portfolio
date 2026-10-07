@@ -107,7 +107,7 @@ function Projects() {
           <p>{project.summary}</p>
           <div className="project-preview-meta"><span>{project.type}</span><span>{project.period}</span></div>
           <div className="project-actions">
-            <ul className="project-tags" aria-label="프로젝트 키워드">{project.tags.map(tag => <li key={tag}>{tag}</li>)}</ul>
+            <ul className="project-tags" aria-label="프로젝트 키워드">{project.tags.map(tag => <li key={tag}>#{tag}</li>)}</ul>
             <Link className="project-open" to={`/project/${project.slug}`}>프로젝트 보기 <ArrowUpRight className="project-open-arrow" /></Link>
           </div>
         </div>

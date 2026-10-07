@@ -1,6 +1,6 @@
 import type { PerspectiveCamera } from 'three'
 import { campFog, homeFog, SpatialAnchorProjection } from './SpatialAnchorProjection'
-import { campZones, routeProgress, smoothstep } from './progress'
+import { campZones, projectsPresentation, routeProgress, smoothstep } from './progress'
 import type { CampZone, ExpeditionFrame } from './progress'
 
 const DOCK_TIME = .085 // s: time constant of docking and release
@@ -52,6 +52,7 @@ export class SpatialSectionTransition {
   private lastRoute = -1
   private lastReduced = false
   private lastReturn = false
+  private lastProjectsReady: boolean | undefined
   private pending = false
   private arrived = 0
   private leaving = -1
@@ -84,7 +85,7 @@ export class SpatialSectionTransition {
   }
 
   update(camera: PerspectiveCamera, frame: ExpeditionFrame) {
-    const changed = frame.route !== this.lastRoute || frame.reducedMotion !== this.lastReduced || frame.returningHome !== this.lastReturn
+    const changed = frame.route !== this.lastRoute || frame.reducedMotion !== this.lastReduced || frame.returningHome !== this.lastReturn || frame.projectsReady !== this.lastProjectsReady
     if (!changed && !this.pending) return
     // The camp being left on a Home return recedes; camps passed on the way stay quiet.
     if (frame.returningHome && !this.lastReturn) this.leaving = this.arrived
@@ -92,11 +93,20 @@ export class SpatialSectionTransition {
     this.lastRoute = frame.route
     this.lastReduced = frame.reducedMotion
     this.lastReturn = frame.returningHome
+    this.lastProjectsReady = frame.projectsReady
     this.pending = false
     let homeOpacity = 1
     this.stages.forEach((stage, index) => {
+      if (index === 4 && frame.projectsReady === false) return this.apply(stage, 'hidden')
       const arrived = frame.sections[index].interactive
       const [entry, exit] = stage.zone.plateau
+      if (index === 4 && !frame.reducedMotion && !frame.returningHome && this.root.dataset.showcase === '3d') {
+        const { presence } = projectsPresentation(frame.route)
+        if (arrived) return this.apply(stage, 'readable')
+        if (!presence) return this.apply(stage, 'hidden')
+        this.blend = identity.slice()
+        return this.apply(stage, 'spatial', presence, 0, presence)
+      }
       if (frame.reducedMotion) return this.apply(stage, arrived ? 'readable' : 'hidden')
       if (frame.returningHome && index !== 0 && index !== this.leaving) return this.apply(stage, 'hidden')
       if (frame.progress >= entry && frame.progress <= exit) {

@@ -50,7 +50,6 @@ export function Expedition() {
           if (entry.isIntersecting) {
             const index = Number((entry.target as HTMLElement).dataset.checkpoint)
             lastProgress.current = checkpoints[index].progress
-            if (index !== 4) projectSelection.reset()
           }
         })
       }, { rootMargin: '-15% 0px -45% 0px' })
@@ -75,8 +74,6 @@ export function Expedition() {
         })
       }
       if (previousActive !== frame.active) {
-        // Other camps begin a fresh selection; a detail return directly to Projects preserves it.
-        if (frame.active !== 4) projectSelection.reset()
         const focused = document.activeElement
         if (focused instanceof HTMLElement && sections.some(section => section.contains(focused))) focused.blur()
         previousActive = frame.active

@@ -3,6 +3,7 @@ import { experienceConfig } from '../config/experience'
 import { noise2, terrainNoise } from './noise'
 import { arrivalCamps } from './campLayout'
 import { ascentRouteControls, ROUTE_CONTROL_SPACING } from '../data/ascentRoute'
+import { projectsPresentation } from './progress'
 
 // 29 independent route controls: exit, ice approach, switchbacks, traverse,
 // sheltered camps, exposed ridge and final shoulder. World units are metres.
@@ -103,7 +104,7 @@ export function groundHeight(x: number, z: number) {
   return blend ? THREE.MathUtils.lerp(height, showcaseSite.level, blend) : height
 }
 
-export const exhibitionFocus = (route: number) => ease(.705, .738, route) * (1 - ease(.77, .81, route))
+export const exhibitionFocus = (route: number) => projectsPresentation(route).focus
 
 /** A portrait lens only around the exhibition; the rest of the ascent keeps its wide walking view. */
 export function cameraFieldOfView(route: number, aspect: number, width: number) {
@@ -126,11 +127,11 @@ export function cameraPose(route: number, position: THREE.Vector3, target: THREE
 
 /** Render-only staging: route distance, altitude and arrival semantics retain the walking rail. */
 export function exhibitionCameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3, width: number, aspect: number) {
-  cameraPose(route, position, target)
-  if (width <= 1024 || aspect < 1.2) return
+  const exhibition = width > 1024 && aspect >= 1.2 ? exhibitionFocus(route) : 0
+  cameraPose(THREE.MathUtils.lerp(route, showcaseSite.route, exhibition), position, target)
+  if (!exhibition) return
   // A local overlook at Projects exposes the devices' decks and their stone footings.
   // Both shoulders blend back into the original walking camera, including in reverse.
-  const exhibition = exhibitionFocus(route)
   position.y += exhibition * 8
   target.y += exhibition * 7
   position.addScaledVector(showcaseSite.right, exhibition * 8)
