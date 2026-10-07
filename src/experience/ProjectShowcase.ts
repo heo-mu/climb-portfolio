@@ -158,6 +158,7 @@ export class ProjectShowcase {
     const quaternion = new THREE.Quaternion().setFromAxisAngle(up, facing)
     slot.group.position.set(0, 0, 0); slot.group.quaternion.identity(); slot.group.scale.setScalar(1)
     slot.panel.quaternion.copy(quaternion).invert().multiply(view.quaternion)
+    slot.fitStand()
     slot.group.updateMatrixWorld(true)
     slot.hull = []
     slot.group.traverse(object => {

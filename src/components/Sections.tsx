@@ -103,8 +103,8 @@ function Projects() {
       <Link className="project-media-link" to={`/project/${project.slug}`} tabIndex={-1} aria-hidden="true"><ProjectScreen active={active} /></Link>
       <div className="projects-editorial">
         <nav className="project-navigation" aria-label="프로젝트 선택">
-          <p className="project-index-label">프로젝트 선택 <span>01 — 05</span></p>
-          <div className="project-index" role="tablist" aria-label="프로젝트" aria-orientation="vertical">{projects.map((item, index) => <button key={item.slug} role="tab" tabIndex={active === index ? 0 : -1} type="button" id={`project-tab-${item.slug}`} onClick={() => select(index)} onKeyDown={event => {
+          <p className="project-index-label">다른 프로젝트 둘러보기 <span>{project.number} / 05</span></p>
+          <div className="project-index" role="tablist" aria-label="프로젝트" aria-orientation="horizontal">{projects.map((item, index) => <button key={item.slug} role="tab" tabIndex={active === index ? 0 : -1} type="button" id={`project-tab-${item.slug}`} onClick={() => select(index)} onKeyDown={event => {
           const offset = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 0
           if (!offset && event.key !== 'Home' && event.key !== 'End') return
           event.preventDefault(); event.stopPropagation()
@@ -116,9 +116,9 @@ function Projects() {
           </button>)}</div>
         </nav>
         <div className="project-details">{projects.map((item, index) => <div className="project-information" key={item.slug} id={`project-info-${item.slug}`} role="tabpanel" aria-labelledby={`project-tab-${item.slug}`} aria-hidden={active !== index} inert={active !== index}>
-            <h2 className="project-detail-title">{item.name}</h2>
+            <div className="project-detail-heading"><span className="project-detail-number">{item.number}</span><h2 className="project-detail-title">{item.name}</h2></div>
             <p>{item.summary}</p>
-            <div className="project-meta"><span>{item.type}</span><span>{item.period}</span></div>
+            <dl className="project-meta"><div><dt>유형</dt><dd>{item.type}</dd></div><div><dt>기간</dt><dd>{item.period}</dd></div></dl>
             <ul className="project-tags" aria-label="프로젝트 키워드">{item.tags.map(tag => <li key={tag}>#{tag}</li>)}</ul>
             <Link className="project-open" to={`/project/${item.slug}`}>프로젝트 보기 <ArrowUpRight className="project-open-arrow" /></Link>
         </div>)}</div>

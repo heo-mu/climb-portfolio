@@ -215,6 +215,36 @@ describe('Projects exhibit', () => {
     }
   })
 
+  it('joins the tilted housing to the stand without putting support geometry over the capture', () => {
+    for (const [width, height] of [[1920, 1080], [1600, 900], [1366, 768]]) {
+      const camera = campCamera(width, height), target = new THREE.Vector3()
+      const { group, screen } = showcase.structures.items[0]
+      const neck = group.getObjectByName('display-neck') as THREE.Mesh
+      const hinge = group.getObjectByName('display-hinge') as THREE.Mesh
+      const hingeBox = new THREE.Box3().setFromObject(hinge)
+      const footBox = new THREE.Box3().setFromObject(group.getObjectByName('display-foot')!)
+      const points = neck.geometry.getAttribute('position')
+      let contacts = 0, footContacts = 0
+      for (let i = 0; i < points.count; i++) {
+        const point = new THREE.Vector3().fromBufferAttribute(points, i).applyMatrix4(neck.matrixWorld)
+        if (hingeBox.containsPoint(point)) contacts++
+        if (footBox.containsPoint(point)) footContacts++
+      }
+      expect(contacts, 'neck physically overlaps its rear mounting joint').toBeGreaterThan(0)
+      expect(footContacts, 'neck physically overlaps its weighted base').toBeGreaterThan(0)
+      for (const fraction of [0, .5, 1]) {
+        const route = THREE.MathUtils.lerp(...campZones[4].arrival, fraction)
+        cameraPose(route, camera.position, target)
+        for (let x = -.48; x <= .48; x += .08) for (let y = -.27; y <= .27; y += .03) {
+          const point = new THREE.Vector3(x, y, 0).applyMatrix4(screen.matrixWorld)
+          const distance = camera.position.distanceTo(point)
+          const ray = new THREE.Raycaster(camera.position, point.clone().sub(camera.position).normalize(), 0, distance - .001)
+          expect(ray.intersectObjects([neck, hinge]), 'support stays behind every part of the screen').toHaveLength(0)
+        }
+      }
+    }
+  })
+
   it('shows the flat capture instead on portrait screens', () => {
     campCamera(390, 844)
     expect(showcase.structures.enabled).toBe(false)
