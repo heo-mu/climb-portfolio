@@ -5,7 +5,7 @@ import { SCREEN_HEIGHT, captureFit } from '../src/experience/showcaseDevices'
 import { guideRoute } from '../src/experience/grounding'
 import { cameraFieldOfView, exhibitionCameraPose, exhibitionFocus, groundHeight, routePoint, showcaseShelfBlend, showcaseSite, terrainGeometry, TerrainSurface } from '../src/experience/terrain'
 import { projects } from '../src/data/projects'
-import { campZones, routeProgress, type ExpeditionFrame } from '../src/experience/progress'
+import { campZones, projectsPresentation, routeProgress, type ExpeditionFrame } from '../src/experience/progress'
 
 const terrain = terrainGeometry(), surface = new TerrainSurface(terrain)
 const world = new THREE.Group(), showcase = new ProjectShowcase()
@@ -213,6 +213,30 @@ describe('Projects exhibit', () => {
       const values = Array.from({ length: 151 }, (_, i) => presence(.72 + i * .0004))
       expect(values.some(value => value > 0 && value < 1), `spatial fade @${width}`).toBe(true)
       for (let i = 150; i >= 0; i--) expect(presence(.72 + i * .0004)).toBeCloseTo(values[i], 8)
+    }
+  })
+
+  it('leaves the fixed exhibit behind with a wider view in either direction, without clipping its fade', () => {
+    const [entry, exit] = campZones[4].arrival.map(routeProgress), span = exit - entry
+    for (const [width, height] of [[1920, 1080], [1440, 900], [1280, 800]]) {
+      const camera = campCamera(width, height), target = new THREE.Vector3()
+      const { group, screen } = showcase.structures.items[0], rest = group.matrixWorld.toArray()
+      for (const direction of [-1, 1]) {
+        let initialWidth = 0
+        for (const amount of [0, .1, .2, .3, .4, .5, .6]) {
+          const route = (direction < 0 ? entry : exit) + direction * span * amount
+          exhibitionCameraPose(route, camera.position, target, width, camera.aspect, true)
+          camera.fov = cameraFieldOfView(route, camera.aspect, width, true)
+          camera.updateProjectionMatrix(); camera.lookAt(target); camera.updateMatrixWorld(true)
+          showcase.update({ route, time: route, progress: 0, destination: 0, sections: [], projectsDeparting: true } as unknown as ExpeditionFrame, camera)
+          expect(group.matrixWorld.toArray(), 'stationary in the world').toEqual(rest)
+          expect(screen.material.uniforms.presence.value, `whole frame @${width}, ${direction}, ${amount}`).toBeCloseTo(projectsPresentation(route, true).presence, 6)
+          const corners = screenCorners(screen).map(point => point.project(camera))
+          const projectedWidth = Math.max(...corners.map(p => p.x)) - Math.min(...corners.map(p => p.x))
+          if (!amount) initialWidth = projectedWidth
+          else expect(projectedWidth, `recedes @${width}, ${direction}, ${amount}`).toBeLessThan(initialWidth)
+        }
+      }
     }
   })
 

@@ -101,10 +101,12 @@ export class SpatialSectionTransition {
       const arrived = frame.sections[index].interactive
       const [entry, exit] = stage.zone.plateau
       if (index === 4 && !frame.reducedMotion && !frame.returningHome && this.root.dataset.showcase === '3d') {
-        const { presence } = projectsPresentation(frame.route)
+        const { presence, departure } = projectsPresentation(frame.route, frame.projectsDeparting)
         if (arrived) return this.apply(stage, 'readable')
         if (!presence) return this.apply(stage, 'hidden')
         this.blend = identity.slice()
+        this.blend[0] = this.blend[5] = 1 - departure * .1
+        this.blend[13] = -departure * 12
         return this.apply(stage, 'spatial', presence, 0, presence)
       }
       if (frame.reducedMotion) return this.apply(stage, arrived ? 'readable' : 'hidden')

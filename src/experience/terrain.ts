@@ -107,9 +107,9 @@ export function groundHeight(x: number, z: number) {
 export const exhibitionFocus = (route: number) => projectsPresentation(route).focus
 
 /** A portrait lens only around the exhibition; the rest of the ascent keeps its wide walking view. */
-export function cameraFieldOfView(route: number, aspect: number, width: number) {
+export function cameraFieldOfView(route: number, aspect: number, width: number, departing = false) {
   const base = aspect < .95 ? experienceConfig.camera.mobileFov : experienceConfig.camera.desktopFov
-  return width > 1024 && aspect >= 1.2 ? THREE.MathUtils.lerp(base, 42, exhibitionFocus(route)) : base
+  return width > 1024 && aspect >= 1.2 ? THREE.MathUtils.lerp(base, 42, projectsPresentation(route, departing).lens) : base
 }
 
 export function cameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3) {
@@ -126,8 +126,8 @@ export function cameraPose(route: number, position: THREE.Vector3, target: THREE
 }
 
 /** Render-only staging: route distance, altitude and arrival semantics retain the walking rail. */
-export function exhibitionCameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3, width: number, aspect: number) {
-  const exhibition = width > 1024 && aspect >= 1.2 ? exhibitionFocus(route) : 0
+export function exhibitionCameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3, width: number, aspect: number, departing = false) {
+  const exhibition = width > 1024 && aspect >= 1.2 ? projectsPresentation(route, departing).focus : 0
   cameraPose(THREE.MathUtils.lerp(route, showcaseSite.route, exhibition), position, target)
   if (!exhibition) return
   // A local overlook at Projects exposes the devices' decks and their stone footings.

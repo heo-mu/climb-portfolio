@@ -605,7 +605,7 @@ try {
     const { context, page } = await open({ reducedMotion: 'reduce' })
     let release = () => {}
     const captureGate = new Promise<void>(resolve => { release = resolve })
-    await page.route(/deurim.*\.webp/, async route => { await captureGate; await route.continue() })
+    await page.route(/deurim.*\.png/, async route => { await captureGate; await route.continue() })
     try {
       await page.goto(base)
       await ready(page)
@@ -645,7 +645,7 @@ try {
     // Phones show the capture itself, flat and whole, instead of the 3D exhibit.
     await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '2d')
     await page.locator('.project-row').nth(1).tap()
-    await expect.poll(() => page.evaluate(() => { const img = document.querySelector<HTMLImageElement>('#high-camp .project-screen img[data-active="true"]'); return img ? img.complete && img.naturalWidth > 0 && /bees-dashboard/.test(img.currentSrc) : false })).toBe(true)
+    await expect.poll(() => page.evaluate(() => { const img = document.querySelector<HTMLImageElement>('#high-camp .project-screen img[data-active="true"]'); return img ? img.complete && img.naturalWidth > 0 && /bees[-.]/.test(img.currentSrc) : false })).toBe(true)
     await page.locator('.project-open').tap()
     await expect(page.locator('.detail-title')).toHaveText(projects[1].name)
     await context.close()

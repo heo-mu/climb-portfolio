@@ -164,11 +164,11 @@ export class MountainScene {
     if (this.disposed) return
     if (frame.route !== this.poseRoute) {
       this.poseRoute = frame.route
-      exhibitionCameraPose(frame.route, this.position, this.target, this.options.canvas.clientWidth, this.camera.aspect)
+      exhibitionCameraPose(frame.route, this.position, this.target, this.options.canvas.clientWidth, this.camera.aspect, frame.projectsDeparting)
       this.camera.position.copy(this.position)
       this.camera.lookAt(this.target)
       this.camera.updateMatrixWorld()
-      this.camera.fov = cameraFieldOfView(frame.route, this.camera.aspect, this.options.canvas.clientWidth)
+      this.camera.fov = cameraFieldOfView(frame.route, this.camera.aspect, this.options.canvas.clientWidth, frame.projectsDeparting)
       this.camera.updateProjectionMatrix()
     }
     // Spatial UI follows every controller frame (docking settles while standing);

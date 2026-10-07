@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeCheckpoint, altitudeAt, campZones, readableCheckpoint, routeProgress, sectionUIAt } from '../src/experience/progress'
+import { ProjectsDeparture, projectsPresentation, activeCheckpoint, altitudeAt, campZones, readableCheckpoint, routeProgress, sectionUIAt } from '../src/experience/progress'
 import { checkpoints } from '../src/data/expedition'
 import { routeEyeAt } from '../src/data/ascentRoute'
 import { cameraPose, groundHeight, routeCurve, terrainGeometry } from '../src/experience/terrain'
@@ -9,6 +9,20 @@ import { Vector3 } from 'three'
 const eye = (progress: number) => new Vector3(...routeEyeAt(routeProgress(progress)))
 
 describe('spatial arrival', () => {
+  it('keeps first entry functional and only uses spatial exit after a visit', () => {
+    const motion = new ProjectsDeparture()
+    const [entry, exit] = campZones[4].arrival.map(routeProgress)
+    expect(motion.update(entry - .004, false)).toBe(false)
+    expect(motion.update(.75, true)).toBe(false)
+    for (const edge of [entry - .004, exit + .004]) {
+      expect(motion.update(edge, false)).toBe(true)
+      expect(projectsPresentation(edge, true).presence).toBeGreaterThan(0)
+      expect(projectsPresentation(edge, true).lens).toBeLessThan(1)
+      expect(motion.update(.75, true)).toBe(false)
+    }
+    expect(motion.update(.85, false)).toBe(false)
+    expect(motion.update(exit + .004, false)).toBe(false)
+  })
   it('waits for the first Projects capture without enabling empty content', () => {
     for (const progress of campZones[4].arrival) {
       expect(sectionUIAt(progress, false, false)[4].interactive).toBe(false)

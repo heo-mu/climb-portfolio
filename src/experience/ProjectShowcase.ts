@@ -272,7 +272,7 @@ export class ProjectShowcase {
     // Camera staging and presence share the same arrival envelope, in either direction.
     if (this.enabled && (frame.route !== this.poseRoute || this.dirty)) {
       this.poseRoute = frame.route
-      const { presence } = projectsPresentation(frame.route)
+      const { presence } = projectsPresentation(frame.route, frame.projectsDeparting)
       const nearness = (this.displayed >= 0 || this.textures[this.selected]) && presence > 0 ? this.clearance(camera) * presence : 0
       if (nearness !== this.nearness) { this.nearness = nearness; this.apply(slot) }
     }

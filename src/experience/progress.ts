@@ -71,14 +71,29 @@ const within = (progress: number, [from, to]: Span) => progress >= from - Number
 // Park the overlook before revealing the display; finish the reveal before input opens.
 const projectsArrival = campZones[4].arrival.map(routeProgress)
 const projectsShoulder = projectsArrival[1] - projectsArrival[0]
-export function projectsPresentation(route: number) {
+export function projectsPresentation(route: number, departing = false) {
   const [entry, exit] = projectsArrival
   const ramp = (from: number, to: number) => smoothstep((route - from) / (to - from))
   const focus = ramp(entry - projectsShoulder, entry - projectsShoulder * .15)
     * (1 - ramp(exit + projectsShoulder * .15, exit + projectsShoulder))
   const presence = ramp(entry - projectsShoulder * .15, entry)
     * (1 - ramp(exit, exit + projectsShoulder * .15))
-  return { focus, presence }
+  if (!departing) return { focus, lens: focus, presence, departure: 0 }
+  const distance = Math.max(entry - route, route - exit, 0) / projectsShoulder
+  // The exhibit stays fixed. Widen the lens first, then release the walking
+  // camera, so the screen recedes instead of sticking to the viewport.
+  const departure = smoothstep(distance / .6)
+  return { focus: 1 - smoothstep((distance - .4) / .6), lens: 1 - departure, presence: 1 - departure, departure }
+}
+
+/** Exit framing is earned by a visit, never applied to a first approach. */
+export class ProjectsDeparture {
+  private visited = false
+  update(route: number, arrived: boolean) {
+    if (arrived) this.visited = true
+    else if (projectsPresentation(route).focus === 0) this.visited = false
+    return this.visited && !arrived
+  }
 }
 
 // Arrival is spatial, never dependent on a second animation clock.
@@ -120,10 +135,11 @@ export function sectionUIAt(progress: number, returningHome = false, projectsRea
 const WHEEL_GESTURE_GAP = 180
 
 /** `destination`: the camp whose dock holds the scroll target, where the walker will stand. */
-export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; projectsReady?: boolean; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
+export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; projectsReady?: boolean; projectsDeparting?: boolean; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
 type Listener = (frame: ExpeditionFrame) => void
 
 export class ScrollController {
+  private projectsDeparture = new ProjectsDeparture()
   private projectsReady = false
   setProjectsReady = (ready: boolean) => { this.projectsReady = ready }
   private listeners = new Set<Listener>()
@@ -219,7 +235,9 @@ export class ScrollController {
     const sections = sectionUIAt(this.current, returningHome, this.projectsReady)
     // Returning Home names its destination at once; the marker shows the descent.
     const active = returningHome ? 0 : activeCheckpoint(this.current, this.frame.active)
-    this.frame = { progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active, destination: dockingCheckpoint(this.target), sections, projectsReady: this.projectsReady, returningHome, delta, time: time / 1000, reducedMotion }
+    const route = routeProgress(this.current)
+    const projectsDeparting = this.projectsDeparture.update(route, sections[4].interactive) && !reducedMotion
+    this.frame = { progress: this.current, route, altitude: altitudeAt(this.current), active, destination: dockingCheckpoint(this.target), sections, projectsReady: this.projectsReady, projectsDeparting, returningHome, delta, time: time / 1000, reducedMotion }
     this.emit()
     this.raf = requestAnimationFrame(this.tick)
   }
