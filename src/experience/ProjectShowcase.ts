@@ -81,13 +81,15 @@ export class ProjectShowcase {
   private lastTime = -1
   private width = 1
   private height = 1
-  private nearness = 1
+  private nearness = 0
   private limits = { left: -1, right: 1 }
   private poseRoute = -1
   private linkState = ''
   private reported = ''
   private view = new THREE.PerspectiveCamera()
   private corner = new THREE.Vector3()
+  private sight = new THREE.Vector3()
+  private revealPoints: THREE.Vector3[] = []
 
   constructor(private renderer: THREE.WebGLRenderer | null = null, private root: HTMLElement | null = null) {
     this.group.name = 'project-showcase'
@@ -136,15 +138,27 @@ export class ProjectShowcase {
     view.updateProjectionMatrix()
     exhibitionCameraPose(showcaseSite.route, view.position, target, width, camera.aspect)
     view.lookAt(target); view.updateMatrixWorld(true)
+    // Parallel to the camp camera's image plane, not aimed at its off-centre eye position.
+    // Only the display tilts: the support and footing remain vertical and grounded.
+    const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(view.quaternion)
+    const facing = Math.atan2(normal.x, normal.z)
+    const quaternion = new THREE.Quaternion().setFromAxisAngle(up, facing)
+    slot.group.position.set(0, 0, 0); slot.group.quaternion.identity(); slot.group.scale.setScalar(1)
+    slot.panel.quaternion.copy(quaternion).invert().multiply(view.quaternion)
+    slot.group.updateMatrixWorld(true)
+    slot.hull = []
+    slot.group.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return
+      const part = new THREE.Box3().setFromObject(object)
+      if (part.min.y > .1) slot.hull.push(...corners(part))
+    })
+    slot.silhouette = [...slot.hull, ...slot.groundHull]
     const limits = this.limits = this.freeSpace(width)
     type Placement = { anchor: THREE.Vector3; quaternion: THREE.Quaternion; facing: number; scale: number; size: number }
     // Fit the common display between the text and trail, with its footing beyond the rope.
     const place = (slot: Exhibit, forward: number, scale: number): Placement | null => {
       for (let right = ROPE_CLEARANCE; right <= ANCHOR.right; right += .4) {
         const anchor = showcaseSite.toWorld(forward, right)
-        // Nearly square to the camp camera, with only a trace of frame depth.
-        const facing = Math.atan2(view.position.x - anchor.x, view.position.z - anchor.z) + .025
-        const quaternion = new THREE.Quaternion().setFromAxisAngle(up, facing)
         const box = this.projectedBox(slot, anchor, quaternion, scale)
         // The rope and the walker are left behind by stepping right; the face and the trail only get closer.
         if (!box.clear || !box.walk) continue
@@ -162,12 +176,19 @@ export class ProjectShowcase {
       }
     }
     this.enabled = width > 1024 && camera.aspect >= 1.2 && placement !== null
-    const { anchor, quaternion, facing, scale } = placement ?? { anchor: showcaseSite.toWorld(ANCHOR.forward[0], ANCHOR.right), quaternion: new THREE.Quaternion(), facing: 0, scale: SCALE.min }
+    const { anchor, scale } = placement ?? { anchor: showcaseSite.toWorld(ANCHOR.forward[0], ANCHOR.right), scale: SCALE.min }
     slot.group.position.copy(anchor); slot.group.quaternion.copy(quaternion); slot.group.scale.setScalar(scale)
     seatOnGround(slot.group, slot.footing, this.surface, slot.bury * scale)
     slot.rest.scale = scale
     slot.group.updateMatrixWorld(true)
     slot.rest.matrix.copy(slot.group.matrixWorld)
+    // Test the complete face and the base, not just the screen centre. Their
+    // sightlines must clear the foreground snow before any part can appear.
+    this.revealPoints = [-.51, 0, .51].flatMap(x => [-.29, 0, .29].map(y => new THREE.Vector3(x, y, .012).applyMatrix4(slot.panel.matrixWorld)))
+    const foot = slot.footing.boundingBox!
+    for (const x of [foot.min.x, foot.max.x]) for (const z of [foot.min.z, foot.max.z]) {
+      this.revealPoints.push(new THREE.Vector3(x, foot.max.y + .02, z).applyMatrix4(slot.group.matrixWorld))
+    }
     slot.front = Math.min(...slot.silhouette.map(point => { const p = this.corner.copy(point).applyMatrix4(slot.group.matrixWorld).sub(showcaseSite.origin); return p.x * showcaseSite.forward.x + p.z * showcaseSite.forward.z }))
     const { width: w, depth: d, x, z } = slot.shadow
     const center = new THREE.Vector3(x, 0, z).applyMatrix4(slot.group.matrixWorld)
@@ -256,7 +277,8 @@ export class ProjectShowcase {
       let right = -Infinity
       // Far down the route the exhibit is a small shape ahead; only near the camp can it reach the trail.
       if (ahead < 60) for (const point of slot.silhouette) right = Math.max(right, this.corner.copy(point).applyMatrix4(slot.rest.matrix).project(camera).x)
-      const nearness = Math.min(THREE.MathUtils.smoothstep(ahead, PASSING.end, PASSING.start), 1 - THREE.MathUtils.smoothstep(right - this.limits.right - YIELD.after, 0, YIELD.over))
+      const approach = THREE.MathUtils.smoothstep(frame.route, .735, .747)
+      const nearness = Math.min(approach > 0 ? this.clearance(camera) * approach : 0, THREE.MathUtils.smoothstep(ahead, PASSING.end, PASSING.start), 1 - THREE.MathUtils.smoothstep(right - this.limits.right - YIELD.after, 0, YIELD.over))
       if (nearness !== this.nearness) { this.nearness = nearness; this.apply(slot) }
     }
     const screen = slot.screen.material.uniforms
@@ -279,6 +301,25 @@ export class ProjectShowcase {
     const dirty = this.dirty
     this.dirty = false
     return moving || dirty
+  }
+
+  /** A spatial fade only after the complete exhibit clears terrain and viewport edges. */
+  private clearance(camera: THREE.PerspectiveCamera) {
+    let clearance = Infinity, margin = Infinity
+    for (const point of this.revealPoints) {
+      const projected = this.corner.copy(point).project(camera)
+      if (projected.z >= 1 || projected.z <= -1) return 0
+      margin = Math.min(margin, 1 - Math.abs(projected.x), 1 - Math.abs(projected.y))
+      if (margin <= 0) return 0
+      const distance = camera.position.distanceTo(point)
+      // Stop short of the footing's intentional contact with the snow.
+      for (let step = 1; step < distance - 3; step += 1) {
+        this.sight.lerpVectors(camera.position, point, step / distance)
+        clearance = Math.min(clearance, this.sight.y - this.surface!.heightAt(this.sight.x, this.sight.z))
+        if (clearance <= .05) return 0
+      }
+    }
+    return THREE.MathUtils.smoothstep(clearance, .05, .45) * THREE.MathUtils.smoothstep(margin, .015, .06)
   }
 
   private apply(slot: Exhibit) {
@@ -307,7 +348,10 @@ export class ProjectShowcase {
       if (this.disposed) return
       const texture = new THREE.Texture(image)
       texture.colorSpace = THREE.SRGBColorSpace
-      texture.anisotropy = Math.min(8, this.renderer?.capabilities.getMaxAnisotropy() ?? 1)
+      texture.anisotropy = Math.min(16, this.renderer?.capabilities.getMaxAnisotropy() ?? 1)
+      texture.magFilter = THREE.LinearFilter
+      texture.minFilter = THREE.LinearMipmapLinearFilter
+      texture.generateMipmaps = true
       texture.needsUpdate = true
       // Upload between frames, so the first sight of a capture never stalls the walk.
       await idle()

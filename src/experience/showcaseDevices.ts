@@ -46,14 +46,19 @@ export function buildDisplay(environment: THREE.Texture | null, placeholder: THR
     return mesh
   }
   const bottom = .14, center = bottom + SCREEN_HEIGHT / 2
-  part(1.018, SCREEN_HEIGHT + .018, .018, 0, center, 0)
+  const panel = new THREE.Group()
+  panel.position.y = center
+  group.add(panel)
+  const bezel = part(1.018, SCREEN_HEIGHT + .018, .018, 0, 0, 0)
+  panel.add(bezel)
   part(.036, .22, .024, 0, .12, -.025)
   const base = part(.28, .018, .18, 0, .009, -.025)
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(1, SCREEN_HEIGHT), screenMaterial)
   screen.name = 'showcase-screen'
-  screen.position.set(0, center, .0095)
+  // Positive separation from the chassis avoids coplanar depth noise at a distance.
+  screen.position.set(0, 0, .012)
   screen.renderOrder = 20
-  group.add(screen)
+  panel.add(screen)
   const footing = base.geometry.clone().translate(...base.position.toArray())
-  return { group, screen, footing, shadow: { width: .4, depth: .28, x: 0, z: -.025 }, materials: [metal, screenMaterial] as THREE.Material[] }
+  return { group, panel, screen, footing, shadow: { width: .4, depth: .28, x: 0, z: -.025 }, materials: [metal, screenMaterial] as THREE.Material[] }
 }

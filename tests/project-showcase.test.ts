@@ -168,6 +168,11 @@ describe('Projects exhibit', () => {
       for (const { screen } of showcase.structures.items) {
         const ndc = screenCorners(screen).map(corner => corner.project(camera))
         const label = `display @${width}x${height}`
+        expect(ndc[0].x, `${label}: parallel vertical edges`).toBeCloseTo(ndc[2].x, 8)
+        expect(ndc[1].x).toBeCloseTo(ndc[3].x, 8)
+        expect(ndc[0].y, `${label}: level horizontal edges`).toBeCloseTo(ndc[1].y, 8)
+        expect(ndc[2].y).toBeCloseTo(ndc[3].y, 8)
+        expect((ndc[1].x - ndc[0].x) * width / ((ndc[2].y - ndc[0].y) * height)).toBeCloseTo(16 / 9, 8)
         for (const p of ndc) {
           expect(p.z, label).toBeLessThan(1)
           // The editorial panel occupies the left third; the entire display clears it.
@@ -186,6 +191,24 @@ describe('Projects exhibit', () => {
     expect(showcase.structures.items.every(item => !item.group.visible)).toBe(true)
     campCamera(1440, 900)
     expect(showcase.structures.enabled).toBe(true)
+  })
+
+  it('hides the incomplete approach, then reveals the whole exhibit reversibly', () => {
+    for (const [width, height] of [[1920, 1080], [1600, 900], [1440, 900], [1366, 768], [1280, 800]]) {
+      const camera = campCamera(width, height), target = new THREE.Vector3()
+      const { group, screen } = showcase.structures.items[0]
+      const presence = (route: number) => {
+        camera.fov = cameraFieldOfView(route, width / height, width); camera.updateProjectionMatrix()
+        exhibitionCameraPose(route, camera.position, target, width, width / height); camera.lookAt(target); camera.updateMatrixWorld(true)
+        showcase.update({ route, time: route, progress: 0, destination: 0, sections: [] } as unknown as ExpeditionFrame, camera)
+        return screen.material.uniforms.presence.value as number
+      }
+      for (const route of [.6, .69, .72, .735]) { expect(presence(route)).toBe(0); expect(group.visible).toBe(false) }
+      expect(presence(.75), `whole exhibit @${width}`).toBe(1)
+      const values = Array.from({ length: 151 }, (_, i) => presence(.735 + i * .0001))
+      expect(values.some(value => value > 0 && value < 1), `spatial fade @${width}`).toBe(true)
+      for (let i = 150; i >= 0; i--) expect(presence(.735 + i * .0001)).toBeCloseTo(values[i], 8)
+    }
   })
 
   it('levels its shelf without touching the walked line or the rope', () => {

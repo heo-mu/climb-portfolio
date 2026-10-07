@@ -108,9 +108,9 @@ function Projects() {
     <p className="body-copy section-intro">복잡한 문제를 구조화하고 실제 제품으로 만든 작업을 모았어요.</p>
     <div className="panel-body projects-layout">
       <Link className="project-media-link" to={`/project/${project.slug}`} tabIndex={-1} aria-hidden="true"><ProjectScreen active={active} /></Link>
-      <article className="project-preview" id="selected-project" aria-label="선택한 프로젝트">
+      <article className="project-preview" id="selected-project" role="tabpanel" aria-labelledby={`project-tab-${project.slug}`}>
         <div className="project-information" key={project.slug} aria-live="polite" aria-atomic="true">
-          <header className="project-preview-header"><span className="project-selected-number">{project.number} / 05</span><h2>{project.name}</h2></header>
+          <header className="project-preview-header"><h2>{project.name}</h2></header>
           <p>{project.summary}</p>
           <div className="project-preview-meta"><span>{project.type}</span><span>{project.period}</span></div>
           <div className="project-actions">
@@ -119,8 +119,15 @@ function Projects() {
           </div>
         </div>
       </article>
-      <div className="project-index" role="group" aria-label="프로젝트 선택">{projects.map((item, index) => <button type="button" key={item.slug} onClick={() => select(index)} className="project-row" data-active={active === index} aria-pressed={active === index} aria-controls="selected-project" aria-label={`${item.number} ${item.name}`} title={item.name}>
-        <span className="project-number">{item.number}</span>
+      <div className="project-index" role="tablist" aria-label="프로젝트 선택">{projects.map((item, index) => <button type="button" role="tab" id={`project-tab-${item.slug}`} key={item.slug} onClick={() => select(index)} onKeyDown={event => {
+        const offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+        if (!offset && event.key !== 'Home' && event.key !== 'End') return
+        event.preventDefault(); event.stopPropagation()
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? projects.length - 1 : (index + offset + projects.length) % projects.length
+        select(next)
+        document.getElementById(`project-tab-${projects[next].slug}`)?.focus({ preventScroll: true })
+      }} className="project-row" data-active={active === index} aria-selected={active === index} tabIndex={active === index ? 0 : -1} aria-controls="selected-project" aria-label={`${item.number} ${item.name}`} title={item.name}>
+        <span className="project-number">{item.number}</span><span className="project-tab-name">{item.navigationName}</span>
       </button>)}</div>
     </div>
   </>

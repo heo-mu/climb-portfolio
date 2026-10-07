@@ -40,10 +40,16 @@ describe('Home departure projection', () => {
 
   it('recedes before dissolving and is gone before About becomes readable', () => {
     const { projection, move, point } = setup()
-    move(.008)
+    // Observe the same physical departure poses regardless of scroll allocation.
+    const moveAlongRoute = (route: number) => {
+      let low = 0, high = 1
+      for (let i = 0; i < 40; i++) { const mid = (low + high) / 2; if (routeProgress(mid) < route) low = mid; else high = mid }
+      move((low + high) / 2)
+    }
+    moveAlongRoute(.0058)
     expect(projection.opacity).toBeGreaterThan(.9)
     expect(point(1440, 450).x - point(0, 450).x).toBeLessThan(1300)
-    move(.02)
+    moveAlongRoute(.0268)
     expect(projection.opacity).toBeGreaterThan(.7)
     expect(point(1440, 450).x - point(0, 450).x).toBeLessThan(700)
     expect(point(720, 450).x).toBeLessThan(720)

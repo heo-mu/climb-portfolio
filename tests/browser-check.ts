@@ -383,7 +383,7 @@ try {
       await goToCamp(page, 4)
       for (const [index, project] of projects.entries()) {
         await page.locator('.project-row').nth(index).click()
-        await expect(page.locator('.project-row').nth(index)).toHaveAttribute('aria-pressed', 'true')
+        await expect(page.locator('.project-row').nth(index)).toHaveAttribute('aria-selected', 'true')
         await expect(page.locator('.project-preview h2')).toHaveText(project.name)
         await expect(page.locator('.project-open')).toHaveAttribute('href', `/project/${project.slug}`)
       }
@@ -406,14 +406,14 @@ try {
       await expect(page).toHaveURL(`${base}/#high-camp`)
       await ready(page)
       await expectArrived(page, 4)
-      await expect(page.locator('.project-row').nth(2)).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('.project-row').nth(2)).toHaveAttribute('aria-selected', 'true')
       // Browser back from a project page returns to the same camp and selection.
       await page.locator('.project-open').click()
       await expect(page.locator('.detail-title')).toHaveText(pick.name)
       await page.goBack()
       await ready(page)
       await expectArrived(page, 4)
-      await expect(page.locator('.project-row').nth(2)).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('.project-row').nth(2)).toHaveAttribute('aria-selected', 'true')
     })
 
     await step('contact links come from profile data', async () => {
@@ -452,6 +452,16 @@ try {
     await expect(page.locator('.project-open')).toBeFocused()
     await page.keyboard.press('Tab')
     await expect(page.locator('.project-row').first()).toBeFocused()
+    const projectsScroll = await page.evaluate(() => scrollY)
+    await page.keyboard.press('ArrowRight')
+    await expect(page.locator('.project-row').nth(1)).toBeFocused()
+    await expect(page.locator('.project-row').nth(1)).toHaveAttribute('aria-selected', 'true')
+    await page.keyboard.press('End')
+    await expect(page.locator('.project-row').last()).toBeFocused()
+    await page.keyboard.press('Home')
+    await expect(page.locator('.project-row').first()).toBeFocused()
+    await expect(page.locator('.project-row').first()).toHaveAttribute('aria-selected', 'true')
+    expect(await page.evaluate(() => scrollY)).toBe(projectsScroll)
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press('Tab')
       const leaked = await page.evaluate(() => { const active = document.activeElement; return active?.closest('[inert]') ? active.outerHTML.slice(0, 80) : null })

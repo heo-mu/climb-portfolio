@@ -70,6 +70,13 @@ describe('spatial arrival', () => {
 })
 
 describe('expedition progression', () => {
+  it('gives every journey a comparable scroll span, including Home to About', () => {
+    const spans = checkpoints.slice(1).map((camp, index) => camp.progress - checkpoints[index].progress)
+    expect(Math.max(...spans) / Math.min(...spans)).toBeLessThan(1.2)
+    const travel = campZones.slice(1).map((zone, index) => zone.arrival[0] - campZones[index].arrival[1])
+    expect(Math.min(...travel)).toBeGreaterThan(.08)
+    expect(Math.max(...travel) / Math.min(...travel)).toBeLessThan(1.8)
+  })
   it('climbs smoothly from 1240 m to the 6956 m summit without a display-only override', () => {
     expect(altitudeAt(0)).toBe(1240)
     expect(altitudeAt(1)).toBe(6956)

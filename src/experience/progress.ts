@@ -15,7 +15,12 @@ export function routeProgress(progress: number) {
   const local = (p - start) / (end - start)
   const from = checkpoints[index].route
   const to = checkpoints[index + 1].route
-  return from + (to - from) * (0.12 * local + 0.88 * smoothstep(local))
+  // Home releases promptly on the first wheel gesture, then eases into the
+  // longer first journey. The other camps retain their symmetric reading dwell.
+  const travel = index === 0
+    ? local * (2.5 + local * (-2.12 + .62 * local))
+    : .12 * local + .88 * smoothstep(local)
+  return from + (to - from) * travel
 }
 
 export function altitudeAt(progress: number) {

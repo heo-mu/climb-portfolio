@@ -110,7 +110,7 @@ export class SpatialSectionTransition {
       const docked = index === this.leaving ? frame.progress >= entry : arrived && frame.destination === index
       const amount = stage.dock.ease(docked, frame.delta)
       this.pending ||= stage.dock.pending(docked)
-      // Home and About are unusually close: About waits for the departure to clear.
+      // Keep the first introduction clear of Home's receding statement.
       const handoff = index === 1 && frame.progress < entry ? 1 - smoothstep(homeOpacity / .3) : 1
       const opacity = projection.opacity * handoff + (1 - projection.opacity * handoff) * amount
       if (index === 0) homeOpacity = opacity
