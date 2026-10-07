@@ -68,8 +68,8 @@ export function seatOnGround(object: THREE.Object3D, geometry: THREE.BufferGeome
 }
 
 /** A subdivided contact patch follows the surface; flat decals floated on slopes. */
-export function contactPatch(surface: TerrainSurface, x: number, z: number, width: number, length: number, yaw = 0) {
-  const geometry = new THREE.PlaneGeometry(width, length, 6, 6)
+export function contactPatch(surface: TerrainSurface, x: number, z: number, width: number, length: number, yaw = 0, segments = 6) {
+  const geometry = new THREE.PlaneGeometry(width, length, segments, segments)
   geometry.rotateX(-Math.PI / 2); geometry.rotateY(yaw)
   const p = geometry.getAttribute('position')
   for (let i = 0; i < p.count; i++) {

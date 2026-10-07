@@ -5,13 +5,15 @@ import { buildDisplay, captureFit, SCREEN_HEIGHT, type ShowcaseDevice } from './
 import { cameraFieldOfView, exhibitionCameraPose, showcaseSite, type TerrainSurface } from './terrain'
 import { contactPatch, seatOnGround } from './grounding'
 import type { ExpeditionFrame } from './progress'
+import { loadProjectCapture } from './projectCaptures'
 
-const CROSSFADE = .32
+const CROSSFADE = .22
 const PROJECTS = checkpoints.findIndex(camp => camp.id === 'high-camp')
 /** Where the exhibit may stand, in the High Camp view (metres): ahead of the plateau the walker can rest on. */
 const ANCHOR = { forward: [30, 36, 42], right: 38 }
 /** Display width search range in metres; final size is fitted independently in projected space. */
-const SCALE = { max: 52, min: 12 }
+const SCALE = { max: 56, min: 12 }
+const GROUND_EMBED = .003
 /** Lateral limit for anything on the ground: the guide rope runs just inside it. */
 const ROPE_CLEARANCE = 3.3
 /** Below head height (m above the shelf), nothing may reach into the walked line. */
@@ -74,6 +76,7 @@ export class ProjectShowcase {
   private displayed = -1
   private transition = 1
   private textures: (THREE.Texture | null)[] = projects.map(() => null)
+  private preparing = new Map<number, Promise<void>>()
   private enabled = false
   private loading = false
   private disposed = false
@@ -103,7 +106,7 @@ export class ProjectShowcase {
     this.surface = surface
     const device = buildDisplay(this.environment?.texture ?? null, this.placeholder)
     const shadeMaterial = shadow(), coreMaterial = shadow()
-    shadeMaterial.userData.opacity = .4; coreMaterial.userData.opacity = .5
+    shadeMaterial.userData.opacity = .5; coreMaterial.userData.opacity = .8
     const shade = new THREE.Mesh(new THREE.BufferGeometry(), shadeMaterial), core = new THREE.Mesh(new THREE.BufferGeometry(), coreMaterial)
     shade.name = 'showcase-shadow'; core.name = 'showcase-contact'
     device.footing.computeBoundingBox()
@@ -122,7 +125,7 @@ export class ProjectShowcase {
     })).values()]
     const silhouette = [...hull, ...groundHull]
     device.group.visible = shade.visible = core.visible = false
-    this.exhibit = { ...device, materials: [...device.materials, shadeMaterial, coreMaterial], shade, core, bury: -device.footing.boundingBox!.min.y + .014, rest: { scale: 1, matrix: new THREE.Matrix4() }, silhouette, hull, groundHull, front: Infinity }
+    this.exhibit = { ...device, materials: [...device.materials, shadeMaterial, coreMaterial], shade, core, bury: -device.footing.boundingBox!.min.y + GROUND_EMBED, rest: { scale: 1, matrix: new THREE.Matrix4() }, silhouette, hull, groundHull, front: Infinity }
     this.group.add(device.group, shade, core)
     world.add(this.group)
     this.select(this.selected, true)
@@ -163,7 +166,7 @@ export class ProjectShowcase {
         // The rope and the walker are left behind by stepping right; the face and the trail only get closer.
         if (!box.clear || !box.walk) continue
         if (box.right > limits.right || box.top > .76 || box.bottom < -.86) continue
-        if (box.screenRight - box.screenLeft > .9 || box.left + box.right < limits.left + limits.right - .04) continue
+        if (box.screenRight - box.screenLeft > .98 || box.left + box.right < limits.left + limits.right - .04) continue
         if (box.face && box.left >= limits.left && box.screenLeft >= limits.left + .025) return { anchor, quaternion, facing, scale, size: box.screenRight - box.screenLeft }
       }
       return null
@@ -184,7 +187,7 @@ export class ProjectShowcase {
     slot.rest.matrix.copy(slot.group.matrixWorld)
     // Test the complete face and the base, not just the screen centre. Their
     // sightlines must clear the foreground snow before any part can appear.
-    this.revealPoints = [-.51, 0, .51].flatMap(x => [-.29, 0, .29].map(y => new THREE.Vector3(x, y, .012).applyMatrix4(slot.panel.matrixWorld)))
+    this.revealPoints = [-.514, 0, .514].flatMap(x => [-.295, 0, .295].map(y => new THREE.Vector3(x, y, .021).applyMatrix4(slot.panel.matrixWorld)))
     const foot = slot.footing.boundingBox!
     for (const x of [foot.min.x, foot.max.x]) for (const z of [foot.min.z, foot.max.z]) {
       this.revealPoints.push(new THREE.Vector3(x, foot.max.y + .02, z).applyMatrix4(slot.group.matrixWorld))
@@ -193,9 +196,9 @@ export class ProjectShowcase {
     const { width: w, depth: d, x, z } = slot.shadow
     const center = new THREE.Vector3(x, 0, z).applyMatrix4(slot.group.matrixWorld)
     slot.shade.geometry.dispose(); slot.core.geometry.dispose()
-    slot.shade.geometry = contactPatch(this.surface, center.x, center.z, w * scale * 1.35, d * scale * 1.35, facing)
+    slot.shade.geometry = contactPatch(this.surface, center.x, center.z, w * scale * 1.35, d * scale * 1.35, facing, 48)
     const footing = slot.footing.boundingBox!, base = new THREE.Vector3((footing.min.x + footing.max.x) / 2, 0, (footing.min.z + footing.max.z) / 2).applyMatrix4(slot.group.matrixWorld)
-    slot.core.geometry = contactPatch(this.surface, base.x, base.z, (footing.max.x - footing.min.x) * scale * 1.25, (footing.max.z - footing.min.z) * scale * 1.3, facing)
+    slot.core.geometry = contactPatch(this.surface, base.x, base.z, (footing.max.x - footing.min.x) * scale * 1.45, (footing.max.z - footing.min.z) * scale * 1.5, facing, 32)
     this.apply(slot)
     if (this.root) this.root.dataset.showcase = this.enabled ? '3d' : '2d'
     this.linkState = ''
@@ -218,7 +221,7 @@ export class ProjectShowcase {
   }
 
   private projectedBox(slot: Exhibit, anchor: THREE.Vector3, quaternion: THREE.Quaternion, scale: number) {
-    const origin = anchor.clone().setY(showcaseSite.level - .014 * scale)
+    const origin = anchor.clone().setY(showcaseSite.level - GROUND_EMBED * scale)
     const matrix = new THREE.Matrix4().compose(origin, quaternion, new THREE.Vector3(scale, scale, scale))
     let right = -Infinity, top = -Infinity, left = Infinity, bottom = Infinity, screenLeft = Infinity, screenRight = -Infinity
     for (const point of slot.silhouette) {
@@ -255,6 +258,7 @@ export class ProjectShowcase {
 
   select(index: number, instant = false) {
     if (!projects[index]) return
+    if (index === this.selected && !instant) return
     this.selected = index
     if (instant) this.transition = 1
     this.dirty = true
@@ -282,7 +286,7 @@ export class ProjectShowcase {
       if (nearness !== this.nearness) { this.nearness = nearness; this.apply(slot) }
     }
     const screen = slot.screen.material.uniforms
-    if (this.transition === 1 && this.displayed !== this.selected && this.textures[this.selected]) {
+    if (this.displayed !== this.selected && this.textures[this.selected]) {
       screen.fromMap.value = screen.toMap.value
       screen.fromFit.value.copy(screen.toFit.value)
       screen.toMap.value = this.textures[this.selected]
@@ -341,10 +345,16 @@ export class ProjectShowcase {
     const order = [this.selected, ...projects.map((_, i) => i).filter(i => i !== this.selected)]
     for (const index of order) {
       if (this.disposed) return
-      const image = new Image()
-      image.decoding = 'async'
-      image.src = projects[index].screen.desktop
-      try { await image.decode() } catch { continue }
+      try { await this.prepare(index) } catch { /* Keep the current exhibit; selection can retry. */ }
+    }
+  }
+
+  /** Commit selection only after the original is decoded and uploaded to this display. */
+  prepare(index: number): Promise<void> {
+    if (this.textures[index] || this.disposed) return Promise.resolve()
+    const existing = this.preparing.get(index)
+    if (existing) return existing
+    const pending = loadProjectCapture(index).then(async image => {
       if (this.disposed) return
       const texture = new THREE.Texture(image)
       texture.colorSpace = THREE.SRGBColorSpace
@@ -359,7 +369,9 @@ export class ProjectShowcase {
       this.renderer?.initTexture(texture)
       this.textures[index] = texture
       this.dirty = true
-    }
+    }).finally(() => this.preparing.delete(index))
+    this.preparing.set(index, pending)
+    return pending
   }
 
   /** A pointer target over the visible display, so the exhibit itself opens the project. */

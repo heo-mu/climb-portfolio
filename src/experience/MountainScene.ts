@@ -46,6 +46,7 @@ export class MountainScene {
   private spatialTransition: SpatialSectionTransition
   private showcase: ProjectShowcase
   private unsubscribeSelection: () => void
+  private unsubscribePreparation: () => void
 
   constructor(private options: SceneOptions) {
     this.spatialTransition = new SpatialSectionTransition(options.root)
@@ -83,7 +84,8 @@ export class MountainScene {
     this.resizeObserver.observe(options.canvas.parentElement!)
     this.resize()
     this.showcase.select(projectSelection.get(), true)
-    this.unsubscribeSelection = projectSelection.subscribe(index => this.showcase.select(index))
+    this.unsubscribeSelection = projectSelection.subscribe(() => this.showcase.select(projectSelection.get()))
+    this.unsubscribePreparation = projectSelection.prepareWith(index => this.showcase.prepare(index))
     const advance = () => {
       if (this.disposed) return
       try {
@@ -214,6 +216,7 @@ export class MountainScene {
     this.disposed = true
     this.spatialTransition.dispose()
     this.unsubscribeSelection()
+    this.unsubscribePreparation()
     this.showcase.dispose()
     if (this.idle) window.cancelIdleCallback(this.deferred)
     else window.clearTimeout(this.deferred)

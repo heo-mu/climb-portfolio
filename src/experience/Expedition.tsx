@@ -7,6 +7,8 @@ import { checkpoints } from '../data/expedition'
 import { CheckpointSections } from '../components/Sections'
 import { HUD } from '../components/HUD'
 import { experienceConfig } from '../config/experience'
+import { projectSelection } from './projectSelection'
+import { projects } from '../data/projects'
 
 const routePositions = new Map<string, number>()
 
@@ -28,6 +30,13 @@ export function Expedition() {
   const onFallback = useCallback(() => setFallback(true), [])
 
   useLayoutEffect(() => {
+    const returning = Math.abs(initialProgress - checkpoints[4].progress) < experienceConfig.content.readableRange
+    const restored = projects.findIndex(project => project.slug === (location.state as { project?: string } | null)?.project)
+    projectSelection.reset(returning ? (restored >= 0 ? restored : projectSelection.get()) : 0)
+    return () => projectSelection.reset(projectSelection.get())
+  }, [initialProgress, location.state])
+
+  useLayoutEffect(() => {
     document.title = 'Heo Chang Mu - Portfolio'
     const sections = Array.from(root.current!.querySelectorAll<HTMLElement>('[data-checkpoint]'))
     if (fallback) {
@@ -38,7 +47,11 @@ export function Expedition() {
       const raf = requestAnimationFrame(() => target.progress ? document.getElementById(target.id)?.scrollIntoView() : window.scrollTo({ top: 0, behavior: 'instant' }))
       const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
-          if (entry.isIntersecting) lastProgress.current = checkpoints[Number((entry.target as HTMLElement).dataset.checkpoint)].progress
+          if (entry.isIntersecting) {
+            const index = Number((entry.target as HTMLElement).dataset.checkpoint)
+            lastProgress.current = checkpoints[index].progress
+            if (index !== 4) projectSelection.reset()
+          }
         })
       }, { rootMargin: '-15% 0px -45% 0px' })
       sections.forEach(section => observer.observe(section))
@@ -62,6 +75,8 @@ export function Expedition() {
         })
       }
       if (previousActive !== frame.active) {
+        // Other camps begin a fresh selection; a detail return directly to Projects preserves it.
+        if (frame.active !== 4) projectSelection.reset()
         const focused = document.activeElement
         if (focused instanceof HTMLElement && sections.some(section => section.contains(focused))) focused.blur()
         previousActive = frame.active

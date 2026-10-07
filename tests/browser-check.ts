@@ -369,7 +369,7 @@ try {
           const display = rect('.showcase-link'), labels = Array.from(document.querySelectorAll('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect())
           return {
             shown: getComputedStyle(document.querySelector('.showcase-link')!).visibility, share: display.width / innerWidth,
-            text: ['#high-camp .project-preview', '#high-camp .project-index', '#high-camp .portfolio-heading', '#high-camp .section-intro'].some(selector => hit(display, rect(selector))),
+            text: ['#high-camp .project-preview', '#high-camp .project-index', '#high-camp .portfolio-heading'].some(selector => hit(display, rect(selector))),
             hud: ['.altitude-hud', '.journey-home', '.current-location'].some(selector => hit(display, rect(selector))) || labels.some(label => hit(display, label)),
             inside: display.left >= 0 && display.top >= 0 && display.right <= innerWidth && display.bottom <= innerHeight,
           }
@@ -380,7 +380,11 @@ try {
     })
 
     await step('Projects: selection, detail round trip and restored selection', async () => {
+      await goToCamp(page, 3)
       await goToCamp(page, 4)
+      await expect(page.locator('.project-preview h2')).toHaveText(projects[0].name)
+      await expect(page.locator('.project-row').first()).toHaveAttribute('aria-selected', 'true')
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[0].slug)
       for (const [index, project] of projects.entries()) {
         await page.locator('.project-row').nth(index).click()
         await expect(page.locator('.project-row').nth(index)).toHaveAttribute('aria-selected', 'true')
