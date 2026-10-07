@@ -8,7 +8,7 @@ export const experienceConfig = {
   // is within `arrivalDistance` metres of its reading plateau, and docks there when
   // the walker will stop inside it. Home docks only within `homeDockDistance`, so a
   // single wheel step still departs instead of springing back.
-  content: { readableRange: 0.024, arrivalDistance: 5, homeDockDistance: 3 },
+  content: { readableRange: 0.030, arrivalDistance: 5, homeDockDistance: 3 },
   home: { exitRange: 0.022 },
   snow: { nearCount: 220, middleCount: 800, farCount: 1400 },
 }

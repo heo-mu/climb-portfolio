@@ -1,4 +1,4 @@
-﻿import { memo, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+﻿import { memo, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { checkpoints, inventory, profile, workflow } from '../data/expedition'
 import { projects } from '../data/projects'
@@ -94,25 +94,6 @@ function ShowcaseLink() {
 }
 
 function Projects() {
-  const indexElement = useRef<HTMLDivElement>(null)
-  useLayoutEffect(() => {
-    const element = indexElement.current!
-    const contents = Array.from(element.querySelectorAll<HTMLElement>('.project-information'))
-    let previous = 0
-    const measure = () => {
-      // Natural detail boxes stay unchanged while their outer rows open/close.
-      // Reserve their actual maximum, not a viewport-specific guessed height.
-      const height = Math.max(...contents.map(content => content.offsetHeight))
-      if (height !== previous) {
-        previous = height
-        element.style.setProperty('--project-detail-height', `${height}px`)
-      }
-    }
-    measure()
-    const observer = new ResizeObserver(measure)
-    contents.forEach(content => observer.observe(content))
-    return () => observer.disconnect()
-  }, [])
   const { index: active, pending, failed } = useSyncExternalStore(projectSelection.subscribe, projectSelection.snapshot)
   const select = (index: number) => { void projectSelection.request(index) }
   const project = projects[active]
@@ -120,27 +101,28 @@ function Projects() {
     <h1 className="portfolio-heading" id="title-high-camp" tabIndex={-1}>Selected Work<span className="heading-accent">.</span></h1>
     <div className="panel-body projects-layout">
       <Link className="project-media-link" to={`/project/${project.slug}`} tabIndex={-1} aria-hidden="true"><ProjectScreen active={active} /></Link>
-      <div ref={indexElement} className="project-index" aria-label="프로젝트 선택">{projects.map((item, index) => <article className="project-entry" key={item.slug} data-active={active === index}>
-        <h2><button type="button" id={`project-tab-${item.slug}`} onClick={() => select(index)} onKeyDown={event => {
+      <div className="projects-editorial">
+        <nav className="project-navigation" aria-label="프로젝트 선택">
+          <p className="project-index-label">프로젝트 선택 <span>01 — 05</span></p>
+          <div className="project-index" role="tablist" aria-label="프로젝트" aria-orientation="vertical">{projects.map((item, index) => <button key={item.slug} role="tab" tabIndex={active === index ? 0 : -1} type="button" id={`project-tab-${item.slug}`} onClick={() => select(index)} onKeyDown={event => {
           const offset = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 0
           if (!offset && event.key !== 'Home' && event.key !== 'End') return
           event.preventDefault(); event.stopPropagation()
           const next = event.key === 'Home' ? 0 : event.key === 'End' ? projects.length - 1 : (index + offset + projects.length) % projects.length
           select(next)
           document.getElementById(`project-tab-${projects[next].slug}`)?.focus({ preventScroll: true })
-        }} className="project-row" data-active={active === index} data-pending={pending === index} aria-expanded={active === index} aria-controls={`project-info-${item.slug}`} aria-label={`${item.number} ${item.name}`}>
-          <span className="project-number">{item.number}</span><span className="project-tab-name"><span className="project-name-full">{item.name}</span><span className="project-name-short">{item.navigationName}</span></span><span className="project-selection-mark" aria-hidden="true" />
-          </button></h2>
-        <div className="project-expansion" id={`project-info-${item.slug}`} role="region" aria-labelledby={`project-tab-${item.slug}`} aria-hidden={active !== index} inert={active !== index}>
-          <div className="project-expansion-clip"><div className="project-information">
-            <h3 className="project-mobile-title">{item.name}</h3>
+        }} className="project-row" data-active={active === index} data-pending={pending === index} aria-selected={active === index} aria-controls={`project-info-${item.slug}`} aria-label={`${item.number} ${item.name}`}>
+          <span className="project-number">{item.number}</span><span className="project-tab-name"><span className="project-name-full">{item.name}</span><span className="project-name-short">{item.navigationName}</span></span>
+          </button>)}</div>
+        </nav>
+        <div className="project-details">{projects.map((item, index) => <div className="project-information" key={item.slug} id={`project-info-${item.slug}`} role="tabpanel" aria-labelledby={`project-tab-${item.slug}`} aria-hidden={active !== index} inert={active !== index}>
+            <h2 className="project-detail-title">{item.name}</h2>
             <p>{item.summary}</p>
             <div className="project-meta"><span>{item.type}</span><span>{item.period}</span></div>
             <ul className="project-tags" aria-label="프로젝트 키워드">{item.tags.map(tag => <li key={tag}>#{tag}</li>)}</ul>
             <Link className="project-open" to={`/project/${item.slug}`}>프로젝트 보기 <ArrowUpRight className="project-open-arrow" /></Link>
-          </div></div>
-        </div>
-      </article>)}</div>
+        </div>)}</div>
+      </div>
       <span className="project-load-status" role="status">{pending !== null ? `${projects[pending].name} 화면을 불러오고 있어요.` : failed ? '화면을 불러오지 못했어요. 다시 선택해 주세요.' : ''}</span>
     </div>
   </>

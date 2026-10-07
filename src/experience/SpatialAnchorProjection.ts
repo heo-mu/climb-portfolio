@@ -8,7 +8,8 @@ import { smoothstep } from './progress'
 // and orientation, with longitudinal travel reflected into recession. The world
 // anchor never follows the camera. A normal forward projection would cull a
 // passed anchor behind the camera (or enlarge a plane in front of it).
-const anchorDepth = 18
+const homeAnchorDepth = 18
+const campAnchorDepth = 14
 
 /** Distances over which a composition dissolves into the weather. */
 export type AnchorFog = { start: number; end: number }
@@ -34,7 +35,11 @@ export class SpatialAnchorProjection {
   private anchorCamera = new PerspectiveCamera()
   private target = new Vector3()
 
-  constructor(private anchorRoute = 0, private fog: AnchorFog = homeFog) {}
+  private readonly anchorDepth: number
+
+  constructor(private anchorRoute = 0, private fog: AnchorFog = homeFog) {
+    this.anchorDepth = fog === homeFog ? homeAnchorDepth : campAnchorDepth
+  }
 
   resize(camera: PerspectiveCamera, width: number, height: number) {
     cameraPose(this.anchorRoute, this.origin, this.target)
@@ -43,9 +48,9 @@ export class SpatialAnchorProjection {
     this.anchorCamera.updateMatrixWorld()
     this.anchorCamera.getWorldDirection(this.forward)
     const anchorFov = cameraFieldOfView(this.anchorRoute, camera.aspect, width)
-    const unitsPerPixel = 2 * anchorDepth * Math.tan(anchorFov * Math.PI / 360) / height
+    const unitsPerPixel = 2 * this.anchorDepth * Math.tan(anchorFov * Math.PI / 360) / height
     this.plane.copy(this.anchorCamera.matrixWorld)
-      .multiply(new Matrix4().makeTranslation(0, 0, -anchorDepth))
+      .multiply(new Matrix4().makeTranslation(0, 0, -this.anchorDepth))
       .multiply(new Matrix4().makeScale(unitsPerPixel, -unitsPerPixel, 1))
       .multiply(new Matrix4().makeTranslation(-width / 2, -height / 2, 0))
     // Homogeneous clip coordinates -> CSS pixels. Keep w for real perspective,
@@ -55,7 +60,7 @@ export class SpatialAnchorProjection {
 
   update(camera: PerspectiveCamera) {
     this.distance = camera.position.distanceTo(this.origin)
-    const recession = this.distance / (anchorDepth + this.distance)
+    const recession = this.distance / (this.anchorDepth + this.distance)
     this.opacity = (1 - .3 * recession) * (1 - smoothstep((this.distance - this.fog.start) / (this.fog.end - this.fog.start)))
     this.backdrop = 1 - smoothstep(this.distance / 22)
     this.blur = 2 * smoothstep((this.distance - 12) / 40)
@@ -67,7 +72,7 @@ export class SpatialAnchorProjection {
     this.view.copy(camera.matrixWorld).setPosition(this.eye).invert()
     this.matrix.copy(this.viewport).multiply(camera.projectionMatrix)
       .multiply(this.view).multiply(this.plane)
-    this.matrix.multiplyScalar(1 / anchorDepth)
+    this.matrix.multiplyScalar(1 / this.anchorDepth)
     // Embed the plane's 3x3 homography in an invertible CSS 4x4 matrix.
     // A zero z row projects correctly mathematically but browsers cull it.
     const elements = this.matrix.elements

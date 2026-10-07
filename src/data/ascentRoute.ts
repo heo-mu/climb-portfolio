@@ -32,18 +32,10 @@ export function routeEyeAt(route: number): [number, number, number] {
   return [eye.x, eye.y, eye.z]
 }
 
-/** The overlook is geometry in the rail, included in arc length, never a speed filter. */
-const ramp = (t: number) => { const v = Math.max(0, Math.min(1, t)); return v * v * (3 - 2 * v) }
-export function overlookAt(curveParameter: number) {
-  return ramp((curveParameter - .7) / .055) * (1 - ramp((curveParameter - .85) / .07))
-}
-
 export function writeRouteEye(curveParameter: number, out: { x: number; y: number; z: number }) {
-  const r = Math.max(0, Math.min(1, curveParameter)), overlook = overlookAt(r)
-  out.x = catmullRom(r, 0) + 16 * overlook
-  const height = catmullRom(r, 1)
-  const lift = catmullRom(.8, 1) + 13 - height
-  out.y = height + experienceConfig.camera.eyeHeight + .5 * (lift + Math.sqrt(lift * lift + 1)) * overlook
+  const r = Math.max(0, Math.min(1, curveParameter))
+  out.x = catmullRom(r, 0)
+  out.y = catmullRom(r, 1) + experienceConfig.camera.eyeHeight
   out.z = -r * (ascentRouteControls.length - 1) * ROUTE_CONTROL_SPACING
 }
 

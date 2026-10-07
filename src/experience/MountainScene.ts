@@ -172,13 +172,13 @@ export class MountainScene {
       this.camera.position.copy(this.position)
       this.camera.lookAt(this.target)
       this.camera.updateMatrixWorld()
-      this.camera.fov = cameraFieldOfView(frame.journeyProgress, this.camera.aspect, this.width)
+      this.camera.fov = cameraFieldOfView(frame.journeyProgress, this.camera.aspect, this.width, this.position)
       this.camera.updateProjectionMatrix()
     }
     // Spatial UI follows every controller frame (docking settles while standing);
     // it returns immediately when nothing changed.
     this.spatialTransition.update(this.camera, frame)
-    // A project change moves only the exhibit: it renders every frame while it crosses over.
+    // A project change crossfades the capture; the exhibit stays fixed in world space.
     const exhibit = this.showcase.update(frame, this.camera) || this.showcase.drawWarmUp(this.camera)
     this.options.onProjectsReady(this.showcase.ready)
     const moving = frame.journeyProgress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit

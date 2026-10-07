@@ -4,15 +4,15 @@ import { checkpoints } from '../data/checkpoints'
 import { buildDisplay, captureFit, SCREEN_HEIGHT, type ShowcaseDevice } from './showcaseDevices'
 import { cameraFieldOfView, cameraPose, showcaseSite, type TerrainSurface } from './terrain'
 import { contactPatch, seatOnGround } from './grounding'
-import { projectsPresentation, type ExpeditionFrame } from './progress'
+import { campZones, projectsPresentation, type ExpeditionFrame } from './progress'
 import { CaptureDecoder } from './CaptureDecoder'
 
 const CROSSFADE = .28
 const PROJECTS = checkpoints.findIndex(camp => camp.id === 'high-camp')
 /** Where the exhibit may stand, in the High Camp view (metres): ahead of the plateau the walker can rest on. */
-const ANCHOR = { forward: [30, 36, 42], right: 38 }
+const ANCHOR = { forward: [100, 110, 120], right: 100 }
 /** Display width search range in metres; final size is fitted independently in projected space. */
-const SCALE = { max: 56, min: 12 }
+const SCALE = { max: 140, min: 40 }
 const GROUND_EMBED = .003
 /** Lateral limit for anything on the ground: the guide rope runs just inside it. */
 const ROPE_CLEARANCE = 3.3
@@ -23,17 +23,20 @@ type Exhibit = ShowcaseDevice & {
   shade: THREE.Mesh
   core: THREE.Mesh
   bury: number
-  rest: { scale: number; matrix: THREE.Matrix4 }
+  rest: { scale: number }
   silhouette: THREE.Vector3[]
   /** Corners of every part held above the ground: none may meet the snow face. */
   hull: THREE.Vector3[]
   groundHull: THREE.Vector3[]
-  /** Forward distance of the structure's nearest point in the High Camp view, for the passing dissolve. */
-  front: number
 }
 
 const smootherstep = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
 const up = new THREE.Vector3(0, 1, 0)
+// The lower edge is the critical sightline over the ridge; sample it more densely.
+const visibilityFace = [
+  ...Array.from({ length: 9 }, (_, i) => [-.514 + 1.028 * i / 8, -.295]),
+  ...[-.514, 0, .514].flatMap(x => [[x, 0], [x, .295]]),
+]
 const screenHitCorners = [[-.5, -1], [.5, -1], [-.5, 1], [.5, 1]] as const
 const corners = (box: THREE.Box3) => [0, 1].flatMap(x => [0, 1].flatMap(y => [0, 1].map(z => new THREE.Vector3(x ? box.max.x : box.min.x, y ? box.max.y : box.min.y, z ? box.max.z : box.min.z))))
 const idle = () => new Promise<void>(resolve => typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(() => resolve(), { timeout: 200 }) : window.setTimeout(resolve, 16))
@@ -59,7 +62,7 @@ function exhibitEnvironment(renderer: THREE.WebGLRenderer) {
   return target
 }
 
-/** A camp display with a local reading frame; selection changes only its capture. */
+/** A world-fixed camp display; selection changes only its capture. */
 export class ProjectShowcase {
   readonly group = new THREE.Group()
   private exhibit: Exhibit | null = null
@@ -102,9 +105,7 @@ export class ProjectShowcase {
   }
 
   private link: HTMLAnchorElement | null = null
-  private clearanceView = new THREE.Matrix4()
-  private clearanceProjection = new THREE.Matrix4()
-  private cachedClearance = -1
+  private visibilityProfile = new Float32Array(129)
   private reportedPresence = -1
   build(world: THREE.Group, surface: TerrainSurface, shadow: () => THREE.Material) {
     this.surface = surface
@@ -129,7 +130,7 @@ export class ProjectShowcase {
     })).values()]
     const silhouette = [...hull, ...groundHull]
     device.group.visible = shade.visible = core.visible = false
-    this.exhibit = { ...device, materials: [...device.materials, shadeMaterial, coreMaterial], shade, core, bury: -device.footing.boundingBox!.min.y + GROUND_EMBED, rest: { scale: 1, matrix: new THREE.Matrix4() }, silhouette, hull, groundHull, front: Infinity }
+    this.exhibit = { ...device, materials: [...device.materials, shadeMaterial, coreMaterial], shade, core, bury: -device.footing.boundingBox!.min.y + GROUND_EMBED, rest: { scale: 1 }, silhouette, hull, groundHull }
     this.group.add(device.group, shade, core)
     world.add(this.group)
     this.select(this.selected, true)
@@ -140,7 +141,6 @@ export class ProjectShowcase {
     this.group.matrixAutoUpdate = false
     this.group.matrix.identity()
     this.group.updateMatrixWorld(true)
-    this.cachedClearance = -1
     this.width = width; this.height = height
     const slot = this.exhibit
     if (!this.surface || !slot) return
@@ -169,21 +169,37 @@ export class ProjectShowcase {
     const limits = this.limits = this.freeSpace(width)
     type Placement = { anchor: THREE.Vector3; quaternion: THREE.Quaternion; facing: number; scale: number; size: number }
     // Fit the common display between the text and trail, with its footing beyond the rope.
+    const readingViews = Array.from({ length: 11 }, (_, i) => THREE.MathUtils.lerp(...campZones[PROJECTS].arrival, i / 10)).map(progress => {
+      const probe = view.clone()
+      cameraPose(progress, probe.position, target)
+      probe.fov = cameraFieldOfView(progress, probe.aspect, width)
+      probe.updateProjectionMatrix(); probe.lookAt(target); probe.updateMatrixWorld(true)
+      return probe
+    })
+    const installation = new THREE.Object3D()
     const place = (slot: Exhibit, forward: number, scale: number): Placement | null => {
-      for (let right = ROPE_CLEARANCE; right <= ANCHOR.right; right += .4) {
+      for (let right = ROPE_CLEARANCE; right <= ANCHOR.right; right += 1) {
         const anchor = showcaseSite.toWorld(forward, right)
         const box = this.projectedBox(slot, anchor, quaternion, scale)
-        // The rope and the walker are left behind by stepping right; the face and the trail only get closer.
+        // Candidate footings stay outside the rope and the walked corridor.
         if (!box.clear || !box.walk) continue
         if (box.right > limits.right || box.top > .76 || box.bottom < -.86) continue
         if (box.screenRight - box.screenLeft > .98 || box.left + box.right < limits.left + limits.right) continue
-        if (box.face && box.left >= limits.left && box.screenLeft >= limits.left + .025) return { anchor, quaternion, facing, scale, size: box.screenRight - box.screenLeft }
+        if (box.face && box.left >= limits.left && box.screenLeft >= limits.left + .025) {
+          installation.position.copy(anchor); installation.quaternion.copy(quaternion); installation.scale.setScalar(scale)
+          seatOnGround(installation, slot.footing, this.surface!, slot.bury * scale)
+          const seated = this.projectedBox(slot, anchor, quaternion, scale, installation.position.y)
+          if (!seated.face || seated.left < limits.left || seated.right > limits.right || seated.top > .76 || seated.bottom < -.86) continue
+          const matrix = installation.matrix.clone().multiply(slot.panel.matrixWorld)
+          this.revealPoints = visibilityFace.map(([x, y]) => new THREE.Vector3(x, y, .021).applyMatrix4(matrix))
+          if (readingViews.every(probe => this.measureClearance(probe, 1.25) === 1)) return { anchor, quaternion, facing, scale, size: box.screenRight - box.screenLeft }
+        }
       }
       return null
     }
     let placement: Placement | null = null
     for (const forward of ANCHOR.forward) {
-      for (let scale = SCALE.max; scale >= SCALE.min; scale -= .4) {
+      for (let scale = SCALE.max; scale >= SCALE.min; scale -= 1) {
         const candidate = place(slot, forward, scale)
         if (candidate) { if (!placement || candidate.size > placement.size) placement = candidate; break }
       }
@@ -195,21 +211,23 @@ export class ProjectShowcase {
     seatOnGround(slot.group, slot.footing, this.surface, slot.bury * scale)
     slot.rest.scale = scale
     slot.group.updateMatrixWorld(true)
-    slot.rest.matrix.copy(slot.group.matrixWorld)
-    // Test the complete face and the base, not just the screen centre. Their
-    // sightlines must clear the foreground snow before any part can appear.
-    this.revealPoints = [-.514, 0, .514].flatMap(x => [-.295, 0, .295].map(y => new THREE.Vector3(x, y, .021).applyMatrix4(slot.panel.matrixWorld)))
-    const foot = slot.footing.boundingBox!
-    for (const x of [foot.min.x, foot.max.x]) for (const z of [foot.min.z, foot.max.z]) {
-      this.revealPoints.push(new THREE.Vector3(x, foot.max.y + .02, z).applyMatrix4(slot.group.matrixWorld))
-    }
-    slot.front = Math.min(...slot.silhouette.map(point => { const p = this.corner.copy(point).applyMatrix4(slot.group.matrixWorld).sub(showcaseSite.origin); return p.x * showcaseSite.forward.x + p.z * showcaseSite.forward.z }))
+    // Test the complete face; the grounded support may be naturally occluded by snow.
+    this.revealPoints = visibilityFace.map(([x, y]) => new THREE.Vector3(x, y, .021).applyMatrix4(slot.panel.matrixWorld))
     const { width: w, depth: d, x, z } = slot.shadow
     const center = new THREE.Vector3(x, 0, z).applyMatrix4(slot.group.matrixWorld)
     slot.shade.geometry.dispose(); slot.core.geometry.dispose()
     slot.shade.geometry = contactPatch(this.surface, center.x, center.z, w * scale * 1.35, d * scale * 1.35, facing, 48)
     const footing = slot.footing.boundingBox!, base = new THREE.Vector3((footing.min.x + footing.max.x) / 2, 0, (footing.min.z + footing.max.z) / 2).applyMatrix4(slot.group.matrixWorld)
     slot.core.geometry = contactPatch(this.surface, base.x, base.z, (footing.max.x - footing.min.x) * scale * 1.45, (footing.max.z - footing.min.z) * scale * 1.5, facing, 32)
+    // Terrain sightlines are sampled once on layout, never during scrolling.
+    const probe = view.clone()
+    for (let i = 0; i < this.visibilityProfile.length; i++) {
+      const progress = .68 + .24 * i / (this.visibilityProfile.length - 1)
+      cameraPose(progress, probe.position, target)
+      probe.fov = cameraFieldOfView(progress, probe.aspect, width)
+      probe.updateProjectionMatrix(); probe.lookAt(target); probe.updateMatrixWorld(true)
+      this.visibilityProfile[i] = this.enabled ? this.measureClearance(probe) : 0
+    }
     this.apply(slot)
     if (this.root) this.root.dataset.showcase = this.enabled ? '3d' : '2d'
     this.linkState = ''
@@ -221,7 +239,7 @@ export class ProjectShowcase {
     const root = this.root
     const labels = root ? Array.from(root.querySelectorAll<HTMLElement>('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect()).filter(rect => rect.width) : []
     const right = labels.length ? Math.min(...labels.map(rect => rect.left)) - 24 : width * .86
-    const text = root?.querySelector<HTMLElement>('#high-camp .project-index')
+    const text = root?.querySelector<HTMLElement>('#high-camp .projects-editorial')
     let left = width * .34
     if (text) {
       // Offsets ignore the spatial transforms the panel may be carrying right now.
@@ -231,8 +249,8 @@ export class ProjectShowcase {
     return { left: left / width * 2 - 1, right: right / width * 2 - 1 }
   }
 
-  private projectedBox(slot: Exhibit, anchor: THREE.Vector3, quaternion: THREE.Quaternion, scale: number) {
-    const origin = anchor.clone().setY(showcaseSite.level - GROUND_EMBED * scale)
+  private projectedBox(slot: Exhibit, anchor: THREE.Vector3, quaternion: THREE.Quaternion, scale: number, height = showcaseSite.level - GROUND_EMBED * scale) {
+    const origin = anchor.clone().setY(height)
     const matrix = new THREE.Matrix4().compose(origin, quaternion, new THREE.Vector3(scale, scale, scale))
     let right = -Infinity, top = -Infinity, left = Infinity, bottom = Infinity, screenLeft = Infinity, screenRight = -Infinity
     for (const point of slot.silhouette) {
@@ -296,13 +314,8 @@ export class ProjectShowcase {
     if (this.enabled && (frame.journeyProgress !== this.poseRoute || this.dirty)) {
       this.poseRoute = frame.journeyProgress
       const { presence } = projectsPresentation(frame.journeyProgress)
-      // UI persistence belongs to the display mount, never to the walking camera.
-      // Reuse the fitted camp view while the world continues at uniform speed.
-      if (frame.journeyProgress === checkpoints[PROJECTS].progress) this.group.matrix.identity()
-      else this.group.matrix.multiplyMatrices(camera.matrixWorld, this.view.matrixWorldInverse)
-      slot.group.scale.setScalar(slot.rest.scale * (1 - .12 * (1 - presence)))
-      this.group.updateMatrixWorld(true)
-      const nearness = (this.displayed >= 0 || this.textures[this.selected]) && presence > 0 ? this.clearance(this.view) * presence : 0
+      // The exhibit and its shadows stay at their surveyed world pose.
+      const nearness = (this.displayed >= 0 || this.textures[this.selected]) && presence > 0 ? this.clearanceAt(frame.journeyProgress) * presence : 0
       if (nearness !== this.nearness) { this.nearness = nearness; this.apply(slot) }
     }
     const screen = slot.screen.material.uniforms
@@ -328,16 +341,14 @@ export class ProjectShowcase {
     return moving || dirty
   }
 
-  /** A spatial fade only after the complete exhibit clears terrain and viewport edges. */
-  private clearance(camera: THREE.PerspectiveCamera) {
-    if (this.cachedClearance >= 0 && this.clearanceView.equals(camera.matrixWorld) && this.clearanceProjection.equals(camera.projectionMatrix)) return this.cachedClearance
-    this.clearanceView.copy(camera.matrixWorld)
-    this.clearanceProjection.copy(camera.projectionMatrix)
-    this.cachedClearance = this.measureClearance(camera)
-    return this.cachedClearance
+  /** Cached terrain visibility; the object never follows the camera. */
+  private clearanceAt(progress: number) {
+    const sample = THREE.MathUtils.clamp((progress - .68) / .24, 0, 1) * (this.visibilityProfile.length - 1)
+    const low = Math.min(Math.floor(sample), this.visibilityProfile.length - 2)
+    return THREE.MathUtils.lerp(this.visibilityProfile[low], this.visibilityProfile[low + 1], sample - low)
   }
 
-  private measureClearance(camera: THREE.PerspectiveCamera) {
+  private measureClearance(camera: THREE.PerspectiveCamera, clearHeight = .45) {
     let clearance = Infinity, margin = Infinity
     for (const point of this.revealPoints) {
       const projected = this.corner.copy(point).project(camera)
@@ -352,7 +363,7 @@ export class ProjectShowcase {
         if (clearance <= .05) return 0
       }
     }
-    return THREE.MathUtils.smoothstep(clearance, .05, .45) * THREE.MathUtils.smoothstep(margin, .015, .06)
+    return THREE.MathUtils.smoothstep(clearance, .05, clearHeight) * THREE.MathUtils.smoothstep(margin, .015, .06)
   }
 
   private apply(slot: Exhibit) {

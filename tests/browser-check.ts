@@ -366,11 +366,11 @@ try {
 
     await step('Projects boundaries, responsive badges and Trail nodes', async () => {
       await goToCamp(page, 4)
-      await page.locator('#high-camp button[aria-expanded]').nth(2).click()
+      await page.locator('#high-camp button[aria-selected]').nth(2).click()
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[2].slug)
       await goToCamp(page, 5)
       await goToCamp(page, 4)
-      await expect(page.locator('#high-camp button[aria-expanded]').nth(2)).toHaveAttribute('aria-expanded', 'true')
+      await expect(page.locator('#high-camp button[aria-selected]').nth(2)).toHaveAttribute('aria-selected', 'true')
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[2].slug)
       // Sample the whole reading dwell from both sides, not only the camp centre.
       for (const progress of [.75, .7715, .78, .8, .824, .8284, .85, .8284, .824, .8, .78, .7715, .75]) {
@@ -394,9 +394,9 @@ try {
         headingStyles.forEach(style => expect(style, `shared heading system @${width}`).toEqual(headingStyles[0]))
         let indexBox: { x: number; y: number; width: number; height: number } | null = null
         for (const [index, project] of projects.entries()) {
-          await page.locator('#high-camp button[aria-expanded]').nth(index).click()
-          await expect(page.locator('#high-camp button[aria-expanded=true] .project-name-full')).toHaveText(project.name)
-          await expect(page.locator('#high-camp [role=region][aria-hidden=false] .project-tags li')).toHaveText(project.tags.map(tag => `#${tag}`))
+          await page.locator('#high-camp button[aria-selected]').nth(index).click()
+          await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(project.name)
+          await expect(page.locator('#high-camp [role=tabpanel][aria-hidden=false] .project-tags li')).toHaveText(project.tags.map(tag => `#${tag}`))
           expect(await layoutIssues(page, 4), `${width}: ${project.slug}`).toEqual([])
           expect(await exhibitIssues(page, project.slug), `${width}: ${project.slug}`).toEqual([])
           await page.locator('.project-index').evaluate(element => Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {}))))
@@ -423,14 +423,14 @@ try {
           expect(node.opacity).toBeGreaterThanOrEqual(.4)
           expect(node.distance, `node on path @${width}`).toBeLessThan(.3)
         }
-        expect(await page.locator('#high-camp [role=region][aria-hidden=false] .project-tags li').first().evaluate(element => getComputedStyle(element).fontSize)).toBe('11px')
+        expect(await page.locator('#high-camp [role=tabpanel][aria-hidden=false] .project-tags li').first().evaluate(element => getComputedStyle(element).fontSize)).toBe('11px')
       }
       await page.setViewportSize(desktop)
       await settle(page)
       await goToCamp(page, 0)
       await goToCamp(page, 4)
-      await expect(page.locator('#high-camp button[aria-expanded=true] .project-name-full')).toHaveText(projects[4].name)
-      await page.locator('#high-camp button[aria-expanded]').first().click()
+      await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(projects[4].name)
+      await page.locator('#high-camp button[aria-selected]').first().click()
     })
 
     await step('project exhibit: each original capture lit on the shared display, clear of the text and the HUD', async () => {
@@ -440,7 +440,7 @@ try {
       // each consumer can emit a request event even when the HTTP cache serves it.
       await expect.poll(() => new Set(captureRequests).size, { message: 'all original captures requested on approach' }).toBe(projects.length)
       for (const [index, project] of projects.entries()) {
-        await page.locator('#high-camp button[aria-expanded]').nth(index).click()
+        await page.locator('#high-camp button[aria-selected]').nth(index).click()
         await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', project.slug)
         await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-lit', 'true', { timeout: 15000 })
         await expect(page.locator('.showcase-link')).toHaveAttribute('href', `/project/${project.slug}`)
@@ -450,7 +450,7 @@ try {
           const display = rect('.showcase-link'), labels = Array.from(document.querySelectorAll('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect())
           return {
             shown: getComputedStyle(document.querySelector('.showcase-link')!).visibility, share: display.width / innerWidth,
-            text: ['#high-camp .project-index', '#high-camp .portfolio-heading'].some(selector => hit(display, rect(selector))),
+            text: ['#high-camp .projects-editorial', '#high-camp .portfolio-heading'].some(selector => hit(display, rect(selector))),
             hud: ['.altitude-hud', '.journey-home', '.current-location'].some(selector => hit(display, rect(selector))) || labels.some(label => hit(display, label)),
             inside: display.left >= 0 && display.top >= 0 && display.right <= innerWidth && display.bottom <= innerHeight,
           }
@@ -462,18 +462,18 @@ try {
 
     await step('Projects: selection, detail round trip and restored selection', async () => {
       await goToCamp(page, 4)
-      await page.locator('#high-camp button[aria-expanded]').first().click()
-      await expect(page.locator('#high-camp button[aria-expanded=true] .project-name-full')).toHaveText(projects[0].name)
-      await expect(page.locator('#high-camp button[aria-expanded]').first()).toHaveAttribute('aria-expanded', 'true')
+      await page.locator('#high-camp button[aria-selected]').first().click()
+      await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(projects[0].name)
+      await expect(page.locator('#high-camp button[aria-selected]').first()).toHaveAttribute('aria-selected', 'true')
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[0].slug)
       for (const [index, project] of projects.entries()) {
-        await page.locator('#high-camp button[aria-expanded]').nth(index).click()
-        await expect(page.locator('#high-camp button[aria-expanded]').nth(index)).toHaveAttribute('aria-expanded', 'true')
-        await expect(page.locator('#high-camp button[aria-expanded=true] .project-name-full')).toHaveText(project.name)
+        await page.locator('#high-camp button[aria-selected]').nth(index).click()
+        await expect(page.locator('#high-camp button[aria-selected]').nth(index)).toHaveAttribute('aria-selected', 'true')
+        await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(project.name)
         await expect(page.getByRole('link', { name: '프로젝트 보기', exact: true })).toHaveAttribute('href', `/project/${project.slug}`)
       }
       const pick = projects[2]
-      await page.locator('#high-camp button[aria-expanded]').nth(2).click()
+      await page.locator('#high-camp button[aria-selected]').nth(2).click()
       // The exhibit itself opens the project too.
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', pick.slug)
       await page.locator('.showcase-link').click()
@@ -491,14 +491,14 @@ try {
       await expect(page).toHaveURL(`${base}/#high-camp`)
       await ready(page)
       await expectArrived(page, 4)
-      await expect(page.locator('#high-camp button[aria-expanded]').nth(2)).toHaveAttribute('aria-expanded', 'true')
+      await expect(page.locator('#high-camp button[aria-selected]').nth(2)).toHaveAttribute('aria-selected', 'true')
       // Browser back from a project page returns to the same camp and selection.
       await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
       await expect(page.locator('.detail-title')).toHaveText(pick.name)
       await page.goBack()
       await ready(page)
       await expectArrived(page, 4)
-      await expect(page.locator('#high-camp button[aria-expanded]').nth(2)).toHaveAttribute('aria-expanded', 'true')
+      await expect(page.locator('#high-camp button[aria-selected]').nth(2)).toHaveAttribute('aria-selected', 'true')
     })
 
     await step('contact links come from profile data', async () => {
@@ -534,19 +534,19 @@ try {
     await expect(page.locator('#title-high-camp')).toBeFocused()
     await expectArrived(page, 4)
     await page.keyboard.press('Tab')
-    await expect(page.locator('#high-camp button[aria-expanded]').first()).toBeFocused()
+    await expect(page.locator('#high-camp button[aria-selected]').first()).toBeFocused()
     await page.keyboard.press('Tab')
     await expect(page.getByRole('link', { name: '프로젝트 보기', exact: true })).toBeFocused()
     await page.keyboard.press('Shift+Tab')
     const projectsScroll = await page.evaluate(() => scrollY)
     await page.keyboard.press('ArrowRight')
-    await expect(page.locator('#high-camp button[aria-expanded]').nth(1)).toBeFocused()
-    await expect(page.locator('#high-camp button[aria-expanded]').nth(1)).toHaveAttribute('aria-expanded', 'true')
+    await expect(page.locator('#high-camp button[aria-selected]').nth(1)).toBeFocused()
+    await expect(page.locator('#high-camp button[aria-selected]').nth(1)).toHaveAttribute('aria-selected', 'true')
     await page.keyboard.press('End')
-    await expect(page.locator('#high-camp button[aria-expanded]').last()).toBeFocused()
+    await expect(page.locator('#high-camp button[aria-selected]').last()).toBeFocused()
     await page.keyboard.press('Home')
-    await expect(page.locator('#high-camp button[aria-expanded]').first()).toBeFocused()
-    await expect(page.locator('#high-camp button[aria-expanded]').first()).toHaveAttribute('aria-expanded', 'true')
+    await expect(page.locator('#high-camp button[aria-selected]').first()).toBeFocused()
+    await expect(page.locator('#high-camp button[aria-selected]').first()).toHaveAttribute('aria-selected', 'true')
     expect(await page.evaluate(() => scrollY)).toBe(projectsScroll)
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press('Tab')
@@ -606,7 +606,7 @@ try {
           await steps.first().click()
         }
         if (camp.id === 'high-camp') for (let i = 0; i < projects.length; i++) {
-          await page.locator('#high-camp button[aria-expanded]').nth(i).click()
+          await page.locator('#high-camp button[aria-selected]').nth(i).click()
           issues.push(...[...await layoutIssues(page, camp.order), ...await exhibitIssues(page, projects[i].slug)].map(issue => `${projects[i].slug}: ${issue}`))
         }
         if (issues.length) report.push(`${width}x${height} ${camp.navigation}: ${[...new Set(issues)].join('; ')}`)
@@ -663,7 +663,7 @@ try {
     await expect(page.locator('.trail-mobile-label')).toHaveText(camps[4].navigation)
     // Phones show the capture itself, flat and whole, instead of the 3D exhibit.
     await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '2d')
-    await page.locator('#high-camp button[aria-expanded]').nth(1).tap()
+    await page.locator('#high-camp button[aria-selected]').nth(1).tap()
     await expect.poll(() => page.evaluate(() => { const img = document.querySelector<HTMLImageElement>('#high-camp .project-screen img[data-active="true"]'); return img ? img.complete && img.naturalWidth > 0 && /bees[-.]/.test(img.currentSrc) : false })).toBe(true)
     await page.getByRole('link', { name: '프로젝트 보기', exact: true }).tap()
     await expect(page.locator('.detail-title')).toHaveText(projects[1].name)
@@ -801,7 +801,7 @@ try {
       }
       const beforeSelection = await read()
       for (const index of [1, 2, 3, 4, 0]) {
-        await page.locator('#high-camp button[aria-expanded]').nth(index).click()
+        await page.locator('#high-camp button[aria-selected]').nth(index).click()
         await settle(page)
         expect(await read()).toEqual(beforeSelection)
       }
@@ -861,7 +861,7 @@ try {
     const approachStart = await read()
     await sweep(page, camps[3].progress, camps[4].progress, 1800)
     await expectArrived(page, 4, { atCenter: false })
-    await expect(page.locator('#high-camp button[aria-expanded=true]')).toHaveAttribute('aria-label', '01 들임')
+    await expect(page.locator('#high-camp button[aria-selected=true]')).toHaveAttribute('aria-label', '01 들임')
     const cdp = await context.newCDPSession(page)
     await cdp.send('Performance.enable')
     await cdp.send('HeapProfiler.collectGarbage')
@@ -870,7 +870,7 @@ try {
     const displayBefore = await page.locator('.showcase-link').boundingBox()
     const indexBefore = await page.locator('.project-index').boundingBox()
     const frames = await page.evaluate(async () => {
-      const gaps: number[] = [], controls = Array.from(document.querySelectorAll<HTMLButtonElement>('#high-camp button[aria-expanded]'))
+      const gaps: number[] = [], controls = Array.from(document.querySelectorAll<HTMLButtonElement>('#high-camp button[aria-selected]'))
       let running = true, last = performance.now()
       const tick = (now: number) => { gaps.push(now - last); last = now; if (running) requestAnimationFrame(tick) }
       requestAnimationFrame(tick)
@@ -882,7 +882,7 @@ try {
       running = false
       return gaps.sort((a, b) => a - b)
     })
-    await expect(page.locator('#high-camp button[aria-expanded=true]')).toHaveAttribute('aria-label', '01 들임')
+    await expect(page.locator('#high-camp button[aria-selected=true]')).toHaveAttribute('aria-label', '01 들임')
     await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', 'deurim')
     const after = await read()
     expect(after.counts, 'no texture uploads, geometry buffers or programs created on click').toEqual(before.counts)

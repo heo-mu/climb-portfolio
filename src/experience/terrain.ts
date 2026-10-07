@@ -2,7 +2,7 @@
 import { experienceConfig } from '../config/experience'
 import { noise2, terrainNoise } from './noise'
 import { arrivalCamps } from './campLayout'
-import { ascentRouteControls, ROUTE_CONTROL_SPACING, curveParameterAt, writeRouteEye, overlookAt } from '../data/ascentRoute'
+import { ascentRouteControls, ROUTE_CONTROL_SPACING, curveParameterAt, writeRouteEye } from '../data/ascentRoute'
 import { projectsPresentation } from './progress'
 
 // 29 independent route controls: exit, ice approach, switchbacks, traverse,
@@ -82,10 +82,9 @@ export const showcaseSite = (() => {
   const right = new THREE.Vector3(-forward.z, 0, forward.x)
   // Soft edges: short on the rope side (the corridor and the rope keep their ground), longer at the ends and
   // into the face, so the cut reads as a snow bench rather than a step.
-  const shelf = { forward: [-55, 115] as const, right: [3.6, 72] as const, soft: { rope: .5, ends: 8, face: 14 } }
+  const shelf = { forward: [-40, 145] as const, right: [3.6, 110] as const, soft: { rope: .5, ends: 8, face: 14 } }
   const toWorld = (f: number, r: number) => new THREE.Vector3(origin.x + forward.x * f + right.x * r, 0, origin.z + forward.z * f + right.z * r)
-  const center = toWorld(14, 0)
-  return { progress: route, origin: new THREE.Vector3(origin.x, 0, origin.z), forward, right, shelf, toWorld, level: baseHeight(center.x, center.z) + .12 }
+  return { progress: route, origin: new THREE.Vector3(origin.x, 0, origin.z), forward, right, shelf, toWorld, level: routePoint(-toWorld(100, 0).z / depth).y + .12 }
 })()
 
 /** 0 outside the levelled exhibit shelf, 1 on it: each side falls off over its own soft edge. */
@@ -102,15 +101,28 @@ export function showcaseShelfBlend(x: number, z: number) {
 
 export function groundHeight(x: number, z: number) {
   const height = baseHeight(x, z), blend = showcaseShelfBlend(x, z)
-  return blend ? THREE.MathUtils.lerp(height, showcaseSite.level, blend) : height
+  const forward = (x - showcaseSite.origin.x) * showcaseSite.forward.x + (z - showcaseSite.origin.z) * showcaseSite.forward.z
+  // Approach the bench along the slope; a high flat shelf must not form a wall across the sightline.
+  const approach = showcaseSite.level - Math.max(0, 90 - forward) * .8
+  return blend ? THREE.MathUtils.lerp(height, approach, blend) : height
 }
 
 export const exhibitionFocus = (route: number) => projectsPresentation(route).focus
 
+const showcaseLook = showcaseSite.toWorld(100, 50).setY(showcaseSite.level + 36)
+const showcaseEye = new THREE.Vector3()
+writeRouteEye(curveParameterAt(showcaseSite.progress), showcaseEye)
+const showcaseDistance = showcaseEye.distanceTo(showcaseLook)
+
 /** A portrait lens only around the exhibition; the rest of the ascent keeps its wide walking view. */
-export function cameraFieldOfView(route: number, aspect: number, width: number) {
+export function cameraFieldOfView(route: number, aspect: number, width: number, eye?: THREE.Vector3) {
   const base = aspect < .95 ? experienceConfig.camera.mobileFov : experienceConfig.camera.desktopFov
-  return width > 1024 && aspect >= 1.2 ? THREE.MathUtils.lerp(base, 42, projectsPresentation(route).lens) : base
+  const focus = projectsPresentation(route).lens
+  if (width <= 1024 || aspect < 1.2 || !focus) return base
+  if (!eye) writeRouteEye(curveParameterAt(route), showcaseEye)
+  const distance = (eye ?? showcaseEye).distanceTo(showcaseLook)
+  const readingLens = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(21)) * showcaseDistance / distance))
+  return THREE.MathUtils.lerp(base, readingLens, focus)
 }
 
 export function cameraPose(journeyProgress: number, position: THREE.Vector3, target: THREE.Vector3, curveParameter = curveParameterAt(journeyProgress)) {
@@ -122,9 +134,10 @@ export function cameraPose(journeyProgress: number, position: THREE.Vector3, tar
     target.addScaledVector(tangent, (lookT - 1) * depth)
     target.y = routePoint(1).y
   }
-  target.x += 16 * overlookAt(curveParameter)
-  target.y += experienceConfig.camera.eyeHeight + experienceConfig.camera.lookLift + 7 * overlookAt(curveParameter)
-  target.y = THREE.MathUtils.lerp(target.y, position.y - .8, overlookAt(curveParameter))
+  target.y += experienceConfig.camera.eyeHeight + experienceConfig.camera.lookLift
+  // A fixed point ahead of the exhibit guides the gaze; the eye never leaves the trail.
+  const focus = projectsPresentation(journeyProgress).focus
+  target.lerp(showcaseLook, focus)
 }
 
 export function terrainGeometry(detailStep = 1) {

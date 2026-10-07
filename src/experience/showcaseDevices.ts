@@ -48,7 +48,7 @@ export function buildDisplay(environment: THREE.Texture | null, placeholder: THR
     mesh.position.set(x, y, z); group.add(mesh)
     return mesh
   }
-  const bottom = .125, center = bottom + SCREEN_HEIGHT / 2
+  const bottom = .225, center = bottom + SCREEN_HEIGHT / 2
   const panel = new THREE.Group()
   panel.position.y = center
   group.add(panel)
@@ -57,12 +57,12 @@ export function buildDisplay(environment: THREE.Texture | null, placeholder: THR
   panel.add(part('display-shell', 1.024, SCREEN_HEIGHT + .024, .028, 0, 0, -.003))
   panel.add(part('display-rear', 1.002, SCREEN_HEIGHT + .002, .026, 0, 0, -.022, graphite, .009))
   panel.add(part('display-bezel', 1.012, SCREEN_HEIGHT + .012, .008, 0, 0, .014, gasket, .003))
-  const neck = part('display-neck', .074, .19, .032, 0, .11, -.043)
+  const neck = part('display-neck', .074, .29, .032, 0, .16, -.043)
   const neckPoints = neck.geometry.getAttribute('position')
   for (let i = 0; i < neckPoints.count; i++) {
-    const t = (neckPoints.getY(i) + .095) / .19
+    const t = (neckPoints.getY(i) + .145) / .29
     neckPoints.setX(i, neckPoints.getX(i) * (1 - .42 * t))
-    neckPoints.setZ(i, neckPoints.getZ(i) - t * .025)
+    neckPoints.setZ(i, neckPoints.getZ(i) - t * .22)
   }
   neck.geometry.computeVertexNormals()
   const base = part('display-foot', .31, .014, .185, 0, .007, -.034, metal, .006)

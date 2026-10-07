@@ -133,6 +133,27 @@ describe('expedition progression', () => {
 })
 
 describe('first-person route', () => {
+  it('keeps the eye exactly above the terrain route, including Projects approach and exit', () => {
+    const position = new Vector3(), target = new Vector3()
+    for (let i = 0; i <= 4000; i++) {
+      const progress = i / 4000
+      cameraPose(progress, position, target)
+      const trail = routeCurve.getPoint(curveParameterAt(progress))
+      expect(position.x).toBeCloseTo(trail.x, 9)
+      expect(position.z).toBeCloseTo(trail.z, 9)
+      expect(position.y - trail.y).toBeCloseTo(experienceConfig.camera.eyeHeight, 9)
+    }
+  })
+  it('extends all five reading windows by 25% without moving their checkpoints', () => {
+    expect(checkpoints.map(camp => camp.progress)).toEqual([0, .2, .4, .6, .8, 1])
+    expect(experienceConfig.content.readableRange / .024).toBeCloseTo(1.25)
+    for (const [index, zone] of campZones.entries()) {
+      if (!index) { expect(zone.plateau).toEqual([0, 0]); continue }
+      const expected = index === 5 ? .03 : .06
+      expect(zone.plateau[1] - zone.plateau[0]).toBeCloseTo(expected)
+      for (const progress of zone.arrival) expect(sectionUIAt(progress)[index].interactive).toBe(true)
+    }
+  })
   it('never freezes or reverses longitudinal motion in either direction', () => {
     const position = new Vector3(), target = new Vector3(), previous = new Vector3()
     for (const direction of [1, -1]) {
