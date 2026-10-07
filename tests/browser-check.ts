@@ -197,7 +197,7 @@ try {
     const { context, page } = await open()
     // Match both original dev URLs and fingerprinted production capture filenames.
     const captureRequests: string[] = []
-    page.on('request', request => { if (projects.some(project => {
+    context.on('request', request => { if (projects.some(project => {
       const source = new URL(project.screen.desktop).pathname.split('/').at(-1)!
       const name = new URL(request.url()).pathname.split('/').at(-1)!
       const dot = source.lastIndexOf('.')
@@ -430,7 +430,9 @@ try {
     await step('project exhibit: each original capture lit on the shared display, clear of the text and the HUD', async () => {
       await goToCamp(page, 4)
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '3d')
-      expect(captureRequests.length, 'captures loaded on the way to Projects').toBe(projects.length)
+      // Worker textures and the responsive DOM preview share source URLs, but
+      // each consumer can emit a request event even when the HTTP cache serves it.
+      await expect.poll(() => new Set(captureRequests).size, { message: 'all original captures requested on approach' }).toBe(projects.length)
       for (const [index, project] of projects.entries()) {
         await page.locator('#high-camp button[aria-expanded]').nth(index).click()
         await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', project.slug)
@@ -616,7 +618,7 @@ try {
     const { context, page } = await open({ reducedMotion: 'reduce' })
     let release = () => {}
     const captureGate = new Promise<void>(resolve => { release = resolve })
-    await page.route(/deurim.*\.png/, async route => { await captureGate; await route.continue() })
+    await context.route(/deurim.*\.png/, async route => { await captureGate; await route.continue() })
     try {
       await page.goto(base)
       await ready(page)
@@ -779,6 +781,62 @@ try {
       uploadsDuringSelection: (after.counts.texSubImage2D ?? 0) - (before.counts.texSubImage2D ?? 0),
     }))
     await context.close()
+  })
+
+  await step('Full ascent performance: cold captures across all five legs and four desktop sizes', async () => {
+    type JourneyProbe = { tasks: { at: number; duration: number }[]; gpu: { at: number; name: string }[] }
+    for (const [width, height] of [[1920, 1080], [1600, 900], [1440, 900], [1366, 768]]) {
+      const { context, page } = await open({ viewport: { width, height }, reducedMotion: 'no-preference' }, [], () => {
+        const probe: JourneyProbe = { tasks: [], gpu: [] }
+        Object.assign(window, { journeyProbe: probe })
+        new PerformanceObserver(list => {
+          probe.tasks.push(...list.getEntries().map(e => ({ at: e.startTime, duration: e.duration })))
+        }).observe({ type: 'longtask' })
+        const gl = WebGL2RenderingContext.prototype as unknown as Record<string, (...args: unknown[]) => unknown>
+        for (const name of ['texSubImage2D', 'compileShader', 'bufferData']) {
+          const original = gl[name]
+          gl[name] = function (...args: unknown[]) { probe.gpu.push({ at: performance.now(), name }); return Reflect.apply(original, this, args) }
+        }
+      })
+      await page.goto(base)
+      await ready(page)
+      await page.waitForTimeout(1200)
+      const cdp = await context.newCDPSession(page)
+      await cdp.send('Performance.enable')
+      const metrics = async () => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map((m: { name: string; value: number }) => [m.name, m.value]))
+      const before = await metrics()
+      const timing = await page.evaluate(() => new Promise<{ start: number; frames: number[][] }>(resolve => {
+        const start = performance.now(), range = document.documentElement.scrollHeight - innerHeight, frames: number[][] = [[], [], [], [], []]
+        let last = start
+        const tick = (now: number) => {
+          const progress = Math.min(1, (now - start) / 15000)
+          frames[Math.min(4, Math.floor(progress * 5))].push(now - last)
+          last = now
+          scrollTo({ top: range * progress, behavior: 'instant' })
+          if (progress < 1) requestAnimationFrame(tick)
+          else resolve({ start, frames })
+        }
+        requestAnimationFrame(tick)
+      }))
+      await expectArrived(page, 5, { atCenter: false })
+      const after = await metrics()
+      const probe = await page.evaluate(() => (window as unknown as { journeyProbe: JourneyProbe }).journeyProbe)
+      const report = timing.frames.map((frames, leg) => {
+        frames.sort((a, b) => a - b)
+        const inLeg = (at: number) => at >= timing.start + leg * 3000 && at < timing.start + (leg + 1) * 3000
+        return { leg: `${camps[leg].navigation} → ${camps[leg + 1].navigation}`, p95: frames[Math.floor(frames.length * .95)], max: frames.at(-1), longTasks: probe.tasks.filter(task => inLeg(task.at)).map(task => task.duration), uploads: probe.gpu.filter(event => inLeg(event.at) && event.name === 'texSubImage2D').length, shaders: probe.gpu.filter(event => inLeg(event.at) && event.name === 'compileShader').length }
+      })
+      console.log('Full ascent profile', JSON.stringify({ viewport: `${width}x${height}`, legs: report, layoutMs: (after.LayoutDuration - before.LayoutDuration) * 1000, styleMs: (after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000, scriptMs: (after.ScriptDuration - before.ScriptDuration) * 1000 }))
+      for (const leg of report) {
+        expect(leg.p95, `${width}: ${leg.leg} frame budget`).toBeLessThan(35)
+        expect(Math.max(0, ...leg.longTasks), `${width}: ${leg.leg} perceptible main-thread stall`).toBeLessThan(100)
+        expect(leg.shaders, `${width}: ${leg.leg} shaders prepared before travel`).toBe(0)
+      }
+      await sweep(page, 1, 0, 4000)
+      await scrollToProgress(page, 0)
+      await expectArrived(page, 0, { atCenter: false })
+      await context.close()
+    }
   })
 
   expect(errors, 'browser errors').toEqual([])

@@ -1,4 +1,4 @@
-﻿import { memo, useState, useSyncExternalStore } from 'react'
+﻿import { memo, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { checkpoints, inventory, profile, workflow } from '../data/expedition'
 import { projects } from '../data/projects'
@@ -94,6 +94,25 @@ function ShowcaseLink() {
 }
 
 function Projects() {
+  const indexElement = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const element = indexElement.current!
+    const contents = Array.from(element.querySelectorAll<HTMLElement>('.project-information'))
+    let previous = 0
+    const measure = () => {
+      // Natural detail boxes stay unchanged while their outer rows open/close.
+      // Reserve their actual maximum, not a viewport-specific guessed height.
+      const height = Math.max(...contents.map(content => content.offsetHeight))
+      if (height !== previous) {
+        previous = height
+        element.style.setProperty('--project-detail-height', `${height}px`)
+      }
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    contents.forEach(content => observer.observe(content))
+    return () => observer.disconnect()
+  }, [])
   const { index: active, pending, failed } = useSyncExternalStore(projectSelection.subscribe, projectSelection.snapshot)
   const select = (index: number) => { void projectSelection.request(index) }
   const project = projects[active]
@@ -101,7 +120,7 @@ function Projects() {
     <h1 className="portfolio-heading" id="title-high-camp" tabIndex={-1}>Selected Work<span className="heading-accent">.</span></h1>
     <div className="panel-body projects-layout">
       <Link className="project-media-link" to={`/project/${project.slug}`} tabIndex={-1} aria-hidden="true"><ProjectScreen active={active} /></Link>
-      <div className="project-index" aria-label="프로젝트 선택">{projects.map((item, index) => <article className="project-entry" key={item.slug} data-active={active === index}>
+      <div ref={indexElement} className="project-index" aria-label="프로젝트 선택">{projects.map((item, index) => <article className="project-entry" key={item.slug} data-active={active === index}>
         <h2><button type="button" id={`project-tab-${item.slug}`} onClick={() => select(index)} onKeyDown={event => {
           const offset = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 0
           if (!offset && event.key !== 'Home' && event.key !== 'End') return

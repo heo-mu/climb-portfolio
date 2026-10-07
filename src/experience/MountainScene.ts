@@ -37,6 +37,7 @@ export class MountainScene {
   private lastProgress = -1
   private lastReducedMotion = false
   private poseRoute = -1
+  private width = 1
   private resizeObserver: ResizeObserver
   private disposed = false
   private wind = { value: 0 }
@@ -147,6 +148,7 @@ export class MountainScene {
     if (this.disposed) return
     const rect = this.options.canvas.parentElement!.getBoundingClientRect()
     const width = Math.max(1, rect.width), height = Math.max(1, rect.height)
+    this.width = width
     const mobile = width / height < 0.95
     this.camera.aspect = width / height
     this.camera.fov = cameraFieldOfView(Math.max(0, this.poseRoute), this.camera.aspect, width)
@@ -164,11 +166,11 @@ export class MountainScene {
     if (this.disposed) return
     if (frame.route !== this.poseRoute) {
       this.poseRoute = frame.route
-      exhibitionCameraPose(frame.route, this.position, this.target, this.options.canvas.clientWidth, this.camera.aspect, frame.projectsDeparting)
+      exhibitionCameraPose(frame.route, this.position, this.target, this.width, this.camera.aspect, frame.projectsDeparting)
       this.camera.position.copy(this.position)
       this.camera.lookAt(this.target)
       this.camera.updateMatrixWorld()
-      this.camera.fov = cameraFieldOfView(frame.route, this.camera.aspect, this.options.canvas.clientWidth, frame.projectsDeparting)
+      this.camera.fov = cameraFieldOfView(frame.route, this.camera.aspect, this.width, frame.projectsDeparting)
       this.camera.updateProjectionMatrix()
     }
     // Spatial UI follows every controller frame (docking settles while standing);

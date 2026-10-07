@@ -104,7 +104,7 @@ export class SpatialSectionTransition {
         const { presence, departure } = projectsPresentation(frame.route, frame.projectsDeparting)
         if (arrived) return this.apply(stage, 'readable')
         if (!presence) return this.apply(stage, 'hidden')
-        this.blend = identity.slice()
+        for (let i = 0; i < 16; i++) this.blend[i] = identity[i]
         this.blend[0] = this.blend[5] = 1 - departure * .1
         this.blend[13] = -departure * 12
         return this.apply(stage, 'spatial', presence, 0, presence)

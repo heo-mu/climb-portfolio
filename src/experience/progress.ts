@@ -170,7 +170,9 @@ export class ScrollController {
   private returnWatch = 0
   private onScroll = () => {
     const previous = this.target
-    this.measure()
+    // The fixed journey's range changes on resize, not on each native scroll.
+    // Reading scrollHeight here can flush the previous spatial style writes.
+    this.target = clamp(window.scrollY / this.range)
     if (!this.returningHome) return
     // A return Home is one uninterrupted descent. Climbing, or coming to rest
     // short of Home, means the visitor took over, including through inputs that

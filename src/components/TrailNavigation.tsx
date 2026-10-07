@@ -23,6 +23,7 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
   }, [])
   useLayoutEffect(() => {
     let drawn = -1
+    const nodes = checkpoints.map(camp => map.at(camp.route))
     const update = (route: number) => {
       if (route === drawn) return
       drawn = currentRoute.current = route
@@ -30,7 +31,7 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
       completed.current?.setAttribute('stroke-dashoffset', String(map.length - point.length))
       marker.current?.setAttribute('cx', String(point.x))
       marker.current?.setAttribute('cy', String(point.y))
-      const overlaps = checkpoints.some(camp => { const node = map.at(camp.route); return Math.hypot(point.x - node.x, point.y - node.y) < 7 })
+      const overlaps = nodes.some(node => Math.hypot(point.x - node.x, point.y - node.y) < 7)
       marker.current?.setAttribute('opacity', overlaps ? '0' : '1')
     }
     update(fallback ? checkpoints[Math.max(0, active)].route : currentRoute.current)

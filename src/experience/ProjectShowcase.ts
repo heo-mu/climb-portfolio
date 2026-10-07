@@ -5,7 +5,7 @@ import { buildDisplay, captureFit, SCREEN_HEIGHT, type ShowcaseDevice } from './
 import { cameraFieldOfView, exhibitionCameraPose, showcaseSite, type TerrainSurface } from './terrain'
 import { contactPatch, seatOnGround } from './grounding'
 import { projectsPresentation, type ExpeditionFrame } from './progress'
-import { loadProjectCapture } from './projectCaptures'
+import { CaptureDecoder } from './CaptureDecoder'
 
 const CROSSFADE = .28
 const PROJECTS = checkpoints.findIndex(camp => camp.id === 'high-camp')
@@ -71,6 +71,7 @@ export class ProjectShowcase {
   private transition = 1
   private textures: (THREE.Texture | null)[] = projects.map(() => null)
   private bitmaps: ImageBitmap[] = []
+  private decoder = new CaptureDecoder()
   private preparing = new Map<number, Promise<void>>()
   private enabled = false
   private layoutReady = false
@@ -170,7 +171,7 @@ export class ProjectShowcase {
         // The rope and the walker are left behind by stepping right; the face and the trail only get closer.
         if (!box.clear || !box.walk) continue
         if (box.right > limits.right || box.top > .76 || box.bottom < -.86) continue
-        if (box.screenRight - box.screenLeft > .98 || box.left + box.right < limits.left + limits.right - .04) continue
+        if (box.screenRight - box.screenLeft > .98 || box.left + box.right < limits.left + limits.right) continue
         if (box.face && box.left >= limits.left && box.screenLeft >= limits.left + .025) return { anchor, quaternion, facing, scale, size: box.screenRight - box.screenLeft }
       }
       return null
@@ -214,7 +215,7 @@ export class ProjectShowcase {
   private freeSpace(width: number) {
     const root = this.root
     const labels = root ? Array.from(root.querySelectorAll<HTMLElement>('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect()).filter(rect => rect.width) : []
-    const right = labels.length ? Math.min(...labels.map(rect => rect.left)) - 32 : width * .86
+    const right = labels.length ? Math.min(...labels.map(rect => rect.left)) - 24 : width * .86
     const text = root?.querySelector<HTMLElement>('#high-camp .project-index')
     let left = width * .34
     if (text) {
@@ -363,16 +364,9 @@ export class ProjectShowcase {
     if (this.textures[index] || this.disposed) return Promise.resolve()
     const existing = this.preparing.get(index)
     if (existing) return existing
-    const pending = loadProjectCapture(index).then(async image => {
-      if (this.disposed) return
-      // Keep the original URL/data intact. Bound only the in-memory GPU copy:
-      // 4K covers the exhibit at desktop DPR 2 without five 8K uploads blocking scroll.
-      const limit = Math.min(4096, this.renderer?.capabilities.maxTextureSize ?? 4096)
-      const ratio = Math.min(1, limit / Math.max(image.naturalWidth, image.naturalHeight))
-      const bitmap = ratio < 1 && typeof createImageBitmap === 'function' ? await createImageBitmap(image, {
-        resizeWidth: Math.round(image.naturalWidth * ratio), resizeHeight: Math.round(image.naturalHeight * ratio),
-        resizeQuality: 'high', imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none',
-      }) : null
+    const limit = Math.min(4096, this.renderer?.capabilities.maxTextureSize ?? 4096)
+    const pending = this.decoder.decode(index, limit).then(async image => {
+      const bitmap = 'close' in image ? image as ImageBitmap : null
       if (this.disposed) { bitmap?.close(); return }
       const texture = new THREE.Texture(bitmap ?? image)
       if (bitmap) texture.flipY = false
@@ -432,12 +426,17 @@ export class ProjectShowcase {
     const scene = new THREE.Scene(), copies: THREE.Material[] = []
     scene.fog = world.fog
     world.traverse(object => { if (object instanceof THREE.Light) scene.add(object.clone()) })
-    for (const transparent of [false, true]) slot.group.traverse(object => {
+    const meshes: THREE.Mesh[] = [slot.shade, slot.core]
+    slot.group.traverse(object => { if (object instanceof THREE.Mesh) meshes.push(object) })
+    for (const transparent of [false, true]) meshes.forEach(object => {
       if (!(object instanceof THREE.Mesh)) return
       const material = (object.material as THREE.Material).clone()
-      material.transparent = transparent || material.transparent || material.userData.opacity !== undefined
+      // The live chassis is transparent while hidden. Derive the parked
+      // variant explicitly instead of inheriting that transient fade state.
+      material.transparent = transparent || object === slot.screen || material.userData.opacity !== undefined
       copies.push(material)
       const copy = new THREE.Mesh(object.geometry, material)
+      copy.frustumCulled = false
       copy.matrixAutoUpdate = false
       copy.matrix.copy(object.matrixWorld)
       scene.add(copy)
@@ -452,12 +451,15 @@ export class ProjectShowcase {
   /** Draws the warm-up copies once, inside a frame that then renders the world over them: first-draw costs
       (buffers, program setup) are paid here, at Home, not at the first project change. */
   drawWarmUp(camera: THREE.Camera) {
-    if (!this.warm || !this.renderer) return false
+    if (!this.warm || this.warmDrawn || !this.renderer) return false
     this.renderer.render(this.warm.scene, camera)
-    this.warm.copies.forEach(material => material.dispose())
-    this.warm = null
+    // Keep both program variants referenced until scene disposal. Disposing the
+    // copies here evicts their programs and recompiles them on first approach.
+    this.warmDrawn = true
     return true
   }
+
+  private warmDrawn = false
 
   /** The structures as laid out for this viewport, read-only, for checks. */
   get structures() {
@@ -482,6 +484,7 @@ export class ProjectShowcase {
 
   dispose() {
     this.disposed = true
+    this.decoder.dispose()
     this.textures.forEach(texture => texture?.dispose())
     this.bitmaps.forEach(bitmap => bitmap.close())
     this.exhibit?.footing.dispose()

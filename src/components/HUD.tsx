@@ -26,14 +26,18 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
       return () => observer.disconnect()
     }
     let previousAltitude = ''
+    let previousActive = 0, previousHome = false, previousVisible = false
     return controller.subscribe(frame => {
       const value = formatAltitude(frame.altitude)
       if (altitude.current && value !== previousAltitude) altitude.current.textContent = previousAltitude = value
       // The climb is shown from the moment the walker has left Home behind.
-      setAltitudeVisible(!frame.sections[0].interactive)
+      const visible = !frame.sections[0].interactive
+      if (visible !== previousVisible) { previousVisible = visible; setAltitudeVisible(visible) }
       // A departed Projects camp is history, not an active exhibit.
-      setActive(frame.active === 4 && !frame.sections[4].interactive ? -1 : frame.active)
-      setHomeVisible(frame.progress > experienceConfig.home.exitRange)
+      const current = frame.active === 4 && !frame.sections[4].interactive ? -1 : frame.active
+      if (current !== previousActive) { previousActive = current; setActive(current) }
+      const showHome = frame.progress > experienceConfig.home.exitRange
+      if (showHome !== previousHome) { previousHome = showHome; setHomeVisible(showHome) }
     })
   }, [controller, fallback])
 
