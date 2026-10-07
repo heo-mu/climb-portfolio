@@ -466,11 +466,15 @@ try {
       await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(projects[0].name)
       await expect(page.locator('#high-camp button[aria-selected]').first()).toHaveAttribute('aria-selected', 'true')
       await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[0].slug)
+      const navigationBox = await page.locator('.project-navigation').boundingBox()
+      const detailBox = await page.locator('.project-details').boundingBox()
+      expect(navigationBox!.y + navigationBox!.height, 'choose before reading the result').toBeLessThan(detailBox!.y)
       for (const [index, project] of projects.entries()) {
         await page.locator('#high-camp button[aria-selected]').nth(index).click()
         await expect(page.locator('#high-camp button[aria-selected]').nth(index)).toHaveAttribute('aria-selected', 'true')
         await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(project.name)
         await expect(page.getByRole('link', { name: '프로젝트 보기', exact: true })).toHaveAttribute('href', `/project/${project.slug}`)
+        expect(await page.locator('.project-navigation').boundingBox(), 'selection controls stay fixed for every project').toEqual(navigationBox)
       }
       const pick = projects[2]
       await page.locator('#high-camp button[aria-selected]').nth(2).click()
