@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { ProjectsDeparture, projectsPresentation, activeCheckpoint, altitudeAt, campZones, readableCheckpoint, routeProgress, sectionUIAt } from '../src/experience/progress'
+import { ProjectsDeparture, projectsPresentation, cameraRouteAt, activeCheckpoint, altitudeAt, campZones, readableCheckpoint, routeProgress, sectionUIAt } from '../src/experience/progress'
 import { checkpoints } from '../src/data/expedition'
 import { routeEyeAt } from '../src/data/ascentRoute'
-import { cameraPose, groundHeight, routeCurve, terrainGeometry } from '../src/experience/terrain'
+import { cameraPose, exhibitionCameraPose, groundHeight, routeCurve, terrainGeometry } from '../src/experience/terrain'
 import { experienceConfig } from '../src/config/experience'
 import { Vector3 } from 'three'
 
@@ -105,7 +105,7 @@ describe('expedition progression', () => {
     for (let i = 1; i <= 2000; i++) {
       const altitude = altitudeAt(i / 2000)
       expect(altitude).toBeGreaterThanOrEqual(previous)
-      expect(altitude - previous).toBeLessThan(10)
+      expect(altitude - previous).toBeLessThanOrEqual(10)
       previous = altitude
     }
   })
@@ -139,6 +139,38 @@ describe('expedition progression', () => {
 })
 
 describe('first-person route', () => {
+  it('never freezes or reverses longitudinal motion anywhere, including Projects in both directions', () => {
+    for (const [width, height] of [[1440, 900], [390, 844]]) {
+      const position = new Vector3(), target = new Vector3(), previous = new Vector3()
+      for (const departing of [false, true]) {
+        exhibitionCameraPose(0, previous, target, width, width / height, departing)
+        let lastRoute = 0
+        for (let i = 1; i <= 10000; i++) {
+          const route = i / 10000, physical = cameraRouteAt(route)
+          exhibitionCameraPose(route, position, target, width, width / height, departing)
+          expect(physical).toBeGreaterThan(lastRoute)
+          expect(position.z).toBeLessThan(previous.z)
+          expect(position.distanceTo(previous)).toBeGreaterThan(.01)
+          expect(position.distanceTo(previous)).toBeLessThan(.4)
+          lastRoute = physical; previous.copy(position)
+        }
+      }
+    }
+  })
+
+  it('keeps a visible slow drift and increasing altitude throughout the unchanged reading dwell', () => {
+    const positions = [.772, .785, .8, .815, .828].map(progress => {
+      const position = new Vector3()
+      exhibitionCameraPose(routeProgress(progress), position, new Vector3(), 1440, 1.6)
+      expect(sectionUIAt(progress)[4].interactive).toBe(true)
+      return { position, altitude: altitudeAt(progress) }
+    })
+    for (let i = 1; i < positions.length; i++) {
+      expect(positions[i].position.distanceTo(positions[i - 1].position)).toBeGreaterThan(.7)
+      expect(positions[i].position.y).toBeGreaterThan(positions[i - 1].position.y)
+      expect(positions[i].altitude).toBeGreaterThan(positions[i - 1].altitude)
+    }
+  })
   it('stays at eye height, moves forward and turns continuously through the terrain', () => {
     const position = new Vector3(), target = new Vector3(), previous = new Vector3(), heading = new Vector3(), lastHeading = new Vector3()
     expect(routeCurve.points.length).toBeGreaterThan(20)

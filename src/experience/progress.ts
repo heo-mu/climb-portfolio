@@ -24,7 +24,10 @@ export function routeProgress(progress: number) {
 }
 
 export function altitudeAt(progress: number) {
-  const route = routeProgress(progress)
+  return altitudeAtRoute(cameraRouteAt(routeProgress(progress)))
+}
+
+export function altitudeAtRoute(route: number) {
   const index = Math.max(0, checkpoints.findIndex((point, i) => i < checkpoints.length - 1 && route >= point.route && route <= checkpoints[i + 1].route))
   const from = checkpoints[index], to = checkpoints[index + 1]
   const local = (route - from.route) / (to.route - from.route)
@@ -68,9 +71,31 @@ export const campZones: CampZone[] = checkpoints.map((camp, index) => {
 const within = (progress: number, [from, to]: Span) => progress >= from - Number.EPSILON && progress <= to + Number.EPSILON
 
 // One reversible presentation envelope, derived from the actual Projects arrival.
-// Park the overlook before revealing the display; finish the reveal before input opens.
+// Frame the overlook before revealing the display; finish the reveal before input opens.
 const projectsArrival = campZones[4].arrival.map(routeProgress)
 const projectsShoulder = projectsArrival[1] - projectsArrival[0]
+
+/** Physical rail progress. Reading consumes the same scroll span at a positive
+ * speed; C1 shoulders reconnect to the walking rail without clamps or reversals.
+ * Independent of viewport, selection, and travel direction. */
+export function cameraRouteAt(route: number) {
+  // Keep slow travel through the visible departure, then regain travel speed.
+  // This gives the stationary display time to recede before the terrain occludes it.
+  const entry = projectsArrival[0] - projectsShoulder * .6
+  const exit = projectsArrival[1] + projectsShoulder * .6
+  const start = projectsArrival[0] - projectsShoulder * 3
+  const end = projectsArrival[1] + projectsShoulder * 3
+  if (route <= start || route >= end) return route
+  const speed = .12, center = checkpoints[4].route
+  const slow = (r: number) => center + (r - center) * speed
+  if (route >= entry && route <= exit) return slow(route)
+  const a = route < entry ? start : exit, b = route < entry ? entry : end
+  const y0 = route < entry ? start : slow(exit), y1 = route < entry ? slow(entry) : end
+  const m0 = route < entry ? 1 : speed, m1 = route < entry ? speed : 1
+  const t = (route - a) / (b - a), t2 = t * t, t3 = t2 * t
+  return (2 * t3 - 3 * t2 + 1) * y0 + (t3 - 2 * t2 + t) * (b - a) * m0
+    + (-2 * t3 + 3 * t2) * y1 + (t3 - t2) * (b - a) * m1
+}
 export function projectsPresentation(route: number, departing = false) {
   const [entry, exit] = projectsArrival
   const ramp = (from: number, to: number) => smoothstep((route - from) / (to - from))
@@ -134,8 +159,9 @@ export function sectionUIAt(progress: number, returningHome = false, projectsRea
 /** Silence (ms) that ends a wheel gesture; momentum and free-spinning wheels fire far more often. */
 const WHEEL_GESTURE_GAP = 180
 
-/** `destination`: the camp whose dock holds the scroll target, where the walker will stand. */
-export type ExpeditionFrame = { progress: number; route: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; projectsReady?: boolean; projectsDeparting?: boolean; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
+/** `route` controls presentation timing; `worldRoute` is shared physical travel for
+ * camera, altitude and trail. `destination` is the camp at the scroll target. */
+export type ExpeditionFrame = { progress: number; route: number; worldRoute: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; projectsReady?: boolean; projectsDeparting?: boolean; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
 type Listener = (frame: ExpeditionFrame) => void
 
 export class ScrollController {
@@ -152,7 +178,7 @@ export class ScrollController {
   private media = window.matchMedia('(prefers-reduced-motion: reduce)')
   private started = false
   private returningHome = false
-  private frame: ExpeditionFrame = { progress: 0, route: 0, altitude: checkpoints[0].altitude, active: 0, destination: 0, sections: sectionUIAt(0), projectsReady: false, returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
+  private frame: ExpeditionFrame = { progress: 0, route: 0, worldRoute: 0, altitude: checkpoints[0].altitude, active: 0, destination: 0, sections: sectionUIAt(0), projectsReady: false, returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener)
@@ -238,8 +264,9 @@ export class ScrollController {
     // Returning Home names its destination at once; the marker shows the descent.
     const active = returningHome ? 0 : activeCheckpoint(this.current, this.frame.active)
     const route = routeProgress(this.current)
+    const worldRoute = cameraRouteAt(route)
     const projectsDeparting = this.projectsDeparture.update(route, sections[4].interactive) && !reducedMotion
-    this.frame = { progress: this.current, route, altitude: altitudeAt(this.current), active, destination: dockingCheckpoint(this.target), sections, projectsReady: this.projectsReady, projectsDeparting, returningHome, delta, time: time / 1000, reducedMotion }
+    this.frame = { progress: this.current, route, worldRoute, altitude: altitudeAtRoute(worldRoute), active, destination: dockingCheckpoint(this.target), sections, projectsReady: this.projectsReady, projectsDeparting, returningHome, delta, time: time / 1000, reducedMotion }
     this.emit()
     this.raf = requestAnimationFrame(this.tick)
   }
@@ -249,7 +276,7 @@ export class ScrollController {
     this.started = true
     this.measure()
     this.current = this.target = clamp(initialProgress)
-    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current, false, this.projectsReady), projectsReady: this.projectsReady }
+    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), worldRoute: cameraRouteAt(routeProgress(this.current)), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current, false, this.projectsReady), projectsReady: this.projectsReady }
     window.scrollTo({ top: this.current * this.range, behavior: 'instant' })
     window.addEventListener('scroll', this.onScroll, { passive: true })
     window.addEventListener('resize', this.onResize)

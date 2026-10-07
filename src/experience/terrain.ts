@@ -3,7 +3,7 @@ import { experienceConfig } from '../config/experience'
 import { noise2, terrainNoise } from './noise'
 import { arrivalCamps } from './campLayout'
 import { ascentRouteControls, ROUTE_CONTROL_SPACING } from '../data/ascentRoute'
-import { projectsPresentation } from './progress'
+import { cameraRouteAt, projectsPresentation } from './progress'
 
 // 29 independent route controls: exit, ice approach, switchbacks, traverse,
 // sheltered camps, exposed ridge and final shoulder. World units are metres.
@@ -125,17 +125,23 @@ export function cameraPose(route: number, position: THREE.Vector3, target: THREE
   target.y += experienceConfig.camera.eyeHeight + experienceConfig.camera.lookLift
 }
 
-/** Render-only staging: route distance, altitude and arrival semantics retain the walking rail. */
-export function exhibitionCameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3, width: number, aspect: number, departing = false) {
-  const exhibition = width > 1024 && aspect >= 1.2 ? projectsPresentation(route, departing).focus : 0
-  cameraPose(THREE.MathUtils.lerp(route, showcaseSite.route, exhibition), position, target)
-  if (!exhibition) return
+/** Framing offsets never replace the shared, strictly increasing physical rail. */
+export function exhibitionCameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3, width: number, aspect: number, departing = false, worldRoute = cameraRouteAt(route)) {
+  const desktop = width > 1024 && aspect >= 1.2
+  const exhibition = desktop ? projectsPresentation(route, departing).focus : 0
+  cameraPose(worldRoute, position, target)
+  if (!desktop) return
   // A local overlook at Projects exposes the devices' decks and their stone footings.
   // Both shoulders blend back into the original walking camera, including in reverse.
   position.y += exhibition * 8
   target.y += exhibition * 7
-  position.addScaledVector(showcaseSite.right, exhibition * 8)
-  target.addScaledVector(showcaseSite.right, exhibition * 8)
+  // Longitudinal framing follows the physical rail too, so its release cannot
+  // cancel the small forward drift. The camp's established centre pose is kept.
+  position.x += showcaseSite.right.x * exhibition * 8
+  target.x += showcaseSite.right.x * exhibition * 8
+  const longitudinal = projectsPresentation(worldRoute).focus * showcaseSite.right.z * 8
+  position.z += longitudinal
+  target.z += longitudinal
 }
 
 export function terrainGeometry(detailStep = 1) {

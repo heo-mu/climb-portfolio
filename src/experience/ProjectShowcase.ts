@@ -85,6 +85,7 @@ export class ProjectShowcase {
   private limits = { left: -1, right: 1 }
   private poseRoute = -1
   private linkState = ''
+  private linkRoute = -1
   private reported = ''
   private view = new THREE.PerspectiveCamera()
   private corner = new THREE.Vector3()
@@ -398,7 +399,8 @@ export class ProjectShowcase {
       if (this.linkState !== 'hidden') { link.style.visibility = 'hidden'; this.linkState = 'hidden' }
       return
     }
-    if (!this.dirty && this.linkState !== 'hidden') return
+    if (!this.dirty && this.linkState !== 'hidden' && this.linkRoute === frame.route) return
+    this.linkRoute = frame.route
     slot.screen.updateWorldMatrix(true, false)
     let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity
     for (const [x, y] of [[-.5, -1], [.5, -1], [-.5, 1], [.5, 1]]) {

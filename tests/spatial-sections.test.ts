@@ -57,8 +57,9 @@ describe.each(checkpoints.slice(1).map((camp, i) => ({ ...camp, index: i + 1 }))
     pose(camera, arrival[0] - .0005)
     approach.update(camera)
     if (camp.index === 4) {
-      // The overlook is already parked; the shared reveal still precedes arrival.
-      expect(scaleOf(approach, 1440, 900)).toBeCloseTo(1)
+      // The overlook drifts into camp; it is near reading scale, never parked.
+      expect(scaleOf(approach, 1440, 900)).toBeGreaterThan(.9)
+      expect(scaleOf(approach, 1440, 900)).toBeLessThan(1)
       expect(projectsPresentation(routeProgress(arrival[0] - .0005)).presence).toBeLessThan(1)
     } else expect(scaleOf(approach, 1440, 900)).toBeLessThan(.8)
   })

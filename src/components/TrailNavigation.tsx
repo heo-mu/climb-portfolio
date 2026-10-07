@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { checkpoints } from '../data/expedition'
-import { projectsPresentation, type ScrollController } from '../experience/progress'
+import type { ScrollController } from '../experience/progress'
 import { createTrailMap } from '../experience/trailMap'
 
 export function TrailNavigation({ controller, active, fallback, navigate }: {
@@ -31,14 +31,11 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
       completed.current?.setAttribute('stroke-dashoffset', String(map.length - point.length))
       marker.current?.setAttribute('cx', String(point.x))
       marker.current?.setAttribute('cy', String(point.y))
-      const overlaps = nodes.some(node => Math.hypot(point.x - node.x, point.y - node.y) < 7)
+      const overlaps = nodes.some(node => Math.hypot(point.x - node.x, point.y - node.y) < .1)
       marker.current?.setAttribute('opacity', overlaps ? '0' : '1')
     }
     update(fallback ? checkpoints[Math.max(0, active)].route : currentRoute.current)
-    if (!fallback) return controller.subscribe(frame => {
-      const focus = projectsPresentation(frame.route).focus
-      update(frame.route + (checkpoints[4].route - frame.route) * focus)
-    })
+    if (!fallback) return controller.subscribe(frame => update(frame.worldRoute))
   }, [controller, map, fallback, active])
   return <nav ref={root} className="checkpoint-nav trail-nav" aria-label="포트폴리오 등반 경로">
     <svg className="trail-map" viewBox={`0 0 ${map.width} ${map.height}`} aria-hidden="true">

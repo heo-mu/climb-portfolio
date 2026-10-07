@@ -166,7 +166,7 @@ export class MountainScene {
     if (this.disposed) return
     if (frame.route !== this.poseRoute) {
       this.poseRoute = frame.route
-      exhibitionCameraPose(frame.route, this.position, this.target, this.width, this.camera.aspect, frame.projectsDeparting)
+      exhibitionCameraPose(frame.route, this.position, this.target, this.width, this.camera.aspect, frame.projectsDeparting, frame.worldRoute)
       this.camera.position.copy(this.position)
       this.camera.lookAt(this.target)
       this.camera.updateMatrixWorld()
@@ -187,7 +187,7 @@ export class MountainScene {
     this.lastProgress = frame.progress
     this.lastReducedMotion = frame.reducedMotion
     this.wind.value = frame.reducedMotion ? 0 : frame.time
-    const mood = worldMood(frame.route)
+    const mood = worldMood(frame.worldRoute)
     this.sky.copy(this.low).lerp(this.iceSky, mood.ice).lerp(this.basinSky, mood.basin).lerp(this.faceSky, mood.face).lerp(this.snowFog, mood.storm * .85).lerp(this.high, mood.summit)
     this.fog.color.copy(this.sky).lerp(this.snowFog, mood.storm * .5)
     this.fog.density = mood.fog

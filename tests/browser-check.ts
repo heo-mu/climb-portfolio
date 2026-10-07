@@ -717,6 +717,88 @@ try {
     await context.close()
   })
 
+  await step('Projects slow drift: rendered camera, altitude and trail advance and reverse together', async () => {
+    const { context, page } = await open({}, [], () => {
+      // Inspect the view matrix actually uploaded to WebGL, not a duplicate route calculation.
+      const probe = window as unknown as { renderedEye: number[] }
+      probe.renderedEye = []
+      const names = new WeakMap<WebGLUniformLocation, string>()
+      const gl = WebGL2RenderingContext.prototype
+      const location = gl.getUniformLocation, matrix = gl.uniformMatrix4fv
+      gl.getUniformLocation = function (program, name) {
+        const result = location.call(this, program, name)
+        if (result) names.set(result, name)
+        return result
+      }
+      gl.uniformMatrix4fv = function (location, transpose, data, ...offsets) {
+        if (location && names.get(location) === 'viewMatrix') {
+          const m = data as Float32Array
+          probe.renderedEye = [0, 4, 8].map(i => -(m[i] * m[12] + m[i + 1] * m[13] + m[i + 2] * m[14]))
+        }
+        return matrix.call(this, location, transpose, data, ...offsets)
+      }
+    })
+    await page.goto(base!)
+    await ready(page)
+    const settleCamera = () => page.evaluate(() => new Promise<void>((resolve, reject) => {
+      let last = '', stable = 0, frames = 0
+      const tick = () => {
+        const value = (window as unknown as { renderedEye: number[] }).renderedEye.join(',')
+        stable = value && value === last ? stable + 1 : 0
+        last = value
+        if (stable >= 5) resolve()
+        else if (++frames > 300) reject(new Error('Rendered camera did not settle'))
+        else requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    }))
+    const read = () => page.evaluate(() => ({
+      eye: (window as unknown as { renderedEye: number[] }).renderedEye,
+      altitude: Number(document.querySelector('.altitude-number')!.textContent),
+      trail: Number(document.querySelector('.trail-completed')!.getAttribute('stroke-dashoffset')),
+      marker: ['cx', 'cy'].map(axis => Number(document.querySelector('.trail-current')!.getAttribute(axis))),
+      scroll: scrollY,
+    }))
+    for (const [width, height] of [[1440, 900], [1366, 768]]) {
+      await page.setViewportSize({ width, height })
+      const samples = []
+      for (const progress of [.772, .785, .8, .815, .828]) {
+        await scrollToProgress(page, progress)
+        await expectArrived(page, 4, { atCenter: false })
+        await settleCamera()
+        expect(await exhibitIssues(page, projects[0].slug)).toEqual([])
+        samples.push(await read())
+      }
+      for (let i = 1; i < samples.length; i++) {
+        const previous = samples[i - 1], next = samples[i]
+        expect(next.eye).toHaveLength(3)
+        expect(Math.hypot(...next.eye.map((value, axis) => value - previous.eye[axis]))).toBeGreaterThan(.7)
+        expect(next.eye[1]).toBeGreaterThan(previous.eye[1])
+        expect(next.eye[2]).toBeLessThan(previous.eye[2])
+        expect(next.altitude).toBeGreaterThan(previous.altitude)
+        expect(next.trail).toBeLessThan(previous.trail)
+        expect(Math.hypot(...next.marker.map((value, axis) => value - previous.marker[axis]))).toBeGreaterThan(.1)
+      }
+      for (const index of [3, 2, 1, 0]) {
+        await scrollToProgress(page, [.772, .785, .8, .815, .828][index])
+        await expectArrived(page, 4, { atCenter: false })
+        await settleCamera()
+        const back = await read(), outward = samples[index]
+        expect(back.altitude).toBe(outward.altitude)
+        expect(Math.abs(back.trail - outward.trail)).toBeLessThan(.01)
+        expect(Math.hypot(...back.eye.map((value, axis) => value - outward.eye[axis]))).toBeLessThan(.01)
+      }
+      const beforeSelection = await read()
+      for (const index of [1, 2, 3, 4, 0]) {
+        await page.locator('#high-camp button[aria-expanded]').nth(index).click()
+        await settle(page)
+        expect(await read()).toEqual(beforeSelection)
+      }
+      console.log('Projects drift', width, samples.map(({ eye, altitude, trail }) => ({ eye, altitude, trail })))
+    }
+    await context.close()
+  })
+
   await step('Projects performance: cached rapid selection and reversible journey', async () => {
     type Probe = { counts: Record<string, number>; tasks: number[] }
     const { context, page } = await open({}, [], () => {
