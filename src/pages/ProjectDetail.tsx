@@ -30,7 +30,9 @@ export function ProjectDetail() {
     <div className="detail-wrap"><div className="detail-kicker"><span>Project {project.number}</span></div>
       <h1 className="detail-title" tabIndex={-1}>{project.name}</h1><p className="detail-summary">{project.summary}</p><ul className="project-tags" aria-label="프로젝트 키워드">{project.tags.map(tag => <li key={tag}>#{tag}</li>)}</ul>
       <dl className="detail-meta">{meta.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
-      <div className="detail-hero media-surface" aria-hidden="true"><span>{project.number}</span></div>
+      <div className="detail-hero" style={{ aspectRatio: `${project.screen.width} / ${project.screen.height}` }}>
+        <img src={project.screen.desktop} width={project.screen.width} height={project.screen.height} alt={`${project.name} 프로젝트 화면`} loading="eager" decoding="async" fetchPriority="high" />
+      </div>
       <div className="case-study">{(project.caseStudy ?? processCaseStudy).map((section, sectionIndex) => <section className="case-section" key={section.title} aria-labelledby={`case-${sectionIndex}`}>
         <div className="case-label mono"><span>{String(sectionIndex + 1).padStart(2, '0')}</span>{section.title}</div>
         <div>

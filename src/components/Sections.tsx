@@ -103,8 +103,7 @@ function Projects() {
       <Link className="project-media-link" to={`/project/${project.slug}`} tabIndex={-1} aria-hidden="true"><ProjectScreen active={active} /></Link>
       <div className="projects-editorial">
         <nav className="project-navigation" aria-label="프로젝트 선택">
-          <p className="project-index-label">프로젝트를 선택해 보세요 <span>{project.number} / {String(projects.length).padStart(2, '0')}</span></p>
-          <div className="project-index" role="tablist" aria-label="프로젝트" aria-orientation="horizontal">{projects.map((item, index) => <button key={item.slug} role="tab" tabIndex={active === index ? 0 : -1} type="button" id={`project-tab-${item.slug}`} onClick={() => select(index)} onKeyDown={event => {
+          <div className="project-index" role="tablist" aria-label={`프로젝트 ${projects.length}개 중 선택`} aria-orientation="vertical">{projects.map((item, index) => <button key={item.slug} role="tab" tabIndex={active === index ? 0 : -1} type="button" id={`project-tab-${item.slug}`} onClick={() => select(index)} onKeyDown={event => {
           const offset = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 0
           if (!offset && event.key !== 'Home' && event.key !== 'End') return
           event.preventDefault(); event.stopPropagation()
@@ -112,7 +111,7 @@ function Projects() {
           select(next)
           document.getElementById(`project-tab-${projects[next].slug}`)?.focus({ preventScroll: true })
         }} className="project-row" data-active={active === index} data-pending={pending === index} aria-selected={active === index} aria-controls={`project-info-${item.slug}`} aria-label={`${item.number} ${item.name}`}>
-          <span className="project-number">{item.number}</span><span className="project-tab-name"><span className="project-name-full">{item.name}</span><span className="project-name-short">{item.navigationName}</span></span>
+          <span className="project-number">{item.number}</span><span className="project-name-full">{item.name}</span>
           </button>)}</div>
         </nav>
         <div className="project-details">{projects.map((item, index) => <div className="project-information" key={item.slug} id={`project-info-${item.slug}`} role="tabpanel" aria-labelledby={`project-tab-${item.slug}`} aria-hidden={active !== index} inert={active !== index}>

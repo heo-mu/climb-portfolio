@@ -40,6 +40,9 @@ async function open(options: BrowserContextOptions = {}, allow: RegExp[] = [], i
   const context = await browser.newContext({ viewport: desktop, ...options })
   if (init) await context.addInitScript(init)
   const page = await context.newPage()
+  page.on('response', response => {
+    if (response.status() >= 400 && response.request().resourceType() !== 'document') errors.push(`asset ${response.status()} ${response.url()}`)
+  })
   page.on('pageerror', error => errors.push(`[${options.viewport?.width ?? 1440}] pageerror ${error.message}`))
   page.on('console', message => {
     if (message.type() === 'error' && !allow.some(pattern => pattern.test(message.text()))) errors.push(`[${options.viewport?.width ?? 1440}] console ${message.text()}`)
@@ -223,6 +226,21 @@ try {
       expect(await page.evaluate(() => document.documentElement.scrollTop)).toBe(0)
       await page.waitForTimeout(1500)
       expect(captureRequests, 'captures requested at Home').toEqual([])
+    })
+
+    await step('metadata and shipped assets: Korean document, favicon, font and nine tool logos', async () => {
+      await expect(page.locator('html')).toHaveAttribute('lang', 'ko')
+      await expect(page).toHaveTitle('Heo Chang Mu - Portfolio')
+      await expect(page.locator('meta[name=description]')).toHaveAttribute('content', /Changmu Heo/)
+      await expect(page.locator('meta[name=viewport]')).toHaveAttribute('content', /width=device-width/)
+      await expect(page.locator('meta[name=theme-color]')).toHaveAttribute('content', '#171c20')
+      const favicon = await page.request.get(new URL((await page.locator('link[rel=icon]').getAttribute('href'))!, base).href)
+      expect(favicon.status()).toBe(200)
+      expect(favicon.headers()['content-type']).toContain('image/svg+xml')
+      await page.evaluate(() => document.fonts.ready)
+      expect(await page.evaluate(() => document.fonts.check('14px "SUIT Variable"'))).toBe(true)
+      await expect(page.locator('.tool-icon img')).toHaveCount(9)
+      await expect.poll(() => page.locator('.tool-icon img').evaluateAll(images => images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true)
     })
 
     await step('ascent and descent: every camp parks crisp, interactive and current', async () => {
@@ -460,7 +478,35 @@ try {
       }
     })
 
+    await step('Projects previews: each original image stays whole at its source aspect ratio', async () => {
+      await page.setViewportSize({ width: 768, height: 1024 })
+      await goToCamp(page, 4)
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase', '2d')
+      const imageFiles: Record<string, string> = { deurim: 'deurim.png', 'samsung-bees': 'bees.png', edk: 'edk.png', 'moel-ax': 'ax.png', groupware: 'groupware.png' }
+      for (const [index, project] of projects.entries()) {
+        await page.locator('#high-camp button[aria-selected]').nth(index).click()
+        await expect(page.locator('#high-camp button[aria-selected]').nth(index)).toHaveAttribute('aria-selected', 'true')
+        const image = page.locator('#high-camp .project-screen img[data-active="true"]')
+        await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).complete && (element as HTMLImageElement).naturalWidth > 0)).toBe(true)
+        const display = await image.evaluate(element => {
+          const img = element as HTMLImageElement
+          const frame = img.parentElement!.getBoundingClientRect()
+          return {
+            file: new URL(img.currentSrc).pathname.split('/').at(-1)!.replace(/-[\da-z_-]{8,}(?=\.png$)/i, ''),
+            sourceRatio: img.naturalWidth / img.naturalHeight,
+            objectFit: getComputedStyle(img).objectFit,
+            frameRatio: frame.width / frame.height,
+          }
+        })
+        expect(display.file, `${project.slug}: source image`).toBe(imageFiles[project.slug])
+        expect(display.sourceRatio, `${project.slug}: original ratio`).toBe(16 / 9)
+        expect(display.objectFit, `${project.slug}: full image visible`).toBe('contain')
+        expect(display.frameRatio, `${project.slug}: stable 16:9 frame`).toBe(16 / 9)
+      }
+    })
+
     await step('Projects: selection, detail round trip and restored selection', async () => {
+      await page.setViewportSize(desktop)
       await goToCamp(page, 4)
       await page.locator('#high-camp button[aria-selected]').first().click()
       await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(projects[0].name)
@@ -469,6 +515,7 @@ try {
       const navigationBox = await page.locator('.project-navigation').boundingBox()
       const detailBox = await page.locator('.project-details').boundingBox()
       expect(navigationBox!.y + navigationBox!.height, 'choose before reading the result').toBeLessThan(detailBox!.y)
+      await expect(page.locator('.project-index')).toHaveAttribute('aria-orientation', 'vertical')
       for (const [index, project] of projects.entries()) {
         await page.locator('#high-camp button[aria-selected]').nth(index).click()
         await expect(page.locator('#high-camp button[aria-selected]').nth(index)).toHaveAttribute('aria-selected', 'true')
@@ -476,6 +523,22 @@ try {
         await expect(page.getByRole('link', { name: '프로젝트 보기', exact: true })).toHaveAttribute('href', `/project/${project.slug}`)
         expect(await page.locator('.project-navigation').boundingBox(), 'selection controls stay fixed for every project').toEqual(navigationBox)
       }
+      const scrollBeforeKeys = await page.evaluate(() => scrollY)
+      const tabs = page.locator('#high-camp [role=tab]')
+      await tabs.last().focus()
+      await page.keyboard.press('Home')
+      await expect(tabs.first()).toBeFocused()
+      await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+      await page.keyboard.press('ArrowDown')
+      await expect(tabs.nth(1)).toBeFocused()
+      await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
+      await tabs.nth(2).focus()
+      await page.keyboard.press('Space')
+      await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
+      await tabs.nth(3).focus()
+      await page.keyboard.press('Enter')
+      await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'true')
+      expect(await page.evaluate(() => scrollY), 'index keyboard selection does not move the journey').toBe(scrollBeforeKeys)
       const pick = projects[2]
       await page.locator('#high-camp button[aria-selected]').nth(2).click()
       // The exhibit itself opens the project too.
@@ -570,17 +633,47 @@ try {
   // ─────────────────────────────── Project pages ───────────────────────────────
   await step('project deep links, legacy slugs and the missing route', async () => {
     const { context, page } = await open()
-    for (const [width, height] of [[1440, 900], [390, 844]]) {
+    const cdp = await context.newCDPSession(page)
+    for (const [width, height] of viewports) {
       await page.setViewportSize({ width, height })
       for (const [index, project] of projects.entries()) {
         await page.goto(`${base}/project/${project.slug}`)
         await expect(page.locator('.detail-title')).toHaveText(project.name)
+        const heroImage = page.locator('.detail-hero img')
+        await expect.poll(() => heroImage.evaluate(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true)
+        const hero = await heroImage.evaluate(image => {
+          const element = image as HTMLImageElement
+          const box = element.getBoundingClientRect()
+          const heroBox = element.parentElement!.getBoundingClientRect()
+          return {
+            file: new URL(element.currentSrc).pathname.split('/').pop()!.replace(/-[\da-z_-]{8,}(?=\.png$)/i, ''),
+            imageRatio: element.naturalWidth / element.naturalHeight,
+            heroRatio: heroBox.width / heroBox.height,
+            fit: getComputedStyle(element).objectFit,
+            box: { left: box.left, right: box.right, width: box.width, height: box.height },
+          }
+        })
+        const expectedFile = new URL(project.screen.desktop, import.meta.url).pathname.split('/').pop()!
+        expect(hero.file, `${project.slug} image mapping`).toBe(expectedFile)
+        expect(hero.imageRatio, `${project.slug} source aspect ratio`).toBeCloseTo(16 / 9, 3)
+        expect(hero.heroRatio, `${project.slug} hero aspect ratio`).toBeCloseTo(16 / 9, 3)
+        expect(hero.fit, `${project.slug} image fit`).toBe('contain')
+        expect(hero.box.left, `${project.slug} hero left edge @${width}`).toBeGreaterThanOrEqual(0)
+        expect(hero.box.right, `${project.slug} hero right edge @${width}`).toBeLessThanOrEqual(width)
         await expect(page.locator('.case-section')).toHaveCount((project.caseStudy ?? processCaseStudy).length)
         await expect(page.locator('.detail-meta dt')).toHaveText(['Role', 'Period', 'Type', ...project.status ? ['Status'] : []])
         await expect(page.locator('.detail-meta dd').first()).toHaveText(project.role)
         await expect(page.locator('.next-project')).toHaveAttribute('href', `/project/${projects[(index + 1) % projects.length].slug}`)
         await expect(page.locator('.back-link')).toHaveAttribute('href', '/#high-camp')
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${project.slug} @${width}`).toBe(true)
+        if (width === 1440 || width === 390) {
+          await page.reload()
+          await expect(page.locator('.detail-title')).toHaveText(project.name)
+          await cdp.send('Page.reload', { ignoreCache: true })
+          await page.waitForLoadState('load')
+          await expect(page.locator('.detail-title')).toHaveText(project.name)
+          await expect.poll(() => heroImage.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(project.screen.width)
+        }
       }
     }
     for (const [legacy, slug] of Object.entries(legacyProjectSlugs)) {
