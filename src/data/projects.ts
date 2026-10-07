@@ -1,12 +1,6 @@
-export type CaseSection = {
-  title: string
-  heading: string
-  body: string
-  /** Steps drawn as a process line under the body. */
-  process?: readonly string[]
-  /** Reserves a media frame under the body. */
-  media?: boolean
-}
+import type { CaseSection, ProjectDetailContent } from './caseStudy.ts'
+import { deurimCaseStudy, deurimDetail } from './deurimCaseStudy.ts'
+export type { CaseSection } from './caseStudy.ts'
 
 export type Project = {
   slug: string
@@ -24,13 +18,14 @@ export type Project = {
   screen: { desktop: string; width: number; height: number }
   /** The project's own case study; until provided, the shared process narrative is shown. */
   caseStudy?: readonly CaseSection[]
+  detail?: ProjectDetailContent
 }
 
 // new URL(…, import.meta.url): a fingerprinted asset for Vite, a plain URL for Node tooling.
 const screen = (source: URL, width: number, height: number) => ({ desktop: source.href, width, height })
 
 export const projects: readonly Project[] = [
-  { slug: 'deurim', navigationName: '들임', number: '01', name: '들임', tags: ['SoloBuild', 'AIAssisted', 'WebGL', 'WebService'], type: 'Web Service', period: '2026.09 — 2026.10', role: '기획 · 디자인 · 구현', summary: '구매 전 설치 가능 여부를 확인하는 웹 서비스', screen: screen(new URL('../../img/projects/deurim.png', import.meta.url), 7680, 4320) },
+  { slug: 'deurim', navigationName: '들임', number: '01', name: '들임', tags: ['SoloBuild', 'AIAssisted', 'WebGL', 'WebService'], type: 'Web Service', period: '2026.09 — 2026.10', role: '기획 · 디자인 · 구현', summary: '구매 전 설치 가능 여부를 확인하는 웹 서비스', screen: screen(new URL('../../img/projects/deurim.png', import.meta.url), 7680, 4320), detail: deurimDetail, caseStudy: deurimCaseStudy },
   { slug: 'samsung-bees', navigationName: 'BEES', number: '02', name: '삼성 BEES', tags: ['UnrealEngine', 'DigitalTwin', 'EnergyData'], type: 'Energy Platform', period: '2025.12 — 2026.07', role: 'UX Research / Service Design', summary: '건물 · 층 · 설비의 에너지 데이터를 공간 단위로 읽고 관리하는 플랫폼', screen: screen(new URL('../../img/projects/bees.png', import.meta.url), 7680, 4320) },
   { slug: 'edk', navigationName: 'EDK', number: '03', name: 'EDK', tags: ['ESGPlatform', 'B2BSaaS', 'RBAC'], type: 'B2B Platform', period: '2024.12 — 2025.12', role: 'Design Systems', summary: '기업의 ESG 지표를 종합적으로 관리하는 B2B 플랫폼', screen: screen(new URL('../../img/projects/edk.png', import.meta.url), 7680, 4320) },
   { slug: 'moel-ax', navigationName: 'AX', number: '04', name: '고용노동부 AX', tags: ['OCR', 'GovernmentService', 'AIAnalysis'], type: 'Public Service', period: '2026.01 — 2026.06', role: 'Interaction / Prototyping', summary: 'AI가 서류와 현장 사진을 분석해 필요한 솔루션을 제안하는 공공 서비스', screen: screen(new URL('../../img/projects/ax.png', import.meta.url), 7680, 4320) },

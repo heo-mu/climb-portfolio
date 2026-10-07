@@ -634,12 +634,26 @@ try {
   await step('project deep links, legacy slugs and the missing route', async () => {
     const { context, page } = await open()
     const cdp = await context.newCDPSession(page)
-    for (const [width, height] of viewports) {
+    for (const [width, height] of [...viewports, [320, 740]]) {
       await page.setViewportSize({ width, height })
       for (const [index, project] of projects.entries()) {
         await page.goto(`${base}/project/${project.slug}`)
         await expect(page.locator('.detail-title')).toHaveText(project.name)
         const heroImage = page.locator('.detail-hero img')
+        if (project.detail?.heroSlot) {
+          await expect(heroImage).toHaveCount(0)
+          await expect(page.locator('.detail-hero .case-image-placeholder')).toHaveText(`[IMAGE AREA — ${project.detail.heroSlot.label}]`)
+          await expect(page.locator('.case-section .case-image-slot')).toHaveCount(project.caseStudy!.filter(section => section.imageSlot).length)
+          await expect(page.locator('.case-principle')).toHaveCount(4)
+          await expect(page.locator('.case-decision')).toHaveCount(4)
+          await expect(page.locator('.case-section h2')).toHaveText(project.caseStudy!.map(section => section.heading))
+          if (width <= 767) {
+            // Legacy cases use smaller mobile copy; rich reading content must not inherit it.
+            expect(await page.locator('.case-content > p').first().evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
+          }
+          const overflowing = await page.locator('.case-section, .case-image-slot, .detail-meta').evaluateAll(elements => elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.className))
+          expect(overflowing, `case content @${width}`).toEqual([])
+        } else {
         await expect.poll(() => heroImage.evaluate(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true)
         const hero = await heroImage.evaluate(image => {
           const element = image as HTMLImageElement
@@ -660,9 +674,11 @@ try {
         expect(hero.fit, `${project.slug} image fit`).toBe('contain')
         expect(hero.box.left, `${project.slug} hero left edge @${width}`).toBeGreaterThanOrEqual(0)
         expect(hero.box.right, `${project.slug} hero right edge @${width}`).toBeLessThanOrEqual(width)
+        }
         await expect(page.locator('.case-section')).toHaveCount((project.caseStudy ?? processCaseStudy).length)
-        await expect(page.locator('.detail-meta dt')).toHaveText(['Role', 'Period', 'Type', ...project.status ? ['Status'] : []])
-        await expect(page.locator('.detail-meta dd').first()).toHaveText(project.role)
+        const metadata = project.detail?.metadata ?? [['Role', project.role], ['Period', project.period], ['Type', project.type], ...project.status ? [['Status', project.status]] : []]
+        await expect(page.locator('.detail-meta dt')).toHaveText(metadata.map(([term]) => term))
+        await expect(page.locator('.detail-meta dd')).toHaveText(metadata.map(([, value]) => value))
         await expect(page.locator('.next-project')).toHaveAttribute('href', `/project/${projects[(index + 1) % projects.length].slug}`)
         await expect(page.locator('.back-link')).toHaveAttribute('href', '/#high-camp')
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${project.slug} @${width}`).toBe(true)
@@ -672,7 +688,7 @@ try {
           await cdp.send('Page.reload', { ignoreCache: true })
           await page.waitForLoadState('load')
           await expect(page.locator('.detail-title')).toHaveText(project.name)
-          await expect.poll(() => heroImage.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(project.screen.width)
+          if (!project.detail?.heroSlot) await expect.poll(() => heroImage.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(project.screen.width)
         }
       }
     }
