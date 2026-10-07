@@ -1,5 +1,5 @@
 ﻿import * as THREE from 'three'
-import { cameraFieldOfView, exhibitionCameraPose, seeded } from './terrain'
+import { cameraFieldOfView, cameraPose, seeded } from './terrain'
 import { environmentStages } from './environment'
 import type { ExpeditionFrame } from './progress'
 import { experienceConfig as config } from '../config/experience'
@@ -10,6 +10,8 @@ import { projectSelection } from './projectSelection'
 
 type SceneOptions = { canvas: HTMLCanvasElement; root: HTMLElement; onLost: () => void; onProjectsReady: (ready: boolean) => void }
 type SnowLayer = { points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>; speed: number; drift: number; fall: number }
+
+const snowStormDrift = [.55, .15, 0] as const
 
 export class MountainScene {
   private renderer: THREE.WebGLRenderer
@@ -164,13 +166,13 @@ export class MountainScene {
 
   update = (frame: ExpeditionFrame) => {
     if (this.disposed) return
-    if (frame.route !== this.poseRoute) {
-      this.poseRoute = frame.route
-      exhibitionCameraPose(frame.route, this.position, this.target, this.width, this.camera.aspect, frame.projectsDeparting, frame.worldRoute)
+    if (frame.journeyProgress !== this.poseRoute) {
+      this.poseRoute = frame.journeyProgress
+      cameraPose(frame.journeyProgress, this.position, this.target, frame.curveParameter)
       this.camera.position.copy(this.position)
       this.camera.lookAt(this.target)
       this.camera.updateMatrixWorld()
-      this.camera.fov = cameraFieldOfView(frame.route, this.camera.aspect, this.width, frame.projectsDeparting)
+      this.camera.fov = cameraFieldOfView(frame.journeyProgress, this.camera.aspect, this.width)
       this.camera.updateProjectionMatrix()
     }
     // Spatial UI follows every controller frame (docking settles while standing);
@@ -179,15 +181,15 @@ export class MountainScene {
     // A project change moves only the exhibit: it renders every frame while it crosses over.
     const exhibit = this.showcase.update(frame, this.camera) || this.showcase.drawWarmUp(this.camera)
     this.options.onProjectsReady(this.showcase.ready)
-    const moving = frame.progress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit
+    const moving = frame.journeyProgress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit
     if (frame.reducedMotion && !moving) return
     if (!moving && frame.time - this.lastRender < 1 / 30) return
     const elapsed = Math.min(.1, Math.max(0, frame.time - this.lastRender))
     this.lastRender = frame.time
-    this.lastProgress = frame.progress
+    this.lastProgress = frame.journeyProgress
     this.lastReducedMotion = frame.reducedMotion
     this.wind.value = frame.reducedMotion ? 0 : frame.time
-    const mood = worldMood(frame.worldRoute)
+    const mood = worldMood(frame.journeyProgress)
     this.sky.copy(this.low).lerp(this.iceSky, mood.ice).lerp(this.basinSky, mood.basin).lerp(this.faceSky, mood.face).lerp(this.snowFog, mood.storm * .85).lerp(this.high, mood.summit)
     this.fog.color.copy(this.sky).lerp(this.snowFog, mood.storm * .5)
     this.fog.density = mood.fog
@@ -202,7 +204,7 @@ export class MountainScene {
     this.snow.forEach((layer, index) => {
       layer.points.visible = !frame.reducedMotion
       // Integrate velocity: changing weather must not teleport the particle field.
-      layer.drift += elapsed * mood.windSpeed * layer.speed * (1 + mood.storm * [ .55, .15, 0 ][index])
+      layer.drift += elapsed * mood.windSpeed * layer.speed * (1 + mood.storm * snowStormDrift[index])
       layer.fall += elapsed * (1.05 + mood.storm * 1.1) * layer.speed
       const uniforms = layer.points.material.uniforms
       uniforms.uTime.value = frame.time * layer.speed

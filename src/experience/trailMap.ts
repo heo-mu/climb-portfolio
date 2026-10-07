@@ -1,11 +1,11 @@
-import { routeLateralAt } from '../data/ascentRoute'
+import { routeLateralAt, curveParameterAt } from '../data/ascentRoute'
 
 type Point = { route: number; x: number; y: number; length: number }
 const SAMPLE_COUNT = 280
 
 /** Fixed camera-rail shape; only resized, never rebuilt on scroll. */
 export function createTrailMap(width: number, height: number, horizontal = false) {
-  const lateral = Array.from({ length: SAMPLE_COUNT + 1 }, (_, i) => routeLateralAt(i / SAMPLE_COUNT))
+  const lateral = Array.from({ length: SAMPLE_COUNT + 1 }, (_, i) => routeLateralAt(curveParameterAt(i / SAMPLE_COUNT)))
   const min = Math.min(...lateral), span = Math.max(...lateral) - min
   // Remove the rail's overall sideways drift in the diagram only: both ends
   // share an axis, while the real switchbacks remain. The camera is untouched.

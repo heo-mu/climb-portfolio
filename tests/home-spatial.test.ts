@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { PerspectiveCamera, Vector3 } from 'three'
 import { SpatialAnchorProjection } from '../src/experience/SpatialAnchorProjection'
 import { cameraPose } from '../src/experience/terrain'
-import { campZones, routeProgress } from '../src/experience/progress'
+import { campZones } from '../src/experience/progress'
 
 function setup(width = 1440, height = 900) {
   const camera = new PerspectiveCamera(width / height < .95 ? 72 : 64, width / height, .08, 2400)
@@ -10,7 +10,7 @@ function setup(width = 1440, height = 900) {
   projection.resize(camera, width, height)
   const move = (progress: number) => {
     const target = new Vector3()
-    cameraPose(routeProgress(progress), camera.position, target)
+    cameraPose((progress), camera.position, target)
     camera.lookAt(target)
     camera.updateMatrixWorld()
     projection.update(camera)
@@ -43,7 +43,7 @@ describe('Home departure projection', () => {
     // Observe the same physical departure poses regardless of scroll allocation.
     const moveAlongRoute = (route: number) => {
       let low = 0, high = 1
-      for (let i = 0; i < 40; i++) { const mid = (low + high) / 2; if (routeProgress(mid) < route) low = mid; else high = mid }
+      for (let i = 0; i < 40; i++) { const mid = (low + high) / 2; if ((mid) < route) low = mid; else high = mid }
       move((low + high) / 2)
     }
     moveAlongRoute(.0058)

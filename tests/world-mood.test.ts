@@ -42,7 +42,7 @@ describe('differentiated ascent', () => {
     expect(summit.key).toBeGreaterThan(peak.key * 2)
     expect(summit.ambient).toBeGreaterThan(worldMood(0).ambient)
     expect(summit.fog).toBeGreaterThan(0)
-    for (const camp of checkpoints) expect(worldMood(camp.route).storm).toBe(0)
+    for (const camp of checkpoints) expect(worldMood(camp.progress).storm).toBe(0)
   })
 
   it('keeps lighting and weather continuous through every stage boundary', () => {

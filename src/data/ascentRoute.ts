@@ -25,8 +25,52 @@ function catmullRom(route: number, axis: 0 | 1) {
 
 export const routeLateralAt = (route: number) => catmullRom(route, 0)
 
-/** The first-person eye on the walked corridor: identical to cameraPose(), without three.js. */
+/** Eye on the rail at a legacy curve parameter, without loading three.js. */
 export function routeEyeAt(route: number): [number, number, number] {
-  const r = Math.max(0, Math.min(1, route))
-  return [catmullRom(r, 0), catmullRom(r, 1) + experienceConfig.camera.eyeHeight, -r * (ascentRouteControls.length - 1) * ROUTE_CONTROL_SPACING]
+  const eye = { x: 0, y: 0, z: 0 }
+  writeRouteEye(route, eye)
+  return [eye.x, eye.y, eye.z]
+}
+
+/** The overlook is geometry in the rail, included in arc length, never a speed filter. */
+const ramp = (t: number) => { const v = Math.max(0, Math.min(1, t)); return v * v * (3 - 2 * v) }
+export function overlookAt(curveParameter: number) {
+  return ramp((curveParameter - .7) / .055) * (1 - ramp((curveParameter - .85) / .07))
+}
+
+export function writeRouteEye(curveParameter: number, out: { x: number; y: number; z: number }) {
+  const r = Math.max(0, Math.min(1, curveParameter)), overlook = overlookAt(r)
+  out.x = catmullRom(r, 0) + 16 * overlook
+  const height = catmullRom(r, 1)
+  const lift = catmullRom(.8, 1) + 13 - height
+  out.y = height + experienceConfig.camera.eyeHeight + .5 * (lift + Math.sqrt(lift * lift + 1)) * overlook
+  out.z = -r * (ascentRouteControls.length - 1) * ROUTE_CONTROL_SPACING
+}
+
+// World dressing retains its original spline parameter. Only the walking rail
+// uses normalized cumulative distance; never rebuild this table during scroll.
+const ARC_SAMPLES = 8192
+const arcLengths = new Float64Array(ARC_SAMPLES + 1)
+for (let i = 1; i <= ARC_SAMPLES; i++) {
+  const a = routeEyeAt((i - 1) / ARC_SAMPLES), b = routeEyeAt(i / ARC_SAMPLES)
+  arcLengths[i] = arcLengths[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
+}
+export const journeyLength = arcLengths[ARC_SAMPLES]
+
+/** Canonical journey distance -> legacy world spline parameter. */
+export function curveParameterAt(journeyProgress: number) {
+  const distance = Math.max(0, Math.min(1, journeyProgress)) * journeyLength
+  let low = 0, high = ARC_SAMPLES
+  while (high - low > 1) {
+    const middle = (low + high) >>> 1
+    if (arcLengths[middle] < distance) low = middle; else high = middle
+  }
+  return (low + (distance - arcLengths[low]) / (arcLengths[high] - arcLengths[low])) / ARC_SAMPLES
+}
+
+/** Legacy world landmark -> canonical journey distance (initialization only). */
+export function journeyAtCurveParameter(curveParameter: number) {
+  const sample = Math.max(0, Math.min(1, curveParameter)) * ARC_SAMPLES
+  const i = Math.min(ARC_SAMPLES - 1, Math.floor(sample)), t = sample - i
+  return (arcLengths[i] + (arcLengths[i + 1] - arcLengths[i]) * t) / journeyLength
 }

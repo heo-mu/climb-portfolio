@@ -36,7 +36,7 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
       // A departed Projects camp is history, not an active exhibit.
       const current = frame.active === 4 && !frame.sections[4].interactive ? -1 : frame.active
       if (current !== previousActive) { previousActive = current; setActive(current) }
-      const showHome = frame.progress > experienceConfig.home.exitRange
+      const showHome = frame.journeyProgress > experienceConfig.home.exitRange
       if (showHome !== previousHome) { previousHome = showHome; setHomeVisible(showHome) }
     })
   }, [controller, fallback])

@@ -62,7 +62,7 @@ export function Expedition() {
     let previousSections: ExpeditionFrame['sections'] | null = null
     controller.start(lastProgress.current || initialProgress)
     const unsubscribe = controller.subscribe(frame => {
-      lastProgress.current = frame.progress
+      lastProgress.current = frame.journeyProgress
       // The rendered camera owns visual approach/departure. This shared arrival
       // state owns focus/input, matching the trail navigation. States are shared
       // references, so the DOM is only touched when arrival actually changes.

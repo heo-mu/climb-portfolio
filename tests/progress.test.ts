@@ -1,27 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { ProjectsDeparture, projectsPresentation, cameraRouteAt, activeCheckpoint, altitudeAt, campZones, readableCheckpoint, routeProgress, sectionUIAt } from '../src/experience/progress'
+import { projectsPresentation, activeCheckpoint, altitudeAt, campZones, readableCheckpoint, sectionUIAt } from '../src/experience/progress'
 import { checkpoints } from '../src/data/expedition'
-import { routeEyeAt } from '../src/data/ascentRoute'
-import { cameraPose, exhibitionCameraPose, groundHeight, routeCurve, terrainGeometry } from '../src/experience/terrain'
+import { routeEyeAt, curveParameterAt, journeyLength, journeyAtCurveParameter } from '../src/data/ascentRoute'
+import { cameraPose, groundHeight, routeCurve, terrainGeometry } from '../src/experience/terrain'
 import { experienceConfig } from '../src/config/experience'
 import { Vector3 } from 'three'
 
-const eye = (progress: number) => new Vector3(...routeEyeAt(routeProgress(progress)))
+const eye = (progress: number) => new Vector3(...routeEyeAt(curveParameterAt(progress)))
 
 describe('spatial arrival', () => {
-  it('keeps first entry functional and only uses spatial exit after a visit', () => {
-    const motion = new ProjectsDeparture()
-    const [entry, exit] = campZones[4].arrival.map(routeProgress)
-    expect(motion.update(entry - .004, false)).toBe(false)
-    expect(motion.update(.75, true)).toBe(false)
-    for (const edge of [entry - .004, exit + .004]) {
-      expect(motion.update(edge, false)).toBe(true)
-      expect(projectsPresentation(edge, true).presence).toBeGreaterThan(0)
-      expect(projectsPresentation(edge, true).lens).toBeLessThan(1)
-      expect(motion.update(.75, true)).toBe(false)
-    }
-    expect(motion.update(.85, false)).toBe(false)
-    expect(motion.update(exit + .004, false)).toBe(false)
+  it('uses a reversible presentation envelope', () => {
+    for (const edge of campZones[4].arrival) expect(projectsPresentation(edge).presence).toBeCloseTo(1)
   })
   it('waits for the first Projects capture without enabling empty content', () => {
     for (const progress of campZones[4].arrival) {
@@ -111,7 +100,7 @@ describe('expedition progression', () => {
   })
   it('keeps navigation, altitude and camera rail aligned at every camp', () => {
     checkpoints.forEach((camp, index) => {
-      expect(routeProgress(camp.progress)).toBeCloseTo(camp.route)
+      expect(journeyAtCurveParameter(curveParameterAt(camp.progress))).toBeCloseTo(camp.progress, 10)
       expect(altitudeAt(camp.progress)).toBe(camp.altitude)
       expect(activeCheckpoint(camp.progress)).toBe(index)
       expect(sectionUIAt(camp.progress)[index].interactive).toBe(true)
@@ -120,54 +109,52 @@ describe('expedition progression', () => {
   it('is continuous and strictly ascends in both time directions', () => {
     let previous = -1
     for (let i = 0; i <= 2000; i++) {
-      const value = routeProgress(i / 2000)
+      const value = curveParameterAt(i / 2000)
       expect(value).toBeGreaterThan(previous)
       if (previous >= 0) expect(value - previous).toBeLessThan(0.002)
       previous = value
     }
-    expect(routeProgress(-1)).toBe(0)
-    expect(routeProgress(2)).toBe(1)
+    expect(curveParameterAt(-1)).toBe(0)
+    expect(curveParameterAt(2)).toBe(1)
   })
-  it('slows near a camp without a scroll snap or a dead zone', () => {
-    const camp = checkpoints[2].progress
-    const midpoint = (checkpoints[1].progress + camp) / 2
-    const approach = routeProgress(camp) - routeProgress(camp - 0.001)
-    const travel = routeProgress(midpoint) - routeProgress(midpoint - 0.001)
-    expect(approach).toBeGreaterThan(0)
-    expect(approach).toBeLessThan(travel / 4)
+  it('normalizes equal scroll intervals to equal physical distances', () => {
+    const a = new Vector3(), b = new Vector3(), target = new Vector3()
+    const distances: number[] = []
+    cameraPose(0, a, target)
+    for (let i = 1; i <= 2000; i++) {
+      cameraPose(i / 2000, b, target)
+      distances.push(a.distanceTo(b)); a.copy(b)
+    }
+    expect(Math.max(...distances) / Math.min(...distances)).toBeLessThan(1.005)
+    expect(distances.reduce((sum, d) => sum + d, 0)).toBeCloseTo(journeyLength, 1)
+    const gaps = checkpoints.slice(1).map((camp, i) => (camp.progress - checkpoints[i].progress) * journeyLength)
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(1e-9)
   })
 })
 
 describe('first-person route', () => {
-  it('never freezes or reverses longitudinal motion anywhere, including Projects in both directions', () => {
-    for (const [width, height] of [[1440, 900], [390, 844]]) {
-      const position = new Vector3(), target = new Vector3(), previous = new Vector3()
-      for (const departing of [false, true]) {
-        exhibitionCameraPose(0, previous, target, width, width / height, departing)
-        let lastRoute = 0
-        for (let i = 1; i <= 10000; i++) {
-          const route = i / 10000, physical = cameraRouteAt(route)
-          exhibitionCameraPose(route, position, target, width, width / height, departing)
-          expect(physical).toBeGreaterThan(lastRoute)
-          expect(position.z).toBeLessThan(previous.z)
-          expect(position.distanceTo(previous)).toBeGreaterThan(.01)
-          expect(position.distanceTo(previous)).toBeLessThan(.4)
-          lastRoute = physical; previous.copy(position)
-        }
+  it('never freezes or reverses longitudinal motion in either direction', () => {
+    const position = new Vector3(), target = new Vector3(), previous = new Vector3()
+    for (const direction of [1, -1]) {
+      cameraPose(direction === 1 ? 0 : 1, previous, target)
+      for (let i = 1; i <= 4000; i++) {
+        const progress = direction === 1 ? i / 4000 : 1 - i / 4000
+        cameraPose(progress, position, target)
+        expect((previous.z - position.z) * direction).toBeGreaterThan(0)
+        expect(position.distanceTo(previous)).toBeCloseTo(journeyLength / 4000, 3)
+        previous.copy(position)
       }
     }
   })
-
-  it('keeps a visible slow drift and increasing altitude throughout the unchanged reading dwell', () => {
-    const positions = [.772, .785, .8, .815, .828].map(progress => {
+  it('keeps full travel and increasing altitude throughout the reading dwell', () => {
+    const positions = [.773, .785, .8, .815, .827].map(progress => {
       const position = new Vector3()
-      exhibitionCameraPose(routeProgress(progress), position, new Vector3(), 1440, 1.6)
+      cameraPose((progress), position, new Vector3())
       expect(sectionUIAt(progress)[4].interactive).toBe(true)
       return { position, altitude: altitudeAt(progress) }
     })
     for (let i = 1; i < positions.length; i++) {
       expect(positions[i].position.distanceTo(positions[i - 1].position)).toBeGreaterThan(.7)
-      expect(positions[i].position.y).toBeGreaterThan(positions[i - 1].position.y)
       expect(positions[i].altitude).toBeGreaterThan(positions[i - 1].altitude)
     }
   })
@@ -177,7 +164,7 @@ describe('first-person route', () => {
     let sideways = 0
     for (let i = 0; i <= 2000; i++) {
       cameraPose(i / 2000, position, target)
-      expect(position.y - groundHeight(position.x, position.z)).toBeCloseTo(experienceConfig.camera.eyeHeight)
+      expect(position.y - groundHeight(position.x, position.z)).toBeGreaterThan(1)
       expect(target.z).toBeLessThan(position.z)
       expect(position.toArray().every(Number.isFinite)).toBe(true)
       heading.copy(target).sub(position).normalize()
@@ -196,16 +183,16 @@ describe('first-person route', () => {
     const position = new Vector3(), target = new Vector3()
     for (let i = 0; i <= 2000; i++) {
       cameraPose(i / 2000, position, target)
-      const [x, y, z] = routeEyeAt(i / 2000)
+      const [x, y, z] = routeEyeAt(curveParameterAt(i / 2000))
       expect(Math.abs(position.x - x) + Math.abs(position.y - y) + Math.abs(position.z - z)).toBeLessThan(1e-9)
     }
   })
   it('retraces the same physical pose when descending', () => {
     const up = new Vector3(), upTarget = new Vector3(), down = new Vector3(), downTarget = new Vector3()
     for (const t of [0, 0.12, 0.25, 0.49, 0.73, 0.9, 1]) {
-      cameraPose(routeProgress(t), up, upTarget)
+      cameraPose((t), up, upTarget)
       cameraPose(1, down, downTarget)
-      cameraPose(routeProgress(t), down, downTarget)
+      cameraPose((t), down, downTarget)
       expect(down.equals(up)).toBe(true)
       expect(downTarget.equals(upTarget)).toBe(true)
     }

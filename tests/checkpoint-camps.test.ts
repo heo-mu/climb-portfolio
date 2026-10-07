@@ -76,7 +76,7 @@ describe('checkpoint arrival dressing', () => {
       const cloth = group.getObjectByName('checkpoint-cloth') as THREE.Mesh
       expect(cloth).toBeDefined()
       const camera = new THREE.PerspectiveCamera(64, 1.6, .08, 2400), target = new THREE.Vector3()
-      cameraPose(camp.route, camera.position, target); camera.lookAt(target); camera.updateMatrixWorld(true)
+      cameraPose(camp.progress, camera.position, target); camera.lookAt(target); camera.updateMatrixWorld(true)
       const positions = cloth.geometry.getAttribute('position')
       for (let i = 0; i < positions.count; i++) {
         const p = new THREE.Vector3().fromBufferAttribute(positions, i).applyMatrix4(cloth.matrixWorld).project(camera)

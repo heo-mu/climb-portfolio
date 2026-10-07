@@ -1,9 +1,10 @@
 import type { PerspectiveCamera } from 'three'
 import { campFog, homeFog, SpatialAnchorProjection } from './SpatialAnchorProjection'
-import { campZones, projectsPresentation, routeProgress, smoothstep } from './progress'
+import { campZones, projectsPresentation, smoothstep } from './progress'
 import type { CampZone, ExpeditionFrame } from './progress'
 
-const DOCK_TIME = .085 // s: time constant of docking and release
+const DOCK_TIME = .085 // s: reading-axis arrival
+const RELEASE_TIME = .025 // release input and visual presence together at full walking speed
 
 /**
  * While walking, a camp composition follows its spatial projection exactly.
@@ -16,7 +17,7 @@ export class ArrivalDock {
 
   ease(docked: boolean, delta: number) {
     const target = Number(docked)
-    const next = this.amount + (target - this.amount) * (1 - Math.exp(-delta / DOCK_TIME))
+    const next = this.amount + (target - this.amount) * (1 - Math.exp(-delta / (docked ? DOCK_TIME : RELEASE_TIME)))
     this.amount = Math.abs(target - next) < .002 ? target : next
     return this.amount
   }
@@ -63,7 +64,7 @@ export class SpatialSectionTransition {
     const stage = (index: number, section: HTMLElement, content: HTMLElement, backdrop: Stage['backdrop']): Stage => {
       const zone = campZones[index]
       const fog = index ? campFog : homeFog
-      return { zone, section, content, backdrop, approach: index ? new SpatialAnchorProjection(routeProgress(zone.plateau[0]), fog) : null, departure: new SpatialAnchorProjection(routeProgress(zone.plateau[1]), fog), dock: new ArrivalDock(), mode: '' }
+      return { zone, section, content, backdrop, approach: index ? new SpatialAnchorProjection(zone.plateau[0], fog) : null, departure: new SpatialAnchorProjection(zone.plateau[1], fog), dock: new ArrivalDock(), mode: '' }
     }
     this.stages = [
       stage(0, home, home.querySelector<HTMLElement>('.home-layout')!, value => home.style.setProperty('--home-backdrop', String(value))),
@@ -85,12 +86,12 @@ export class SpatialSectionTransition {
   }
 
   update(camera: PerspectiveCamera, frame: ExpeditionFrame) {
-    const changed = frame.route !== this.lastRoute || frame.reducedMotion !== this.lastReduced || frame.returningHome !== this.lastReturn || frame.projectsReady !== this.lastProjectsReady
+    const changed = frame.journeyProgress !== this.lastRoute || frame.reducedMotion !== this.lastReduced || frame.returningHome !== this.lastReturn || frame.projectsReady !== this.lastProjectsReady
     if (!changed && !this.pending) return
     // The camp being left on a Home return recedes; camps passed on the way stay quiet.
     if (frame.returningHome && !this.lastReturn) this.leaving = this.arrived
     if (!frame.returningHome) this.leaving = -1
-    this.lastRoute = frame.route
+    this.lastRoute = frame.journeyProgress
     this.lastReduced = frame.reducedMotion
     this.lastReturn = frame.returningHome
     this.lastProjectsReady = frame.projectsReady
@@ -101,7 +102,7 @@ export class SpatialSectionTransition {
       const arrived = frame.sections[index].interactive
       const [entry, exit] = stage.zone.plateau
       if (index === 4 && !frame.reducedMotion && !frame.returningHome && this.root.dataset.showcase === '3d') {
-        const { presence, departure } = projectsPresentation(frame.route, frame.projectsDeparting)
+        const { presence, departure } = projectsPresentation(frame.journeyProgress)
         if (arrived) return this.apply(stage, 'readable')
         if (!presence) return this.apply(stage, 'hidden')
         for (let i = 0; i < 16; i++) this.blend[i] = identity[i]
@@ -111,19 +112,19 @@ export class SpatialSectionTransition {
       }
       if (frame.reducedMotion) return this.apply(stage, arrived ? 'readable' : 'hidden')
       if (frame.returningHome && index !== 0 && index !== this.leaving) return this.apply(stage, 'hidden')
-      if (frame.progress >= entry && frame.progress <= exit) {
+      if (frame.journeyProgress >= entry && frame.journeyProgress <= exit) {
         stage.dock.park()
         return this.apply(stage, 'readable')
       }
-      const projection = stage.approach && frame.progress < entry ? stage.approach : stage.departure
+      const projection = stage.approach && frame.journeyProgress < entry ? stage.approach : stage.departure
       projection.update(camera)
       // The camp being left for Home holds its axes until the descent has passed
       // its plateau; otherwise it docks only where the walker will stand.
-      const docked = index === this.leaving ? frame.progress >= entry : arrived && frame.destination === index
+      const docked = index === this.leaving ? frame.journeyProgress >= entry : arrived && frame.destination === index
       const amount = stage.dock.ease(docked, frame.delta)
       this.pending ||= stage.dock.pending(docked)
       // Keep the first introduction clear of Home's receding statement.
-      const handoff = index === 1 && frame.progress < entry ? 1 - smoothstep(homeOpacity / .3) : 1
+      const handoff = index === 1 && frame.journeyProgress < entry ? 1 - smoothstep(homeOpacity / .3) : 1
       const opacity = projection.opacity * handoff + (1 - projection.opacity * handoff) * amount
       if (index === 0) homeOpacity = opacity
       if (opacity === 0) return this.apply(stage, 'hidden')

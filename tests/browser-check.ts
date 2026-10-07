@@ -100,8 +100,14 @@ async function expectArrived(page: Page, index: number, { atCenter = true } = {}
 }
 
 async function goToCamp(page: Page, index: number) {
+  // Let viewport resize handlers restore their normalized position before the
+  // test issues a new programmatic scroll (real navigation measures first).
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
   await scrollToProgress(page, camps[index].progress)
-  await expectArrived(page, index)
+  try { await expectArrived(page, index) } catch (error) {
+    console.error('Arrival state', await page.evaluate(() => ({ width: innerWidth, height: innerHeight, scroll: scrollY, range: document.documentElement.scrollHeight - innerHeight, altitude: document.querySelector('.altitude-number')?.textContent, location: document.querySelector('.current-location strong')?.textContent })))
+    throw error
+  }
 }
 
 /** Scripted scroll with a per-frame audit of the arrival invariants. */
@@ -717,21 +723,26 @@ try {
     await context.close()
   })
 
-  await step('Projects slow drift: rendered camera, altitude and trail advance and reverse together', async () => {
+  await step('Uniform journey: rendered camera, altitude and trail share distance in both directions', async () => {
     const { context, page } = await open({}, [], () => {
-      // Inspect the view matrix actually uploaded to WebGL, not a duplicate route calculation.
+      // Snow has an identity world transform and renders throughout the journey.
+      // Its uploaded model-view matrix is the real camera view; the standalone
+      // viewMatrix uniform is optimized out outside the reflective exhibit.
       const probe = window as unknown as { renderedEye: number[] }
       probe.renderedEye = []
-      const names = new WeakMap<WebGLUniformLocation, string>()
+      const names = new WeakMap<WebGLUniformLocation, { name: string; program: WebGLProgram }>()
+      const snowPrograms = new WeakSet<WebGLProgram>()
       const gl = WebGL2RenderingContext.prototype
       const location = gl.getUniformLocation, matrix = gl.uniformMatrix4fv
       gl.getUniformLocation = function (program, name) {
         const result = location.call(this, program, name)
-        if (result) names.set(result, name)
+        if (result) names.set(result, { name, program })
+        if (result && name === 'uCamera') snowPrograms.add(program)
         return result
       }
       gl.uniformMatrix4fv = function (location, transpose, data, ...offsets) {
-        if (location && names.get(location) === 'viewMatrix') {
+        const uniform = location ? names.get(location) : undefined
+        if (uniform?.name === 'modelViewMatrix' && snowPrograms.has(uniform.program)) {
           const m = data as Float32Array
           probe.renderedEye = [0, 4, 8].map(i => -(m[i] * m[12] + m[i + 1] * m[13] + m[i + 2] * m[14]))
         }
@@ -761,8 +772,9 @@ try {
     }))
     for (const [width, height] of [[1440, 900], [1366, 768]]) {
       await page.setViewportSize({ width, height })
+      await settle(page)
       const samples = []
-      for (const progress of [.772, .785, .8, .815, .828]) {
+      for (const progress of [.773, .785, .8, .815, .827]) {
         await scrollToProgress(page, progress)
         await expectArrived(page, 4, { atCenter: false })
         await settleCamera()
@@ -773,14 +785,13 @@ try {
         const previous = samples[i - 1], next = samples[i]
         expect(next.eye).toHaveLength(3)
         expect(Math.hypot(...next.eye.map((value, axis) => value - previous.eye[axis]))).toBeGreaterThan(.7)
-        expect(next.eye[1]).toBeGreaterThan(previous.eye[1])
         expect(next.eye[2]).toBeLessThan(previous.eye[2])
         expect(next.altitude).toBeGreaterThan(previous.altitude)
         expect(next.trail).toBeLessThan(previous.trail)
         expect(Math.hypot(...next.marker.map((value, axis) => value - previous.marker[axis]))).toBeGreaterThan(.1)
       }
       for (const index of [3, 2, 1, 0]) {
-        await scrollToProgress(page, [.772, .785, .8, .815, .828][index])
+        await scrollToProgress(page, [.773, .785, .8, .815, .827][index])
         await expectArrived(page, 4, { atCenter: false })
         await settleCamera()
         const back = await read(), outward = samples[index]
@@ -794,8 +805,38 @@ try {
         await settle(page)
         expect(await read()).toEqual(beforeSelection)
       }
-      console.log('Projects drift', width, samples.map(({ eye, altitude, trail }) => ({ eye, altitude, trail })))
+      console.log('Projects uniform travel', width, samples.map(({ eye, altitude, trail }) => ({ eye, altitude, trail })))
     }
+    // Equal native wheel input, rather than synthetic changes to application
+    // state: sample the rendered rail across all five legs in both directions.
+    await page.setViewportSize(desktop)
+    await goToCamp(page, 0)
+    await settleCamera()
+    await page.mouse.move(700, 100)
+    const wheelDelta = await page.evaluate(() => (document.documentElement.scrollHeight - innerHeight) / 50)
+    const forward = [await read()]
+    for (let i = 1; i <= 50; i++) {
+      await page.mouse.wheel(0, wheelDelta)
+      await settle(page)
+      await settleCamera()
+      forward.push(await read())
+      if (i % 10 === 0) await expectArrived(page, i / 10, { atCenter: false })
+    }
+    const distances = forward.slice(1).map((next, i) => Math.hypot(...next.eye.map((v, axis) => v - forward[i].eye[axis])))
+    expect(Math.max(...distances) / Math.min(...distances), 'equal wheel delta -> equal camera travel').toBeLessThan(1.03)
+    const legDistances = Array.from({ length: 5 }, (_, i) => distances.slice(i * 10, (i + 1) * 10).reduce((sum, d) => sum + d, 0))
+    expect(Math.max(...legDistances) / Math.min(...legDistances), 'equal camp-to-camp distance').toBeLessThan(1.01)
+    for (let i = 49; i >= 0; i--) {
+      await page.mouse.wheel(0, -wheelDelta)
+      await settle(page)
+      await settleCamera()
+      const back = await read(), outward = forward[i]
+      expect(Math.hypot(...back.eye.map((v, axis) => v - outward.eye[axis])), 'same rendered pose on descent').toBeLessThan(.15)
+      expect(Math.abs(back.altitude - outward.altitude)).toBeLessThanOrEqual(1)
+      expect(Math.abs(back.trail - outward.trail)).toBeLessThan(.1)
+      if (i % 10 === 0) await expectArrived(page, i / 10, { atCenter: false })
+    }
+    console.log('Uniform native wheel travel', { stepMin: Math.min(...distances), stepMax: Math.max(...distances), legDistances })
     await context.close()
   })
 

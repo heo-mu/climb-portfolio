@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { projects } from '../data/projects'
 import { checkpoints } from '../data/checkpoints'
 import { buildDisplay, captureFit, SCREEN_HEIGHT, type ShowcaseDevice } from './showcaseDevices'
-import { cameraFieldOfView, exhibitionCameraPose, showcaseSite, type TerrainSurface } from './terrain'
+import { cameraFieldOfView, cameraPose, showcaseSite, type TerrainSurface } from './terrain'
 import { contactPatch, seatOnGround } from './grounding'
 import { projectsPresentation, type ExpeditionFrame } from './progress'
 import { CaptureDecoder } from './CaptureDecoder'
@@ -34,6 +34,7 @@ type Exhibit = ShowcaseDevice & {
 
 const smootherstep = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
 const up = new THREE.Vector3(0, 1, 0)
+const screenHitCorners = [[-.5, -1], [.5, -1], [-.5, 1], [.5, 1]] as const
 const corners = (box: THREE.Box3) => [0, 1].flatMap(x => [0, 1].flatMap(y => [0, 1].map(z => new THREE.Vector3(x ? box.max.x : box.min.x, y ? box.max.y : box.min.y, z ? box.max.z : box.min.z))))
 const idle = () => new Promise<void>(resolve => typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(() => resolve(), { timeout: 200 }) : window.setTimeout(resolve, 16))
 
@@ -58,7 +59,7 @@ function exhibitEnvironment(renderer: THREE.WebGLRenderer) {
   return target
 }
 
-/** One stationary display in the mountain world; selection changes only its capture. */
+/** A camp display with a local reading frame; selection changes only its capture. */
 export class ProjectShowcase {
   readonly group = new THREE.Group()
   private exhibit: Exhibit | null = null
@@ -136,6 +137,9 @@ export class ProjectShowcase {
 
   /** The composition is set for the camp's own view, where every route to Projects arrives, in this viewport. */
   layout(camera: THREE.PerspectiveCamera, width: number, height: number) {
+    this.group.matrixAutoUpdate = false
+    this.group.matrix.identity()
+    this.group.updateMatrixWorld(true)
     this.cachedClearance = -1
     this.width = width; this.height = height
     const slot = this.exhibit
@@ -143,9 +147,9 @@ export class ProjectShowcase {
     // Measure the destination layout, not the previous viewport's 2D grid.
     if (this.root) this.root.dataset.showcase = width > 1024 && camera.aspect >= 1.2 ? '3d' : '2d'
     const view = this.view, target = new THREE.Vector3()
-    view.fov = cameraFieldOfView(showcaseSite.route, camera.aspect, width); view.aspect = camera.aspect; view.near = camera.near; view.far = camera.far
+    view.fov = cameraFieldOfView(showcaseSite.progress, camera.aspect, width); view.aspect = camera.aspect; view.near = camera.near; view.far = camera.far
     view.updateProjectionMatrix()
-    exhibitionCameraPose(showcaseSite.route, view.position, target, width, camera.aspect)
+    cameraPose(showcaseSite.progress, view.position, target)
     view.lookAt(target); view.updateMatrixWorld(true)
     // Parallel to the camp camera's image plane, not aimed at its off-centre eye position.
     // Only the display tilts: the support and footing remain vertical and grounded.
@@ -260,6 +264,14 @@ export class ProjectShowcase {
       face &&= p.y >= this.surface!.heightAt(p.x, p.z) + .15
       walk &&= p.y - showcaseSite.level >= WALK.height || lateral >= WALK.clearance
     }
+    // Validate the rotated parts' world bounds too: their exposed corners must
+    // not disappear into the rising edge of the new camp shelf.
+    const bounds = new THREE.Box3()
+    for (let start = 0; start < slot.hull.length && face; start += 8) {
+      bounds.makeEmpty()
+      for (let i = start; i < start + 8; i++) bounds.expandByPoint(this.corner.copy(slot.hull[i]).applyMatrix4(matrix))
+      for (const p of [bounds.min, bounds.max]) face &&= p.y >= this.surface!.heightAt(p.x, p.z) + .15
+    }
     return { right, top, left, bottom, screenLeft, screenRight, clear: nearest >= ROPE_CLEARANCE, face, walk }
   }
 
@@ -278,13 +290,19 @@ export class ProjectShowcase {
     const delta = this.lastTime < 0 ? 0 : Math.min(.1, Math.max(0, frame.time - this.lastTime))
     this.lastTime = frame.time
     // Captures load on the way up (or as soon as Projects is the destination), never at Home.
-    if (this.enabled && !this.loading && (frame.progress > .38 || frame.destination >= PROJECTS)) void this.loadCaptures()
+    if (this.enabled && !this.loading && (frame.journeyProgress > .38 || frame.destination >= PROJECTS)) void this.loadCaptures()
     let moving = false
     // Camera staging and presence share the same arrival envelope, in either direction.
-    if (this.enabled && (frame.route !== this.poseRoute || this.dirty)) {
-      this.poseRoute = frame.route
-      const { presence } = projectsPresentation(frame.route, frame.projectsDeparting)
-      const nearness = (this.displayed >= 0 || this.textures[this.selected]) && presence > 0 ? this.clearance(camera) * presence : 0
+    if (this.enabled && (frame.journeyProgress !== this.poseRoute || this.dirty)) {
+      this.poseRoute = frame.journeyProgress
+      const { presence } = projectsPresentation(frame.journeyProgress)
+      // UI persistence belongs to the display mount, never to the walking camera.
+      // Reuse the fitted camp view while the world continues at uniform speed.
+      if (frame.journeyProgress === checkpoints[PROJECTS].progress) this.group.matrix.identity()
+      else this.group.matrix.multiplyMatrices(camera.matrixWorld, this.view.matrixWorldInverse)
+      slot.group.scale.setScalar(slot.rest.scale * (1 - .12 * (1 - presence)))
+      this.group.updateMatrixWorld(true)
+      const nearness = (this.displayed >= 0 || this.textures[this.selected]) && presence > 0 ? this.clearance(this.view) * presence : 0
       if (nearness !== this.nearness) { this.nearness = nearness; this.apply(slot) }
     }
     const screen = slot.screen.material.uniforms
@@ -399,19 +417,19 @@ export class ProjectShowcase {
       if (this.linkState !== 'hidden') { link.style.visibility = 'hidden'; this.linkState = 'hidden' }
       return
     }
-    if (!this.dirty && this.linkState !== 'hidden' && this.linkRoute === frame.route) return
-    this.linkRoute = frame.route
+    if (!this.dirty && this.linkState !== 'hidden' && this.linkRoute === frame.journeyProgress) return
+    this.linkRoute = frame.journeyProgress
     slot.screen.updateWorldMatrix(true, false)
     let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity
-    for (const [x, y] of [[-.5, -1], [.5, -1], [-.5, 1], [.5, 1]]) {
+    for (const [x, y] of screenHitCorners) {
       const p = this.corner.set(x, y * SCREEN_HEIGHT / 2, 0).applyMatrix4(slot.screen.matrixWorld).project(camera)
       const px = (p.x + 1) / 2 * this.width, py = (1 - p.y) / 2 * this.height
       left = Math.min(left, px); right = Math.max(right, px); top = Math.min(top, py); bottom = Math.max(bottom, py)
     }
-    const state = [left, top, right - left, bottom - top].map(Math.round).join(',')
+    const x = Math.round(left), y = Math.round(top), w = Math.round(right - left), h = Math.round(bottom - top)
+    const state = `${x},${y},${w},${h}`
     if (state === this.linkState) return
     this.linkState = state
-    const [x, y, w, h] = state.split(',').map(Number)
     link.style.visibility = 'visible'
     link.style.transform = `translate(${x}px, ${y}px)`
     link.style.width = `${w}px`; link.style.height = `${h}px`

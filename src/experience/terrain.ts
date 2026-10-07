@@ -2,8 +2,8 @@
 import { experienceConfig } from '../config/experience'
 import { noise2, terrainNoise } from './noise'
 import { arrivalCamps } from './campLayout'
-import { ascentRouteControls, ROUTE_CONTROL_SPACING } from '../data/ascentRoute'
-import { cameraRouteAt, projectsPresentation } from './progress'
+import { ascentRouteControls, ROUTE_CONTROL_SPACING, curveParameterAt, writeRouteEye, overlookAt } from '../data/ascentRoute'
+import { projectsPresentation } from './progress'
 
 // 29 independent route controls: exit, ice approach, switchbacks, traverse,
 // sheltered camps, exposed ridge and final shoulder. World units are metres.
@@ -51,7 +51,7 @@ function surfaceHeight(offset: number, z: number, base: number) {
 }
 
 const campShelves = arrivalCamps.flatMap(camp => Array.from({ length: camp.tents }, (_, i) => {
-  const z = routePoint(camp.route).z - camp.tentDepth - i * 12, p = routePoint(-z / depth)
+  const z = routePoint(curveParameterAt(camp.progress)).z - camp.tentDepth - i * 12, p = routePoint(-z / depth)
   return { x: p.x + 7.2, z, height: surfaceHeight(7.2, z, p.y) }
 }))
 
@@ -75,16 +75,17 @@ function baseHeight(x: number, z: number) {
  * right across it (metres from the camp's eye position on the ground).
  */
 export const showcaseSite = (() => {
-  const route = arrivalCamps.find(camp => camp.id === 'high-camp')!.route
-  const origin = routePoint(route), ahead = routePoint(route + experienceConfig.camera.lookAhead / depth)
+  const route = arrivalCamps.find(camp => camp.id === 'high-camp')!.progress
+  const curveParameter = curveParameterAt(route)
+  const origin = routePoint(curveParameter), ahead = routePoint(curveParameter + experienceConfig.camera.lookAhead / depth)
   const forward = new THREE.Vector3(ahead.x - origin.x, 0, ahead.z - origin.z).normalize()
   const right = new THREE.Vector3(-forward.z, 0, forward.x)
   // Soft edges: short on the rope side (the corridor and the rope keep their ground), longer at the ends and
   // into the face, so the cut reads as a snow bench rather than a step.
-  const shelf = { forward: [6, 58] as const, right: [3.6, 48] as const, soft: { rope: .5, ends: 8, face: 14 } }
+  const shelf = { forward: [-55, 115] as const, right: [3.6, 72] as const, soft: { rope: .5, ends: 8, face: 14 } }
   const toWorld = (f: number, r: number) => new THREE.Vector3(origin.x + forward.x * f + right.x * r, 0, origin.z + forward.z * f + right.z * r)
   const center = toWorld(14, 0)
-  return { route, origin: new THREE.Vector3(origin.x, 0, origin.z), forward, right, shelf, toWorld, level: baseHeight(center.x, center.z) + .12 }
+  return { progress: route, origin: new THREE.Vector3(origin.x, 0, origin.z), forward, right, shelf, toWorld, level: baseHeight(center.x, center.z) + .12 }
 })()
 
 /** 0 outside the levelled exhibit shelf, 1 on it: each side falls off over its own soft edge. */
@@ -95,7 +96,7 @@ export function showcaseShelfBlend(x: number, z: number) {
   const across = r < shelf.right[0] ? 1 - ease(0, shelf.soft.rope, shelf.right[0] - r) : r > shelf.right[1] ? 1 - ease(0, shelf.soft.face, r - shelf.right[1]) : 1
   const along = 1 - ease(0, shelf.soft.ends, Math.max(shelf.forward[0] - f, 0, f - shelf.forward[1]))
   // The wider exhibition bench follows the curved corridor's exclusion, not only the camp's tangent.
-  const corridor = ease(3.2, 5, Math.abs(x - routePoint(-z / depth).x))
+  const corridor = ease(3.2, 5, x - routePoint(-z / depth).x)
   return across * along * corridor
 }
 
@@ -107,41 +108,23 @@ export function groundHeight(x: number, z: number) {
 export const exhibitionFocus = (route: number) => projectsPresentation(route).focus
 
 /** A portrait lens only around the exhibition; the rest of the ascent keeps its wide walking view. */
-export function cameraFieldOfView(route: number, aspect: number, width: number, departing = false) {
+export function cameraFieldOfView(route: number, aspect: number, width: number) {
   const base = aspect < .95 ? experienceConfig.camera.mobileFov : experienceConfig.camera.desktopFov
-  return width > 1024 && aspect >= 1.2 ? THREE.MathUtils.lerp(base, 42, projectsPresentation(route, departing).lens) : base
+  return width > 1024 && aspect >= 1.2 ? THREE.MathUtils.lerp(base, 42, projectsPresentation(route).lens) : base
 }
 
-export function cameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3) {
-  routePoint(route, position)
-  position.y = groundHeight(position.x, position.z) + experienceConfig.camera.eyeHeight
-  const lookT = route + experienceConfig.camera.lookAhead / depth
+export function cameraPose(journeyProgress: number, position: THREE.Vector3, target: THREE.Vector3, curveParameter = curveParameterAt(journeyProgress)) {
+  writeRouteEye(curveParameter, position)
+  const lookT = curveParameter + experienceConfig.camera.lookAhead / depth
   routePoint(lookT, target)
   if (lookT > 1) {
     const tangent = routeCurve.getTangent(1)
     target.addScaledVector(tangent, (lookT - 1) * depth)
     target.y = routePoint(1).y
   }
-  target.y += experienceConfig.camera.eyeHeight + experienceConfig.camera.lookLift
-}
-
-/** Framing offsets never replace the shared, strictly increasing physical rail. */
-export function exhibitionCameraPose(route: number, position: THREE.Vector3, target: THREE.Vector3, width: number, aspect: number, departing = false, worldRoute = cameraRouteAt(route)) {
-  const desktop = width > 1024 && aspect >= 1.2
-  const exhibition = desktop ? projectsPresentation(route, departing).focus : 0
-  cameraPose(worldRoute, position, target)
-  if (!desktop) return
-  // A local overlook at Projects exposes the devices' decks and their stone footings.
-  // Both shoulders blend back into the original walking camera, including in reverse.
-  position.y += exhibition * 8
-  target.y += exhibition * 7
-  // Longitudinal framing follows the physical rail too, so its release cannot
-  // cancel the small forward drift. The camp's established centre pose is kept.
-  position.x += showcaseSite.right.x * exhibition * 8
-  target.x += showcaseSite.right.x * exhibition * 8
-  const longitudinal = projectsPresentation(worldRoute).focus * showcaseSite.right.z * 8
-  position.z += longitudinal
-  target.z += longitudinal
+  target.x += 16 * overlookAt(curveParameter)
+  target.y += experienceConfig.camera.eyeHeight + experienceConfig.camera.lookLift + 7 * overlookAt(curveParameter)
+  target.y = THREE.MathUtils.lerp(target.y, position.y - .8, overlookAt(curveParameter))
 }
 
 export function terrainGeometry(detailStep = 1) {

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { curveParameterAt } from '../data/ascentRoute'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { cameraPose, routePoint, seeded, showcaseSite, terrainGeometry, TerrainSurface } from './terrain'
 import { rockGeometry, iceGeometry, tentGeometry, tentSeams, tentVestibule } from './props'
@@ -100,7 +101,7 @@ function addRoute(world: THREE.Group, surface: TerrainSurface, poleMaterial: THR
 }
 
 function addCamp(world: THREE.Group, surface: TerrainSurface, camp: CampSetup, poleMaterial: THREE.Material, shadowMaterial: THREE.Material, wind: { value: number }) {
-  const center = routePoint(camp.route), count = camp.tents
+  const center = routePoint(curveParameterAt(camp.progress)), count = camp.tents
   const fly = new THREE.MeshStandardMaterial({ color: camp.tentColor, roughness: .98, vertexColors: true, side: THREE.DoubleSide })
   const outer = new THREE.MeshStandardMaterial({ color: scenePalette.vestibule, roughness: .97, side: THREE.DoubleSide })
   const dark = new THREE.MeshStandardMaterial({ color: '#1d2b31', roughness: 1, side: THREE.DoubleSide })
@@ -111,7 +112,7 @@ function addCamp(world: THREE.Group, surface: TerrainSurface, camp: CampSetup, p
   const entrance = new THREE.ShapeGeometry(door, 16)
   const skirtGeometry = new THREE.BoxGeometry(2.45, .26, 3.68)
   const view = new THREE.PerspectiveCamera(64, 1.6, .08, 2400), target = new THREE.Vector3()
-  cameraPose(camp.route, view.position, target); view.lookAt(target); view.updateMatrixWorld(true)
+  cameraPose(camp.progress, view.position, target); view.lookAt(target); view.updateMatrixWorld(true)
   for (let i = 0; i < count; i++) {
     const initialZ = center.z - camp.tentDepth - i * 12
     const side = i === 2 ? -1 : 1
@@ -126,7 +127,7 @@ function addCamp(world: THREE.Group, surface: TerrainSurface, camp: CampSetup, p
         unevenness += Math.abs(surface.heightAt(px + dx, pz + depth) - plane)
       }
       const screen = new THREE.Vector3(px, h + .9, pz).project(view)
-      const framing = camp.route === 0 ? 0 : Math.max(0, screen.x - .63) * 35 + Math.abs(screen.x - .47) * 3
+      const framing = camp.progress === 0 ? 0 : Math.max(0, screen.x - .63) * 35 + Math.abs(screen.x - .47) * 3
       const score = (1 - normal.y) * 18 + unevenness + Math.abs(dz) * .025 + offset * .008 + framing
       if (score < best) { best = score; x = px; z = pz }
     }
@@ -155,7 +156,7 @@ function addCamp(world: THREE.Group, surface: TerrainSurface, camp: CampSetup, p
     }
     world.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(guyPoints), new THREE.LineBasicMaterial({ color: '#a59c82', transparent: true, opacity: .7 })))
   }
-  const a = new THREE.Vector3(center.x - (camp.route === 0 ? 10 : 5), 0, center.z - 22)
+  const a = new THREE.Vector3(center.x - (camp.progress === 0 ? 10 : 5), 0, center.z - 22)
   const b = new THREE.Vector3(center.x + 18, 0, center.z - 14)
   a.y = surface.heightAt(a.x, a.z); b.y = surface.heightAt(b.x, b.z)
   if (camp.prayer) addFlags(world, surface, a, b, poleMaterial, wind, camp.seed)
@@ -195,7 +196,7 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
   const poleMaterial = new THREE.MeshStandardMaterial({ color: '#556976', metalness: .35, roughness: .65 })
   const shadowMaterial = contactMaterial()
   const routeAnchors = addRoute(world, surface, poleMaterial)
-  addCamp(world, surface, { id: 'base-camp', route: 0, tents: 5, tentDepth: 14, tentColor: scenePalette.tents[0], prayer: true, seed: 0 }, poleMaterial, shadowMaterial, wind)
+  addCamp(world, surface, { id: 'base-camp', progress: 0, tents: 5, tentDepth: 14, tentColor: scenePalette.tents[0], prayer: true, seed: 0 }, poleMaterial, shadowMaterial, wind)
   yield
   for (const camp of arrivalCamps) {
     addCamp(world, surface, camp, poleMaterial, shadowMaterial, wind)

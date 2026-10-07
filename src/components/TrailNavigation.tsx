@@ -23,7 +23,7 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
   }, [])
   useLayoutEffect(() => {
     let drawn = -1
-    const nodes = checkpoints.map(camp => map.at(camp.route))
+    const nodes = checkpoints.map(camp => map.at(camp.progress))
     const update = (route: number) => {
       if (route === drawn) return
       drawn = currentRoute.current = route
@@ -34,8 +34,8 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
       const overlaps = nodes.some(node => Math.hypot(point.x - node.x, point.y - node.y) < .1)
       marker.current?.setAttribute('opacity', overlaps ? '0' : '1')
     }
-    update(fallback ? checkpoints[Math.max(0, active)].route : currentRoute.current)
-    if (!fallback) return controller.subscribe(frame => update(frame.worldRoute))
+    update(fallback ? checkpoints[Math.max(0, active)].progress : currentRoute.current)
+    if (!fallback) return controller.subscribe(frame => update(frame.journeyProgress))
   }, [controller, map, fallback, active])
   return <nav ref={root} className="checkpoint-nav trail-nav" aria-label="포트폴리오 등반 경로">
     <svg className="trail-map" viewBox={`0 0 ${map.width} ${map.height}`} aria-hidden="true">
@@ -44,7 +44,7 @@ export function TrailNavigation({ controller, active, fallback, navigate }: {
       <circle ref={marker} className="trail-current" cx={map.at(currentRoute.current).x} cy={map.at(currentRoute.current).y} r="3.5" />
     </svg>
     {checkpoints.map((camp, index) => {
-      const point = map.at(camp.route)
+      const point = map.at(camp.progress)
       return <button className="trail-checkpoint" key={camp.id} onClick={() => navigate(index)}
         style={{ left: point.x, top: point.y }} aria-current={active === index ? 'step' : undefined} aria-label={`${camp.index} ${camp.navigation}`}>
         <span className="nav-label">{camp.navigation}</span><span className="trail-node" aria-hidden="true" />

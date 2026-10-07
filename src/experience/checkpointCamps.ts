@@ -9,7 +9,7 @@ import { rockGeometry } from './props'
 
 export function arrivalPosition(camp: typeof arrivalCamps[number]) {
   const position = new THREE.Vector3(), target = new THREE.Vector3()
-  cameraPose(camp.route, position, target)
+  cameraPose(camp.progress, position, target)
   const forward = target.sub(position).setY(0).normalize(), right = forward.clone().cross(new THREE.Vector3(0, 1, 0))
   return position.addScaledVector(forward, camp.forward).addScaledVector(right, camp.right)
 }

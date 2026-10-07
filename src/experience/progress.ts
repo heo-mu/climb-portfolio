@@ -1,41 +1,20 @@
 import { checkpoints } from '../data/expedition'
-import { routeEyeAt } from '../data/ascentRoute'
+import { routeEyeAt, curveParameterAt } from '../data/ascentRoute'
 import { experienceConfig } from '../config/experience'
 
 export const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value))
 export const smoothstep = (value: number) => { const t = clamp(value); return t * t * (3 - 2 * t) }
 
-// Slow near every camp without locking, snapping, or intercepting native scrolling.
-export function routeProgress(progress: number) {
-  const p = clamp(progress)
-  const segment = checkpoints.findIndex((point, i) => i < checkpoints.length - 1 && p <= checkpoints[i + 1].progress && p >= point.progress)
-  const index = Math.max(0, segment)
-  const start = checkpoints[index].progress
-  const end = checkpoints[index + 1].progress
-  const local = (p - start) / (end - start)
-  const from = checkpoints[index].route
-  const to = checkpoints[index + 1].route
-  // Home releases promptly on the first wheel gesture, then eases into the
-  // longer first journey. The other camps retain their symmetric reading dwell.
-  const travel = index === 0
-    ? local * (2.5 + local * (-2.12 + .62 * local))
-    : .12 * local + .88 * smoothstep(local)
-  return from + (to - from) * travel
-}
-
-export function altitudeAt(progress: number) {
-  return altitudeAtRoute(cameraRouteAt(routeProgress(progress)))
-}
-
-export function altitudeAtRoute(route: number) {
-  const index = Math.max(0, checkpoints.findIndex((point, i) => i < checkpoints.length - 1 && route >= point.route && route <= checkpoints[i + 1].route))
+export function altitudeAt(journeyProgress: number) {
+  const route = clamp(journeyProgress)
+  const index = Math.max(0, checkpoints.findIndex((point, i) => i < checkpoints.length - 1 && route >= point.progress && route <= checkpoints[i + 1].progress))
   const from = checkpoints[index], to = checkpoints[index + 1]
-  const local = (route - from.route) / (to.route - from.route)
+  const local = (route - from.progress) / (to.progress - from.progress)
   return Math.round(from.altitude + (to.altitude - from.altitude) * local)
 }
 
 const { readableRange, arrivalDistance, homeDockDistance } = experienceConfig.content
-const eyeAt = (progress: number) => routeEyeAt(routeProgress(progress))
+const eyeAt = (progress: number) => routeEyeAt(curveParameterAt(progress))
 
 /** Progress at which the walker is `reach` metres from the eye pose at `anchor`. */
 function reachFrom(anchor: number, direction: -1 | 1, reach: number) {
@@ -72,53 +51,17 @@ const within = (progress: number, [from, to]: Span) => progress >= from - Number
 
 // One reversible presentation envelope, derived from the actual Projects arrival.
 // Frame the overlook before revealing the display; finish the reveal before input opens.
-const projectsArrival = campZones[4].arrival.map(routeProgress)
+const projectsArrival = campZones[4].arrival
 const projectsShoulder = projectsArrival[1] - projectsArrival[0]
 
-/** Physical rail progress. Reading consumes the same scroll span at a positive
- * speed; C1 shoulders reconnect to the walking rail without clamps or reversals.
- * Independent of viewport, selection, and travel direction. */
-export function cameraRouteAt(route: number) {
-  // Keep slow travel through the visible departure, then regain travel speed.
-  // This gives the stationary display time to recede before the terrain occludes it.
-  const entry = projectsArrival[0] - projectsShoulder * .6
-  const exit = projectsArrival[1] + projectsShoulder * .6
-  const start = projectsArrival[0] - projectsShoulder * 3
-  const end = projectsArrival[1] + projectsShoulder * 3
-  if (route <= start || route >= end) return route
-  const speed = .12, center = checkpoints[4].route
-  const slow = (r: number) => center + (r - center) * speed
-  if (route >= entry && route <= exit) return slow(route)
-  const a = route < entry ? start : exit, b = route < entry ? entry : end
-  const y0 = route < entry ? start : slow(exit), y1 = route < entry ? slow(entry) : end
-  const m0 = route < entry ? 1 : speed, m1 = route < entry ? speed : 1
-  const t = (route - a) / (b - a), t2 = t * t, t3 = t2 * t
-  return (2 * t3 - 3 * t2 + 1) * y0 + (t3 - 2 * t2 + t) * (b - a) * m0
-    + (-2 * t3 + 3 * t2) * y1 + (t3 - t2) * (b - a) * m1
-}
-export function projectsPresentation(route: number, departing = false) {
+export function projectsPresentation(route: number) {
   const [entry, exit] = projectsArrival
   const ramp = (from: number, to: number) => smoothstep((route - from) / (to - from))
   const focus = ramp(entry - projectsShoulder, entry - projectsShoulder * .15)
     * (1 - ramp(exit + projectsShoulder * .15, exit + projectsShoulder))
   const presence = ramp(entry - projectsShoulder * .15, entry)
     * (1 - ramp(exit, exit + projectsShoulder * .15))
-  if (!departing) return { focus, lens: focus, presence, departure: 0 }
-  const distance = Math.max(entry - route, route - exit, 0) / projectsShoulder
-  // The exhibit stays fixed. Widen the lens first, then release the walking
-  // camera, so the screen recedes instead of sticking to the viewport.
-  const departure = smoothstep(distance / .6)
-  return { focus: 1 - smoothstep((distance - .4) / .6), lens: 1 - departure, presence: 1 - departure, departure }
-}
-
-/** Exit framing is earned by a visit, never applied to a first approach. */
-export class ProjectsDeparture {
-  private visited = false
-  update(route: number, arrived: boolean) {
-    if (arrived) this.visited = true
-    else if (projectsPresentation(route).focus === 0) this.visited = false
-    return this.visited && !arrived
-  }
+  return { focus, lens: focus, presence, departure: 1 - presence }
 }
 
 // Arrival is spatial, never dependent on a second animation clock.
@@ -159,13 +102,12 @@ export function sectionUIAt(progress: number, returningHome = false, projectsRea
 /** Silence (ms) that ends a wheel gesture; momentum and free-spinning wheels fire far more often. */
 const WHEEL_GESTURE_GAP = 180
 
-/** `route` controls presentation timing; `worldRoute` is shared physical travel for
- * camera, altitude and trail. `destination` is the camp at the scroll target. */
-export type ExpeditionFrame = { progress: number; route: number; worldRoute: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; projectsReady?: boolean; projectsDeparting?: boolean; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
+/** journeyProgress is damped normalized distance: camera, altitude, UI and trail share it.
+ * curveParameter is only the LUT output for the legacy mountain geometry. */
+export type ExpeditionFrame = { journeyProgress: number; curveParameter: number; altitude: number; active: number; destination: number; sections: readonly SectionUIState[]; projectsReady?: boolean; returningHome: boolean; delta: number; time: number; reducedMotion: boolean }
 type Listener = (frame: ExpeditionFrame) => void
 
 export class ScrollController {
-  private projectsDeparture = new ProjectsDeparture()
   private projectsReady = false
   setProjectsReady = (ready: boolean) => { this.projectsReady = ready }
   private listeners = new Set<Listener>()
@@ -174,11 +116,12 @@ export class ScrollController {
   private raf = 0
   private lastTime = 0
   private resizeRaf = 0
+  private rangeObserver: ResizeObserver | null = null
   private range = 1
   private media = window.matchMedia('(prefers-reduced-motion: reduce)')
   private started = false
   private returningHome = false
-  private frame: ExpeditionFrame = { progress: 0, route: 0, worldRoute: 0, altitude: checkpoints[0].altitude, active: 0, destination: 0, sections: sectionUIAt(0), projectsReady: false, returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
+  private frame: ExpeditionFrame = { journeyProgress: 0, curveParameter: 0, altitude: checkpoints[0].altitude, active: 0, destination: 0, sections: sectionUIAt(0), projectsReady: false, returningHome: false, delta: 0, time: 0, reducedMotion: this.media.matches }
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener)
@@ -263,10 +206,7 @@ export class ScrollController {
     const sections = sectionUIAt(this.current, returningHome, this.projectsReady)
     // Returning Home names its destination at once; the marker shows the descent.
     const active = returningHome ? 0 : activeCheckpoint(this.current, this.frame.active)
-    const route = routeProgress(this.current)
-    const worldRoute = cameraRouteAt(route)
-    const projectsDeparting = this.projectsDeparture.update(route, sections[4].interactive) && !reducedMotion
-    this.frame = { progress: this.current, route, worldRoute, altitude: altitudeAtRoute(worldRoute), active, destination: dockingCheckpoint(this.target), sections, projectsReady: this.projectsReady, projectsDeparting, returningHome, delta, time: time / 1000, reducedMotion }
+    this.frame = { journeyProgress: this.current, curveParameter: curveParameterAt(this.current), altitude: altitudeAt(this.current), active, destination: dockingCheckpoint(this.target), sections, projectsReady: this.projectsReady, returningHome, delta, time: time / 1000, reducedMotion }
     this.emit()
     this.raf = requestAnimationFrame(this.tick)
   }
@@ -275,11 +215,15 @@ export class ScrollController {
     if (this.started) return
     this.started = true
     this.measure()
-    this.current = this.target = clamp(initialProgress)
-    this.frame = { ...this.frame, progress: this.current, route: routeProgress(this.current), worldRoute: cameraRouteAt(routeProgress(this.current)), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current, false, this.projectsReady), projectsReady: this.projectsReady }
-    window.scrollTo({ top: this.current * this.range, behavior: 'instant' })
+    window.scrollTo({ top: clamp(initialProgress) * this.range, behavior: 'instant' })
+    this.current = this.target = clamp(window.scrollY / this.range)
+    this.frame = { ...this.frame, journeyProgress: this.current, curveParameter: curveParameterAt(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current, false, this.projectsReady), projectsReady: this.projectsReady }
     window.addEventListener('scroll', this.onScroll, { passive: true })
     window.addEventListener('resize', this.onResize)
+    // svh layout can settle after the viewport resize event. Observe the actual
+    // document size so the cached range stays correct without scroll-time reads.
+    this.rangeObserver = new ResizeObserver(this.onResize)
+    this.rangeObserver.observe(document.documentElement)
     window.addEventListener('wheel', this.onWheel, { passive: true })
     window.addEventListener('touchstart', this.cancelReturn, { passive: true })
     window.addEventListener('keydown', this.onKey)
@@ -293,8 +237,11 @@ export class ScrollController {
     this.trailingWheel = this.returningHome && performance.now() - this.lastWheel < WHEEL_GESTURE_GAP
     this.frame = { ...this.frame, returningHome: this.returningHome, sections: sectionUIAt(this.current, this.returningHome, this.projectsReady), active: this.returningHome ? 0 : this.frame.active }
     this.emit()
-    if (instant || this.media.matches) this.current = this.target = clamp(progress)
-    window.scrollTo({ top: clamp(progress) * this.range, behavior: instant || this.media.matches ? 'instant' : 'smooth' })
+    const immediate = instant || this.media.matches
+    window.scrollTo({ top: clamp(progress) * this.range, behavior: immediate ? 'instant' : 'smooth' })
+    // Native scroll rounds to device pixels. Use the applied position even when
+    // it equals the previous pixel and therefore produces no scroll event.
+    if (immediate) this.current = this.target = clamp(window.scrollY / this.range)
     if (this.returningHome) this.watchReturn()
   }
 
@@ -303,6 +250,8 @@ export class ScrollController {
     cancelAnimationFrame(this.raf)
     cancelAnimationFrame(this.resizeRaf)
     clearTimeout(this.returnWatch)
+    this.rangeObserver?.disconnect()
+    this.rangeObserver = null
     window.removeEventListener('scroll', this.onScroll)
     window.removeEventListener('resize', this.onResize)
     window.removeEventListener('wheel', this.onWheel)

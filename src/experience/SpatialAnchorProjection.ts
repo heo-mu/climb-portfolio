@@ -1,5 +1,5 @@
 import { Matrix4, PerspectiveCamera, Vector3 } from 'three'
-import { cameraFieldOfView, exhibitionCameraPose } from './terrain'
+import { cameraFieldOfView, cameraPose } from './terrain'
 import { smoothstep } from './progress'
 
 // The scene keeps looking uphill. Ahead of an anchor this is an ordinary
@@ -37,7 +37,7 @@ export class SpatialAnchorProjection {
   constructor(private anchorRoute = 0, private fog: AnchorFog = homeFog) {}
 
   resize(camera: PerspectiveCamera, width: number, height: number) {
-    exhibitionCameraPose(this.anchorRoute, this.origin, this.target, width, camera.aspect)
+    cameraPose(this.anchorRoute, this.origin, this.target)
     this.anchorCamera.position.copy(this.origin)
     this.anchorCamera.lookAt(this.target)
     this.anchorCamera.updateMatrixWorld()

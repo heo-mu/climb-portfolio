@@ -3,10 +3,10 @@ import * as THREE from 'three'
 import { ProjectShowcase } from '../src/experience/ProjectShowcase'
 import { SCREEN_HEIGHT, captureFit } from '../src/experience/showcaseDevices'
 import { guideRoute } from '../src/experience/grounding'
-import { cameraFieldOfView, exhibitionCameraPose, exhibitionFocus, groundHeight, routePoint, showcaseShelfBlend, showcaseSite, terrainGeometry, TerrainSurface } from '../src/experience/terrain'
+import { cameraFieldOfView, cameraPose, exhibitionFocus, groundHeight, routePoint, showcaseShelfBlend, showcaseSite, terrainGeometry, TerrainSurface } from '../src/experience/terrain'
 import { projects } from '../src/data/projects'
 import * as captures from '../src/experience/projectCaptures'
-import { campZones, projectsPresentation, routeProgress, type ExpeditionFrame } from '../src/experience/progress'
+import { campZones, projectsPresentation, type ExpeditionFrame } from '../src/experience/progress'
 
 const terrain = terrainGeometry(), surface = new TerrainSurface(terrain)
 const world = new THREE.Group(), showcase = new ProjectShowcase()
@@ -21,8 +21,8 @@ afterAll(() => {
 
 /** The camp's own view, where every route to Projects arrives. */
 function campCamera(width: number, height: number) {
-  const camera = new THREE.PerspectiveCamera(cameraFieldOfView(showcaseSite.route, width / height, width), width / height, .08, 2400), target = new THREE.Vector3()
-  exhibitionCameraPose(showcaseSite.route, camera.position, target, width, width / height); camera.lookAt(target); camera.updateMatrixWorld(true)
+  const camera = new THREE.PerspectiveCamera(cameraFieldOfView(showcaseSite.progress, width / height, width), width / height, .08, 2400), target = new THREE.Vector3()
+  cameraPose(showcaseSite.progress, camera.position, target); camera.lookAt(target); camera.updateMatrixWorld(true)
   showcase.layout(camera, width, height)
   world.updateMatrixWorld(true)
   return camera
@@ -49,7 +49,7 @@ describe('Projects exhibit', () => {
     let time = 0
     const tick = (reducedMotion = false) => {
       time += .04
-      exhibit.update({ time, progress: .75, route: .75, destination: 4, reducedMotion, returningHome: false, sections: [] } as unknown as ExpeditionFrame, camera)
+      exhibit.update({ time, journeyProgress: .8, curveParameter: 0, destination: 4, reducedMotion, returningHome: false, sections: [] } as unknown as ExpeditionFrame, camera)
       scene.updateMatrixWorld(true)
       expect(group.matrixWorld.toArray()).toEqual(pose)
       expect(group.visible).toBe(exhibit.ready)
@@ -233,34 +233,45 @@ describe('Projects exhibit', () => {
       const { group, screen } = showcase.structures.items[0]
       const presence = (route: number) => {
         camera.fov = cameraFieldOfView(route, width / height, width); camera.updateProjectionMatrix()
-        exhibitionCameraPose(route, camera.position, target, width, width / height); camera.lookAt(target); camera.updateMatrixWorld(true)
-        showcase.update({ route, time: route, progress: 0, destination: 0, sections: [] } as unknown as ExpeditionFrame, camera)
+        cameraPose(route, camera.position, target); camera.lookAt(target); camera.updateMatrixWorld(true)
+        showcase.update({ journeyProgress: route, time: route, curveParameter: 0, destination: 0, sections: [] } as unknown as ExpeditionFrame, camera)
         return screen.material.uniforms.presence.value as number
       }
       for (const route of [.6, .69, .72]) { expect(presence(route)).toBe(0); expect(group.visible).toBe(false) }
-      const [entry, exit] = campZones[4].arrival.map(routeProgress)
+      const [entry, exit] = campZones[4].arrival
       for (let i = 0; i <= 20; i++) expect(presence(entry + (exit - entry) * i / 20), `whole exhibit @${width}, sample ${i}`).toBe(1)
+      // The camera travels the entire reading distance. Check real world-space
+      // sightlines after the local mount transforms, not only its opacity flag.
+      for (const fraction of [0, .25, .5, .75, 1]) {
+        presence(entry + (exit - entry) * fraction)
+        for (const corner of screenCorners(screen)) {
+          const ray = new THREE.Vector3(), distance = camera.position.distanceTo(corner)
+          for (let step = 1; step < distance; step += 2) {
+            ray.lerpVectors(camera.position, corner, step / distance)
+            expect(ray.y - surface.heightAt(ray.x, ray.z), `unoccluded reading screen @${width}, ${fraction}`).toBeGreaterThan(.05)
+          }
+        }
+      }
       const values = Array.from({ length: 151 }, (_, i) => presence(.72 + i * .0004))
       expect(values.some(value => value > 0 && value < 1), `spatial fade @${width}`).toBe(true)
       for (let i = 150; i >= 0; i--) expect(presence(.72 + i * .0004)).toBeCloseTo(values[i], 8)
     }
   })
 
-  it('leaves the fixed exhibit behind with a wider view in either direction, without clipping its fade', () => {
-    const [entry, exit] = campZones[4].arrival.map(routeProgress), span = exit - entry
+  it('keeps a readable local mount and recedes symmetrically without slowing the camera', () => {
+    const [entry, exit] = campZones[4].arrival, span = exit - entry
     for (const [width, height] of [[1920, 1080], [1440, 900], [1280, 800]]) {
       const camera = campCamera(width, height), target = new THREE.Vector3()
-      const { group, screen } = showcase.structures.items[0], rest = group.matrixWorld.toArray()
+      const { screen } = showcase.structures.items[0]
       for (const direction of [-1, 1]) {
         let initialWidth = 0
         for (const amount of [0, .1, .2, .3, .4, .5, .6]) {
           const route = (direction < 0 ? entry : exit) + direction * span * amount
-          exhibitionCameraPose(route, camera.position, target, width, camera.aspect, true)
-          camera.fov = cameraFieldOfView(route, camera.aspect, width, true)
+          cameraPose(route, camera.position, target)
+          camera.fov = cameraFieldOfView(route, camera.aspect, width)
           camera.updateProjectionMatrix(); camera.lookAt(target); camera.updateMatrixWorld(true)
-          showcase.update({ route, time: route, progress: 0, destination: 0, sections: [], projectsDeparting: true } as unknown as ExpeditionFrame, camera)
-          expect(group.matrixWorld.toArray(), 'stationary in the world').toEqual(rest)
-          expect(screen.material.uniforms.presence.value, `whole frame @${width}, ${direction}, ${amount}`).toBeCloseTo(projectsPresentation(route, true).presence, 6)
+          showcase.update({ journeyProgress: route, time: route, curveParameter: 0, destination: 0, sections: [] } as unknown as ExpeditionFrame, camera)
+          expect(screen.material.uniforms.presence.value, `whole frame @${width}, ${direction}, ${amount}`).toBeCloseTo(projectsPresentation(route).presence, 6)
           const corners = screenCorners(screen).map(point => point.project(camera))
           const projectedWidth = Math.max(...corners.map(p => p.x)) - Math.min(...corners.map(p => p.x))
           if (!amount) initialWidth = projectedWidth
@@ -280,15 +291,15 @@ describe('Projects exhibit', () => {
   })
 
   it('confines the portrait lens and camera staging to Projects, with continuous approach and exit', () => {
-    for (const route of [0, .1, .25, .5, .69, .82, 1]) {
+    for (const route of [0, .1, .25, .5, .69, .91, 1]) {
       expect(exhibitionFocus(route)).toBe(0)
       expect(cameraFieldOfView(route, 16 / 9, 1920)).toBe(64)
     }
-    expect(cameraFieldOfView(.75, 16 / 9, 1920)).toBe(42)
+    expect(cameraFieldOfView(.8, 16 / 9, 1920)).toBe(42)
     expect(cameraFieldOfView(.75, 390 / 844, 390)).toBe(72)
     const a = new THREE.Vector3(), b = new THREE.Vector3(), target = new THREE.Vector3()
     for (let route = .7; route < .815; route += .0001) {
-      exhibitionCameraPose(route, a, target, 1920, 16 / 9); exhibitionCameraPose(route + .0001, b, target, 1920, 16 / 9)
+      cameraPose(route, a, target); cameraPose(route + .0001, b, target)
       expect(a.distanceTo(b)).toBeLessThan(.35)
       expect(a.y - groundHeight(a.x, a.z), `camera above ground at ${route}`).toBeGreaterThan(1)
     }
