@@ -7,7 +7,7 @@ import { contactPatch, seatOnGround } from './grounding'
 import { projectsPresentation, type ExpeditionFrame } from './progress'
 import { loadProjectCapture } from './projectCaptures'
 
-const CROSSFADE = .22
+const CROSSFADE = .28
 const PROJECTS = checkpoints.findIndex(camp => camp.id === 'high-camp')
 /** Where the exhibit may stand, in the High Camp view (metres): ahead of the plateau the walker can rest on. */
 const ANCHOR = { forward: [30, 36, 42], right: 38 }
@@ -70,8 +70,10 @@ export class ProjectShowcase {
   private displayed = -1
   private transition = 1
   private textures: (THREE.Texture | null)[] = projects.map(() => null)
+  private bitmaps: ImageBitmap[] = []
   private preparing = new Map<number, Promise<void>>()
   private enabled = false
+  private layoutReady = false
   private loading = false
   private disposed = false
   private dirty = true
@@ -89,13 +91,18 @@ export class ProjectShowcase {
   private revealPoints: THREE.Vector3[] = []
 
   constructor(private renderer: THREE.WebGLRenderer | null = null, private root: HTMLElement | null = null) {
+    this.link = root?.querySelector<HTMLAnchorElement>('.showcase-link') ?? null
     this.group.name = 'project-showcase'
     this.placeholder.colorSpace = THREE.SRGBColorSpace
     this.placeholder.needsUpdate = true
     if (renderer) this.environment = exhibitEnvironment(renderer)
   }
 
-  private get link() { return this.root?.querySelector<HTMLAnchorElement>('.showcase-link') ?? null }
+  private link: HTMLAnchorElement | null = null
+  private clearanceView = new THREE.Matrix4()
+  private clearanceProjection = new THREE.Matrix4()
+  private cachedClearance = -1
+  private reportedPresence = -1
   build(world: THREE.Group, surface: TerrainSurface, shadow: () => THREE.Material) {
     this.surface = surface
     const device = buildDisplay(this.environment?.texture ?? null, this.placeholder)
@@ -127,6 +134,7 @@ export class ProjectShowcase {
 
   /** The composition is set for the camp's own view, where every route to Projects arrives, in this viewport. */
   layout(camera: THREE.PerspectiveCamera, width: number, height: number) {
+    this.cachedClearance = -1
     this.width = width; this.height = height
     const slot = this.exhibit
     if (!this.surface || !slot) return
@@ -175,6 +183,7 @@ export class ProjectShowcase {
       }
     }
     this.enabled = width > 1024 && camera.aspect >= 1.2 && placement !== null
+    this.layoutReady = true
     const { anchor, scale } = placement ?? { anchor: showcaseSite.toWorld(ANCHOR.forward[0], ANCHOR.right), scale: SCALE.min }
     slot.group.position.copy(anchor); slot.group.quaternion.copy(quaternion); slot.group.scale.setScalar(scale)
     seatOnGround(slot.group, slot.footing, this.surface, slot.bury * scale)
@@ -206,7 +215,7 @@ export class ProjectShowcase {
     const root = this.root
     const labels = root ? Array.from(root.querySelectorAll<HTMLElement>('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect()).filter(rect => rect.width) : []
     const right = labels.length ? Math.min(...labels.map(rect => rect.left)) - 32 : width * .86
-    const text = root?.querySelector<HTMLElement>('#high-camp .project-preview')
+    const text = root?.querySelector<HTMLElement>('#high-camp .project-index')
     let left = width * .34
     if (text) {
       // Offsets ignore the spatial transforms the panel may be carrying right now.
@@ -301,6 +310,14 @@ export class ProjectShowcase {
 
   /** A spatial fade only after the complete exhibit clears terrain and viewport edges. */
   private clearance(camera: THREE.PerspectiveCamera) {
+    if (this.cachedClearance >= 0 && this.clearanceView.equals(camera.matrixWorld) && this.clearanceProjection.equals(camera.projectionMatrix)) return this.cachedClearance
+    this.clearanceView.copy(camera.matrixWorld)
+    this.clearanceProjection.copy(camera.projectionMatrix)
+    this.cachedClearance = this.measureClearance(camera)
+    return this.cachedClearance
+  }
+
+  private measureClearance(camera: THREE.PerspectiveCamera) {
     let clearance = Infinity, margin = Infinity
     for (const point of this.revealPoints) {
       const projected = this.corner.copy(point).project(camera)
@@ -348,7 +365,17 @@ export class ProjectShowcase {
     if (existing) return existing
     const pending = loadProjectCapture(index).then(async image => {
       if (this.disposed) return
-      const texture = new THREE.Texture(image)
+      // Keep the original URL/data intact. Bound only the in-memory GPU copy:
+      // 4K covers the exhibit at desktop DPR 2 without five 8K uploads blocking scroll.
+      const limit = Math.min(4096, this.renderer?.capabilities.maxTextureSize ?? 4096)
+      const ratio = Math.min(1, limit / Math.max(image.naturalWidth, image.naturalHeight))
+      const bitmap = ratio < 1 && typeof createImageBitmap === 'function' ? await createImageBitmap(image, {
+        resizeWidth: Math.round(image.naturalWidth * ratio), resizeHeight: Math.round(image.naturalHeight * ratio),
+        resizeQuality: 'high', imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none',
+      }) : null
+      if (this.disposed) { bitmap?.close(); return }
+      const texture = new THREE.Texture(bitmap ?? image)
+      if (bitmap) texture.flipY = false
       texture.colorSpace = THREE.SRGBColorSpace
       texture.anisotropy = Math.min(16, this.renderer?.capabilities.getMaxAnisotropy() ?? 1)
       texture.magFilter = THREE.LinearFilter
@@ -357,8 +384,9 @@ export class ProjectShowcase {
       texture.needsUpdate = true
       // Upload between frames, so the first sight of a capture never stalls the walk.
       await idle()
-      if (this.disposed) { texture.dispose(); return }
-      this.renderer?.initTexture(texture)
+      if (this.disposed) { texture.dispose(); bitmap?.close(); return }
+      try { this.renderer?.initTexture(texture) } catch (error) { texture.dispose(); bitmap?.close(); throw error }
+      if (bitmap) this.bitmaps.push(bitmap)
       this.textures[index] = texture
       this.dirty = true
     }).finally(() => this.preparing.delete(index))
@@ -376,6 +404,7 @@ export class ProjectShowcase {
       if (this.linkState !== 'hidden') { link.style.visibility = 'hidden'; this.linkState = 'hidden' }
       return
     }
+    if (!this.dirty && this.linkState !== 'hidden') return
     slot.screen.updateWorldMatrix(true, false)
     let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity
     for (const [x, y] of [[-.5, -1], [.5, -1], [-.5, 1], [.5, 1]]) {
@@ -436,11 +465,12 @@ export class ProjectShowcase {
     return { enabled: this.enabled, items: slot ? [{ group: slot.group, screen: slot.screen, footing: slot.footing, bury: slot.bury, scale: slot.rest.scale }] : [] }
   }
 
-  get ready() { return !!this.exhibit && (!this.enabled || this.displayed >= 0) }
+  get ready() { return !!this.exhibit && this.layoutReady && (!this.enabled || this.displayed >= 0) }
 
   /** What the exhibit shows, on the root for the DOM and its checks: the settled project and whether its capture is lit. */
   private report() {
-    if (this.root) this.root.dataset.showcasePresence = String(this.enabled ? this.nearness : 0)
+    const presence = this.enabled ? this.nearness : 0
+    if (this.root && this.reportedPresence !== presence) { this.root.dataset.showcasePresence = String(presence); this.reportedPresence = presence }
     const settled = this.displayed === this.selected && this.transition === 1
     const state = this.enabled ? `${settled ? projects[this.selected].slug : ''}|${settled}` : ''
     if (state === this.reported || !this.root) return
@@ -453,6 +483,7 @@ export class ProjectShowcase {
   dispose() {
     this.disposed = true
     this.textures.forEach(texture => texture?.dispose())
+    this.bitmaps.forEach(bitmap => bitmap.close())
     this.exhibit?.footing.dispose()
     this.placeholder.dispose()
     this.environment?.dispose()

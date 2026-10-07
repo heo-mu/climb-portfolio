@@ -19,6 +19,7 @@ export function Expedition() {
   const [fallback, setFallback] = useState(false)
   const root = useRef<HTMLElement>(null)
   const lastProgress = useRef(0)
+  const focusProjectsOnArrival = useRef(false)
   const [initialProgress] = useState(() => {
     if (location.hash) return checkpoints.find(camp => `#${camp.id}` === location.hash)?.progress ?? 0
     if (navigationType === 'POP') {
@@ -39,6 +40,7 @@ export function Expedition() {
   useLayoutEffect(() => {
     document.title = 'Heo Chang Mu - Portfolio'
     const sections = Array.from(root.current!.querySelectorAll<HTMLElement>('[data-checkpoint]'))
+    const projectsHeading = root.current!.querySelector<HTMLElement>('#title-high-camp')
     if (fallback) {
       sections.forEach(section => { section.removeAttribute('style'); section.inert = false; section.removeAttribute('aria-hidden') })
       const camp = checkpoints.reduce((best, item) => Math.abs(item.progress - lastProgress.current) < Math.abs(best.progress - lastProgress.current) ? item : best)
@@ -78,6 +80,13 @@ export function Expedition() {
         if (focused instanceof HTMLElement && sections.some(section => section.contains(focused))) focused.blur()
         previousActive = frame.active
       }
+      if (focusProjectsOnArrival.current) {
+        if (frame.sections[4].interactive) {
+          focusProjectsOnArrival.current = false
+          // The scene applies visibility later in this same controller dispatch.
+          queueMicrotask(() => { if (!sections[4].inert) projectsHeading?.focus({ preventScroll: true }) })
+        } else if (frame.destination !== 4) focusProjectsOnArrival.current = false
+      }
     })
     return () => { unsubscribe(); controller.stop() }
   }, [controller, fallback, initialProgress])
@@ -98,7 +107,7 @@ export function Expedition() {
   }, [controller, fallback])
 
   return <main ref={root} className={`expedition ${fallback ? 'reading-mode' : ''}`} style={fallback ? undefined : { height: `${experienceConfig.route.scrollScreens * 100}svh` }}>
-    <a className="skip-link" href="#high-camp" onClick={event => { if (!fallback) { event.preventDefault(); controller.goTo(checkpoints.find(camp => camp.id === 'high-camp')!.progress, true); requestAnimationFrame(() => document.getElementById('title-high-camp')?.focus({ preventScroll: true })) } }}>프로젝트로 바로 가요</a>
+    <a className="skip-link" href="#high-camp" onClick={event => { if (!fallback) { event.preventDefault(); controller.goTo(checkpoints.find(camp => camp.id === 'high-camp')!.progress, true); focusProjectsOnArrival.current = true } }}>프로젝트로 바로 가요</a>
     {fallback ? <div className="static-landscape" aria-hidden="true" /> : <Scene controller={controller} onFallback={onFallback} />}
     <HUD controller={controller} fallback={fallback} />
     <CheckpointSections onExplore={() => { if (fallback) document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); else controller.goTo(checkpoints[1].progress) }} />

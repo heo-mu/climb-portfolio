@@ -5,6 +5,7 @@ import { SCREEN_HEIGHT, captureFit } from '../src/experience/showcaseDevices'
 import { guideRoute } from '../src/experience/grounding'
 import { cameraFieldOfView, exhibitionCameraPose, exhibitionFocus, groundHeight, routePoint, showcaseShelfBlend, showcaseSite, terrainGeometry, TerrainSurface } from '../src/experience/terrain'
 import { projects } from '../src/data/projects'
+import * as captures from '../src/experience/projectCaptures'
 import { campZones, projectsPresentation, routeProgress, type ExpeditionFrame } from '../src/experience/progress'
 
 const terrain = terrainGeometry(), surface = new TerrainSurface(terrain)
@@ -41,6 +42,7 @@ describe('Projects exhibit', () => {
     const exhibit = new ProjectShowcase(), scene = new THREE.Group()
     const camera = campCamera(1440, 900)
     exhibit.build(scene, surface, () => new THREE.MeshBasicMaterial({ transparent: true }))
+    expect(exhibit.ready, 'building alone must not briefly activate an unplaced display').toBe(false)
     exhibit.layout(camera, 1440, 900)
     const { group, screen } = exhibit.structures.items[0], pose = group.matrixWorld.toArray()
     const uniforms = screen.material.uniforms
@@ -88,6 +90,34 @@ describe('Projects exhibit', () => {
       scene.traverse(object => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => material.dispose()) } })
       vi.unstubAllGlobals()
     }
+  })
+
+  it('prepares one bounded GPU copy per original and closes its bitmap on disposal', async () => {
+    const original = { naturalWidth: 7680, naturalHeight: 4320 } as HTMLImageElement
+    const bitmap = { width: 4096, height: 2304, close: vi.fn() }
+    const decode = vi.spyOn(captures, 'loadProjectCapture').mockResolvedValue(original)
+    const resize = vi.fn().mockResolvedValue(bitmap)
+    vi.stubGlobal('createImageBitmap', resize)
+    vi.stubGlobal('window', { requestIdleCallback: (callback: () => void) => callback() })
+    const exhibit = new ProjectShowcase()
+    try {
+      const first = exhibit.prepare(0)
+      expect(exhibit.prepare(0)).toBe(first)
+      await first
+      await exhibit.prepare(0)
+      expect(decode).toHaveBeenCalledTimes(1)
+      expect(resize).toHaveBeenCalledExactlyOnceWith(original, {
+        resizeWidth: 4096, resizeHeight: 2304, resizeQuality: 'high',
+        imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none',
+      })
+      expect(original.naturalWidth).toBe(7680)
+      expect(bitmap.close).not.toHaveBeenCalled()
+    } finally {
+      exhibit.dispose()
+      decode.mockRestore()
+      vi.unstubAllGlobals()
+    }
+    expect(bitmap.close).toHaveBeenCalledTimes(1)
   })
 
   it('keeps one frame and its pose across every project selection', () => {
