@@ -1,159 +1,164 @@
 import type { CaseSection, ProjectDetailContent } from './caseStudy.ts'
 
 export const deurimDetail: ProjectDetailContent = {
-  summary: '구매 전, 우리 집에 냉장고를 설치할 수 있는지 3D로 확인하는 웹 서비스',
+  presentation: 'editorial',
+  keywords: [],
+  liveUrl: 'https://deurim.co.kr/',
+  liveLabel: '서비스 보러가기',
+  summary: '구매 전에 우리 집에 냉장고를 설치할 수 있는지,\n3D로 확인하는 웹 서비스예요.',
   metadata: [
     ['Type', 'Solo Product Experiment'],
     ['Period', '2026.09 · 3 Weeks'],
     ['Role', 'Product Design · AI-assisted Build'],
-    ['Scope', 'Planning · UX/UI · 3D · Front-end · QA'],
   ],
-  heroSlot: { label: 'PROJECT OVERVIEW', caption: '냉장고를 고르는 제품 선택 화면' },
+  heroSlot: {
+    label: '들임 대표 화면',
+    layout: 'wide',
+    panels: [
+      { label: '제품 선택', image: {
+        src: new URL('../../img/projects/deurim/overview_01.png', import.meta.url).href,
+        alt: '들임 냉장고 제품 선택 화면', width: 1919, height: 1079,
+      } },
+      { label: '공간 설정', image: {
+        src: new URL('../../img/projects/deurim/overview_02.png', import.meta.url).href,
+        alt: '들임에서 제품을 선택한 뒤 설치 공간의 너비·높이·깊이를 입력하는 화면', width: 1919, height: 1079,
+      } },
+      { label: '시작 가이드', image: {
+        src: new URL('../../img/projects/deurim/overview_03.png', import.meta.url).href,
+        alt: '들임 첫 진입 시 설치 가능 여부를 확인하는 방법을 안내하는 시작 가이드 화면', width: 1919, height: 1079,
+      } },
+      { label: '설치 결과', image: {
+        src: new URL('../../img/projects/deurim/overview_04.png', import.meta.url).href,
+        alt: '들임 3D 설치 확인과 공식 기준에 따른 확인 필요 항목을 함께 보여주는 결과 화면', width: 1919, height: 1079,
+      } },
+      { label: '모바일 시안', image: {
+        src: new URL('../../img/projects/deurim/overview_05.png', import.meta.url).href,
+        alt: '들임 제품 선택, 공간 입력, 3D 확인, 설치 결과를 담은 모바일 화면 시안', width: 1118, height: 629,
+      } },
+    ],
+  },
 }
 
 export const deurimCaseStudy: readonly CaseSection[] = [
   {
-    title: 'Overview', heading: '한 명의 디자이너, 하나의 완결된 제품 경험.',
-    body: '들임은 AI와 함께 제품을 어디까지 독립적으로 설계하고 구현할 수 있는지 확인한 개인 실험입니다. 2026년 9월, 약 3주 동안 협업 인원 없이 기획부터 UX/UI, 3D 경험, 프런트엔드 구현과 QA까지 진행했습니다. 백엔드는 사용하지 않았습니다.',
-    blocks: [{ kind: 'rows', items: [
-      { title: 'Define & Design', body: '문제 정의와 제품 기획, UX 구조, 디자인 시스템, 반응형 UX, UX Writing과 인터랙션을 설계했습니다.' },
-      { title: 'Build & Validate', body: 'Three.js / WebGL 경험과 프런트엔드 구현 방향을 정하고, AI Coding Agent를 운용하며 QA·회귀 검증·최종 품질 정리까지 연결했습니다.' },
-    ] }],
+    layout: 'overview', title: 'Overview', tone: 'base', spacing: 'image',
+    heading: '디자이너 혼자,\n제품까지 만들 수 있을까요?',
+    body: 'AI와 함께라면 기획부터 구현까지 어디까지 할 수 있을지 궁금했어요.\n3주 동안 기획, UX/UI, 3D 방향, 구현과 검증을 맡아 냉장고를 고르고 설치 가능 여부를 확인하는 경험을 만들었어요.',
   },
   {
-    title: 'Why I Built This', heading: '제품 판단과 구현 사이의 거리를 줄이고 싶었습니다.',
-    body: 'AI가 디자인 업무를 얼마나 대신할 수 있는지보다, 디자이너가 AI를 실행 파트너로 활용했을 때 자신의 판단을 실제 제품으로 어디까지 옮길 수 있는지가 궁금했습니다.',
-    blocks: [{ kind: 'rows', items: [
-      { title: '실험의 기준', body: '화면 생성에서 멈추지 않고, 제품을 고르고 공간을 입력해 설치 가능 여부를 확인하는 흐름을 끝까지 만들기로 했습니다. 실제 브라우저에서 직접 조작하고 다시 판단할 수 있어야 했습니다.' },
-    ] }],
+    layout: 'statement', title: 'The Problem', tone: 'focus', spacing: 'narrative',
+    heading: '치수로 상상하던 공간을,\n직접 확인할 수 있게 했어요.',
+    body: '제품 치수는 나와 있지만, 우리 집과 비교하는 건 사용자 몫이었어요. 폭이 맞는지만으로는 부족했어요. 설치 여유, 주변 벽과 가구, 문을 열 공간까지 함께 살펴야 했어요.',
   },
   {
-    title: 'The Problem', heading: '치수를 읽는 것만으로는 우리 집을 상상하기 어렵습니다.',
-    body: '제품 페이지에는 치수가 있지만, 실제 공간과 비교하는 일은 사용자에게 남아 있습니다. 냉장고가 들어가는지, 좌우 여유가 충분한지, 벽과 가구가 방해하는지, 문을 열 수 있는지와 배치 위치를 함께 판단해야 합니다.',
-    blocks: [{ kind: 'rows', items: [
-      { title: 'Problem statement', body: '치수를 읽고 상상하는 경험을, 공간에서 직접 확인하는 경험으로 바꾸고 싶었습니다.' },
-    ] }],
-    imageSlot: { label: 'PRODUCT SELECTION', caption: '실제 제품 정보에서 시작하는 냉장고 선택 흐름' },
+    layout: 'structure', title: 'Structure', tone: 'base', spacing: 'standard',
+    lead: { kind: 'flows', items: [{ title: '사용자가 따라가는 네 단계', steps: ['제품 선택', '공간 입력', '3D 확인', '설치 결과'] }] },
+    heading: '선택에서 판단까지 연결했어요.',
+    body: '제품 정보와 사용자가 입력한 공간을 함께 살펴보며, 설치 조건을 확인하는 흐름으로 정리했어요.',
   },
   {
-    title: 'Structuring the Product', heading: '화면보다 먼저, 데이터와 상태의 관계를 정했습니다.',
-    body: '제품 데이터와 사용자 공간, 설치 조건을 분리하고 제조사 자료가 뒷받침하는 기능만 검증으로 연결했습니다. Product Data → User Space → Installation Conditions → Manufacturer Data → Capability → Validation → Consumer Result의 관계가 화면 구조의 기준이 됐습니다.',
+    layout: 'visual-measure', title: 'Visual Measure', tone: 'elevated', spacing: 'standard',
+    heading: '공간을 조절하면서,\n설치 기준도 함께 확인할 수 있게 했어요.',
+    body: '숫자 입력만으로는 공간 크기를 직관적으로 파악하기 어려울 수 있다고 판단했어요.\n그래서 슬라이더를 자 형태로 디자인하고, 제품 크기와 설치에 필요한 최소 기준을 같은 축에 표시했어요. 빨간 기준선을 활용해 현재 공간의 부족한 정도와 여유 공간을 시각적으로 비교할 수 있도록 설계했어요.',
+    imageSlot: { label: '자 눈금 위에 설치 공간 너비와 제품 너비를 함께 보여주는 슬라이더', layout: 'wide', image: {
+      src: new URL('../../img/projects/deurim/interaction_01.png', import.meta.url).href,
+      alt: '자 눈금 위에 설치 공간 너비 150cm와 제품 너비 91.2cm를 함께 보여주는 슬라이더',
+      width: 612,
+      height: 270,
+    } },
+  },
+  {
+    layout: 'trust', title: 'Validation', tone: 'focus', spacing: 'narrative',
+    heading: '설치 가능 여부뿐 아니라,\n그 판단의 근거까지 보여줬어요.',
+    body: '설치 가능 여부만 제공하면 결과의 근거가 충분히 전달되지 않을 수 있다고 판단했어요.\n그래서 어느 위치에 공간이 부족한지, 얼마나 더 필요한지를 함께 표시했어요. 이를 통해 사용자가 설치 조건을 확인하고 다음 행동을 판단할 수 있도록 설계했어요.',
+    imageSlot: { label: '설치 결과에서 확인이 필요한 공간 여유를 보여주는 화면', layout: 'split', image: {
+      src: new URL('../../img/projects/deurim/trust_01.png', import.meta.url).href,
+      alt: '들임 설치 결과에서 좌우 문 여유 공간이 각각 0.1cm 부족하다고 표시한 화면',
+      width: 348,
+      height: 354,
+    } },
+  },
+  {
+    layout: 'workflow', title: 'Working with AI', tone: 'elevated', spacing: 'standard',
+    heading: '기다리는 시간을 줄였어요.',
+    body: '전달하고 기다리던 흐름에서, 동작하는 화면을 직접 써보고 판단하는 흐름으로 바꿨어요.',
     blocks: [
-      { kind: 'flows', items: [{ title: '사용자 흐름', steps: ['제품 선택', '공간 입력', '3D Fit Checker', '공간·제품 비교', '설치 판정', '문제 위치 확인'] }] },
-      { kind: 'rows', items: [
-        { title: '판정 상태', body: 'INSTALLABLE / NOT_INSTALLABLE / UNKNOWN·PARTIAL을 구분했습니다. UNKNOWN은 실패가 아니라, 현재 근거로는 판단할 수 없음을 알리는 명시적인 제품 상태입니다.' },
-        { title: '입력과 기능 상태', body: '사용자 입력 오류와 제조사 데이터 누락을 구분했습니다. 문 열림 시뮬레이션도 필요한 데이터가 있는 제품에서만 제공했습니다.' },
-        { title: '제품 변경과 유지할 맥락', body: '제품을 바꿔도 입력한 공간은 유지하고, 이전 제품의 문 각도와 조작 상태는 초기화했습니다. 저장되는 공간 맥락과 일시적인 인터랙션 상태를 분리했습니다.' },
-      ] },
-    ],
-    imageSlot: { label: 'SPACE INPUT', caption: '내 공간을 알려주세요 — 너비·높이·깊이로 판단에 필요한 최소 정보 입력' },
-  },
-  {
-    title: 'Designing for Trust', heading: '보여줄 수 있는 것과, 판단할 수 있는 것을 나눴습니다.',
-    body: '제조사마다 힌지 좌표, 최대 문 열림 각도, 측면 여유 공간, 문 두께와 문이 지나가는 영역의 데이터 범위가 달랐습니다. 공식 자료가 없는 값은 임의로 채우지 않고 UNKNOWN으로 유지했습니다.',
-    blocks: [
-      { kind: 'comparison', columns: [
-        { title: 'Visual Approximation', items: ['공간과 제품의 관계를 이해하도록 돕는 시각적 표현', '외형을 위한 근삿값은 설치 판정의 근거로 사용하지 않음'] },
-        { title: 'Authoritative Validation', items: ['제조사 근거가 있는 치수와 조건으로 판단', '사용자 입력이 없는 경우와 제조사 자료가 없는 경우를 구분해 안내'] },
-      ] },
-      { kind: 'quote', text: '더 많은 결과를 보여주는 것보다, 틀린 확신을 주지 않는 것을 우선했습니다.' },
-    ],
-    imageSlot: { label: 'VALIDATION STATE', caption: '설치 가능·불가·확인 필요 상태와 각 판단의 근거' },
-  },
-  {
-    title: 'How I Used AI', heading: '구조화부터 회귀 검증까지, 실행의 반복에 AI를 연결했습니다.',
-    body: '제작에 드는 반복을 줄인 만큼 더 많은 상태와 예외를 검토할 수 있었습니다. AI의 제안을 브라우저에서 확인하고, 제품 기준에 맞게 수정하는 순환을 만들었습니다.',
-    blocks: [
-      { kind: 'rows', items: [
-        { title: 'Structure · ChatGPT', body: '문제 구조화, 요구사항 분해, 정책 비교, 누락된 상태 탐색, UX Writing 검토와 QA 기준 설계에 활용했습니다.' },
-        { title: 'Build · Claude / Coding Agent', body: 'React·TypeScript·CSS 구현, 반응형 레이아웃, 상태와 저장, Three.js 인터랙션, 검증 로직 연결, 회귀 수정과 테스트를 반복했습니다.' },
-        { title: 'Visual Exploration · Image AI', body: '초기 비주얼 방향과 썸네일, UI 무드를 탐색하는 데 활용했습니다.' },
-        { title: 'QA · Browser & E2E', body: '화면 폭별 회귀, 한국어 줄바꿈, hover·focus, 새로고침과 저장, 같은 제품 재선택, 터치·키보드 조작, 콘솔과 런타임 오류를 확인했습니다.' },
-      ] },
       { kind: 'flows', items: [
-        { title: '기존 전달 중심 흐름', steps: ['Figma', '개발 전달', '구현 대기', 'QA', '수정 요청', '재구현'] },
-        { title: '이번 AI-assisted 흐름', steps: ['문제 정의', '동작하는 프로토타입', '브라우저에서 판단', '수정', 'QA', '재검증'] },
+        { title: 'BEFORE', steps: ['생각 정리', 'Figma 설계', '개발 전달', '구현 대기', '결과 확인', '수정 요청'] },
+        { title: 'WITH AI', steps: ['문제 정의', '프로토타입 구현', '직접 사용', '판단', '수정', '검증'] },
       ] },
     ],
   },
   {
-    title: 'What AI Did / What I Decided', heading: '실행을 맡겨도, 판단의 책임은 직접 가졌습니다.',
-    body: 'AI가 제안한 결과를 그대로 적용하지 않았습니다. 구현의 편의보다 사용자가 무엇을 이해하고 믿을 수 있는지를 기준으로 선택했습니다.',
-    blocks: [
-      { kind: 'comparison', columns: [
-        { title: 'AI에 맡긴 것', items: ['반복 구현, 코드 탐색과 보일러플레이트', 'UI 변형안, CSS 수정과 패턴 탐색', '상태 비교, QA와 회귀 탐지'] },
-        { title: '직접 판단한 것', items: ['문제 정의와 정보 우선순위', '신뢰할 수 있는 범위와 허용할 불확실성', '보여줄 기능과 덜어낼 정보', '자연스러운 인터랙션과 최종 시각적 품질'] },
-      ] },
-      { kind: 'quote', text: 'AI는 판단을 대신하는 도구가 아니라, 내가 내린 판단을 더 빠르게 구현하고 검증하는 도구로 사용했습니다.' },
-      { kind: 'rows', items: [
-        { title: '01 · 면책 문구 대신 명확한 상태', body: '“각도는 3D로 추정한 값이라 실제와 다를 수 있어요.”라는 문구는 기능 전체를 불신하게 만들 수 있어 제거했습니다. 한계를 숨기는 대신 UNKNOWN과 데이터 출처로 확인할 수 있는 범위와 없는 범위를 구분했습니다.' },
-        { title: '02 · 모바일에는 Solid', body: 'Desktop의 Glass 표현을 그대로 축소하지 않았습니다. 모바일은 Solid로 분리해 작은 화면의 정보와 조작에 집중하도록 했습니다.' },
-        { title: '03 · 변경 범위에 맞춘 QA', body: '작은 시각 수정은 최소 QA, 릴리스는 전체 QA로 구분했습니다. AI를 얼마나 많이 쓰는지보다 언제, 어느 범위까지 검증할지를 직접 정했습니다.' },
-        { title: '04 · 같은 문자열보다 같은 의미', body: '버튼의 “결과 보기”와 화면 제목의 “설치 결과”를 억지로 통일하지 않았습니다. 버튼은 행동, 제목은 도착한 위치를 설명해야 하기 때문입니다.' },
-      ] },
-    ],
+    layout: 'directing-ai', title: 'Directing AI', tone: 'base', spacing: 'standard',
+    heading: 'AI에게 바로 작업을 맡기지 않았어요.\n먼저 판단 기준을 설계하고, 실행 가능한 지시로 바꿨어요.',
+    body: '프롬프트를 길게 쓰는 게 아니라, 작업의 목표·범위·기준을 먼저 설계했어요.\n그 구조를 메타 프롬프트로 정리해 Claude와 Codex에 실제 작업 지시로 전달했어요.',
+    blocks: [{ kind: 'prompt-document', request: 'Claude / Codex 작업 요청 예시',
+      workflow: ['내가 먼저 판단한 것', 'Meta Prompt로 구조화', 'Claude / Codex에 전달', '실제 결과 확인 후 다시 수정'],
+      sections: [
+        { title: '목표', paragraphs: ['제품 정보를 확인한 뒤 바로 제품을 변경할 수 있다는 걸 더 쉽게 인지할 수 있게 개선해줘.'] },
+        { title: '이번 작업 범위', items: ['제품 정보 영역의 hover interaction 개선', '“제품 변경” 액션의 위치와 인지성 개선', '기존 디자인 톤은 그대로 유지'] },
+        { title: '유지해야 할 것', items: ['현재 3D Viewer 크기와 위치', '공간 조절 구조', '결과 보기 CTA', '기존 제품 데이터와 동작 방식', '모바일에서 이미 확정된 구조'] },
+        { title: '변경하지 말 것', items: ['요청하지 않은 다른 UI', '전체 페이지 레이아웃', '이미 확정된 문구', '관련 없는 기능이나 구조'] },
+        { title: 'Visual 기준', paragraphs: ['첨부한 화면을 최종 기준으로 사용해줘. 새로운 스타일을 추가하기보다 현재 UI 안에서 간격, 정렬, 위계를 개선해줘.'] },
+        { title: '검증', paragraphs: ['작업 후 아래 기준을 확인해줘.'], items: ['데스크톱과 모바일 모두 확인', '기존 기능이 그대로 동작하는지 확인', '요청한 영역 외에 불필요한 변경이 없는지 확인'] },
+        { title: '작업 방식', paragraphs: ['먼저 현재 구조를 확인한 뒤 수정하고, 필요 이상의 리팩터링은 하지 말아줘.'] },
+      ], notes: [
+        { title: '기준을 먼저 정했어요.', body: 'AI가 무엇을 만들지보다, 어떤 경험을 지켜야 하는지 먼저 정했어요.' },
+        { title: '범위를 명확하게 줬어요.', body: '빠르게 작업하더라도 요청하지 않은 부분까지 바뀌지 않게 했어요.' },
+        { title: '결과를 다시 판단했어요.', body: 'AI가 만든 결과를 그대로 쓰지 않고 실제 화면에서 다시 확인했어요.' },
+      ], closing: 'AI가 실행을 맡을수록,\n디자이너의 기준은 더 명확해야 했어요.' }],
   },
   {
-    title: 'Key UX Decisions', heading: '지금 할 행동이 먼저 읽히도록 정리했습니다.',
-    body: '제품·공간·결과 정보를 역할별로 묶고, 탭·슬라이더·바텀 시트처럼 익숙한 패턴을 사용했습니다. 공간 조절, 제품 변경, 문 열림, 배치와 결과 확인이 같은 강도로 경쟁하지 않도록 했습니다.',
-    blocks: [
-      { kind: 'quote', text: '더 많은 기능을 보여주는 것보다, 사용자가 지금 무엇을 판단해야 하는지 명확하게 만드는 데 집중했습니다.' },
-      { kind: 'decisions', items: [
-        { title: '모바일은 Desktop을 줄이지 않았습니다.', problem: '3열 화면을 축소하면 3D가 작아지고 정보 밀도가 높아졌습니다.', decision: '3D Main을 중심으로 Bottom Deck, Quick Controls, Bottom Sheet와 Sticky CTA를 배치했습니다.', principle: '반응형은 크기를 줄이는 일이 아니라 우선순위를 다시 결정하는 일입니다.' },
-        { title: '결과와 조작을 분리했습니다.', problem: '설치 결과, 공간 조절, 문 열림과 배치가 동시에 주의를 요구했습니다.', decision: '메인 화면은 조작에 집중하고, Primary CTA인 “결과 보기”로 상세 결과에 접근하게 했습니다.', principle: '현재 행동과 상세 정보가 경쟁하지 않아야 둘 다 잘 읽힙니다.' },
-        { title: '모르는 값은 모른다고 표현했습니다.', problem: '일부 제조사 데이터가 없어 모든 조건을 판정할 수 없었습니다.', decision: 'UNKNOWN을 별도 상태로 두고 추가 입력과 제조사 확인이 필요한 경우를 구분했습니다.', principle: '설치 서비스에서는 더 많은 결과보다 잘못된 확신을 주지 않는 것이 중요합니다.' },
-        { title: '강조는 중요한 행동에만 사용했습니다.', problem: '여러 요소를 강조하면 중요도의 차이가 사라졌습니다.', decision: '브랜드 색은 Primary / Selected / Active / Current 상태에 집중했습니다.', principle: '강조는 많이 할수록 강해지는 것이 아니라 주변과 차이가 날 때 강해집니다.' },
-      ] },
-    ],
-  },
-  {
-    title: 'From Design to Working Product', heading: '동작하는 제품에서 디자인을 다시 판단했습니다.',
-    body: 'React와 TypeScript, 상태 관리와 저장, 반응형 UI, Three.js, 검증 로직을 하나의 흐름으로 연결하고 테스트와 E2E로 확인했습니다. 직접 동작하는 제품이 있어야 인터랙션의 자연스러움과 실제 조작성을 판단할 수 있었습니다.',
-    blocks: [{ kind: 'list', items: [
-      '3D가 장식이 아니라 제품·공간·판정의 관계를 이해하는 도구로 읽히는가?',
-      '모바일에서도 조작 대상과 CTA가 충분히 크고 명확한가?',
-      '긴 텍스트, 포커스, 스크롤바와 새로고침 이후에도 의도한 경험이 유지되는가?',
-    ] }],
-    imageSlot: { label: '3D FIT CHECKER', caption: 'Space Setup · Interactive 3D · Result / Door Control을 연결한 핵심 제품 경험' },
-  },
-  {
-    title: 'Responsive Strategy', heading: '작은 화면에서는 정보의 순서를 다시 설계했습니다.',
-    body: 'Desktop은 공간 설정·3D·결과를 함께 비교할 수 있게 구성했습니다. 모바일에서는 3D를 중심에 두고, 조작과 상세 정보는 필요할 때 열도록 나눴습니다.',
+    layout: 'comparison', title: 'AI vs. Me', tone: 'elevated', spacing: 'standard',
+    heading: '실행을 나누고, 판단은 직접 했어요.',
+    body: 'AI의 제안은 비교할 대안으로 봤어요. 무엇을 만들고 어디까지 믿을지는 직접 결정했어요.',
     blocks: [{ kind: 'comparison', columns: [
-      { title: 'Desktop · Compare', items: ['3열 구조로 공간과 제품, 결과를 비교', 'Glass 표현으로 공간 경험과 UI 연결', '한 화면에서 조작 맥락 유지'] },
-      { title: 'Mobile · Focus', items: ['3D Main과 Solid UI로 가독성 확보', 'Quick Controls와 Bottom Sheet로 단계적 접근', 'Sticky CTA로 결과 확인 경로 유지'] },
-    ] }],
-    imageSlot: { label: 'MOBILE RESPONSIVE', caption: '3D Main · Bottom Deck · Bottom Sheet · 결과 보기 CTA' },
-  },
-  {
-    title: 'QA as Product Design', heading: '실제 환경에서도 의도가 유지되어야 디자인이 끝납니다.',
-    body: 'Figma에서 정돈된 화면도 브라우저에서는 다른 문제를 드러냈습니다. 320·390·768·1199·1200px 등 화면 폭, 다른 제품과 긴 이름, UNKNOWN 상태, 새로고침, 터치·키보드·스크롤까지 검토 범위를 넓혔습니다.',
-    blocks: [{ kind: 'rows', items: [
-      { title: 'Layout & Readability', body: '1200–1280px에서 숫자가 잘리는 현상, 한국어 단어 중간 줄바꿈, 스크롤바 너비 차이와 툴팁 대비를 확인하고 조정했습니다.' },
-      { title: 'State & Validation', body: '음수로 표시되는 가용 공간, 제품 변경 후 이전 상태가 남는 현상, 새로고침 이후 저장 상태와 결과 문구의 정합성을 검증했습니다.' },
-      { title: 'Interaction & Regression', body: '모바일에서 남는 포커스, CTA hover 회귀, 같은 제품 재선택과 입력 방식별 동작을 확인했습니다. 수정 뒤에는 영향을 받는 흐름을 다시 검증했습니다.' },
+      { title: 'AI', items: ['반복 구현', '대안 탐색', '상태 비교', 'QA'] },
+      { title: 'ME', items: ['문제 정의', '정보 우선순위', '신뢰 기준', 'Interaction 판단', '최종 Visual 판단'] },
     ] }],
   },
   {
-    title: 'Outcome', heading: '완결된 제품 흐름을 만들고, 외부에 공개했습니다.',
-    body: '제품 선택부터 공간 입력, 설치 판단과 문제 위치 확인까지 이어지는 경험을 혼자 설계하고 구현했습니다. 결과물은 Wanted AI Hackathon에 출품해 외부에 공개했고, 투표 순위 73위를 기록했습니다.',
-    blocks: [
-      { kind: 'rows', items: [
-        { title: '완성한 경험', body: '제품 선택·변경, 공간 설정, Interactive 3D와 배치, 데이터가 지원되는 제품의 문 열림 조작, 설치 검증과 공간 문제 표시를 연결했습니다.' },
-        { title: '제품으로 유지할 기반', body: '반응형 App Mode, 결과 확인 흐름, 제조사 출처 안내, 상태 저장과 Playwright QA까지 구성했습니다.' },
-      ] },
-      { kind: 'list', items: ['비즈니스 KPI나 사용자 성과는 측정하지 않았습니다. 이 실험의 결과는 독립적으로 제품 경험을 만들고 검증한 범위에 있습니다.'] },
-    ],
+    layout: 'decisions', title: 'Key Decisions', tone: 'base', spacing: 'standard',
+    heading: '다음 행동을 분명하게 했어요.',
+    body: '선택지를 늘리기보다, 세 가지 기준으로 화면을 정리했어요.',
+    blocks: [{ kind: 'compact-decisions', items: [
+      { title: '조작과 결과 분리', body: '메인은 공간 조작에 집중하고, 판단의 근거는 “결과 보기”에서 확인하게 했어요.' },
+      { title: '모바일은 3D 먼저', body: '3D를 중심에 두고 상세 정보는 필요할 때 열게 했어요. 결과 버튼은 하단에 뒀어요.' },
+      { title: '강조는 필요한 곳에', body: '주요 행동과 선택·활성 상태에만 강조색을 남겼어요.' },
+    ] }],
+    imageSlot: { label: '모바일에서 보는 공간과 설치 결과', panels: [
+      { label: '모바일에서 3D 공간과 빠른 조작 버튼이 함께 보이는 화면' },
+      { label: '같은 제품의 상세 정보를 연 모바일 패널과 결과 보기 버튼' },
+    ], layout: 'mobile-pair' },
   },
   {
-    title: 'What I Learned', heading: '구현을 맡길수록 판단의 기준은 더 명확해야 했습니다.',
-    body: '좋은 화면을 그리는 것과 실제 제품에서 좋은 경험을 만드는 것은 달랐습니다. 상태·데이터·검증·반응형·포커스·저장까지 연결해야 UX 품질을 지킬 수 있었습니다.',
+    layout: 'product', title: 'Building the Product', tone: 'focus', spacing: 'image',
+    heading: '직접 써보며 다듬었어요.',
+    body: '브라우저에서 화면 크기, 상태 유지, 터치와 키보드 이동을 확인했어요. 설계할 때 보이지 않던 불편함을 찾고, 수정한 뒤 연결된 흐름도 다시 살폈어요.',
+    imageSlot: { label: '좌측 공간 설정 · 중앙 3D · 우측 설치 결과가 함께 보이는 핵심 화면', layout: 'wide' },
+  },
+  {
+    layout: 'outcome', title: 'Outcome', tone: 'base', spacing: 'standard',
+    heading: '3주 동안 혼자,\n하나의 제품 흐름을 완성했어요.',
+    body: '제품 선택부터 공간 입력, 3D 비교, 설치 판정까지 연결했어요. 사용자·비즈니스 성과는 아직 측정하지 않았어요.',
+  },
+  {
+    layout: 'reflection', title: 'What I Learned', tone: 'focus', spacing: 'narrative',
+    heading: 'AI는 제 판단을 대신하지 않았어요.\n제 판단을 제품으로 옮겼어요.',
+    body: '혼자 제품을 만들며, 직접 판단해야 할 일도 더 선명해졌어요.',
+    externalLink: {
+      url: 'https://event.wanted.co.kr/ai-championship/2026/projects/718',
+      label: '해커톤 제출작 보기',
+      accessibleName: '들임 Wanted AI Championship 제출 페이지 새 창에서 열기',
+      context: '완성한 서비스는 Wanted AI Championship에 출품했고, 투표 순위 73위를 기록했어요.',
+    },
     blocks: [
       { kind: 'rows', items: [
-        { title: '기준을 먼저 정의하기', body: 'AI에게 구현을 맡길수록 무엇을 신뢰할 수 있고 어떤 상태를 허용할지 디자이너가 먼저 정해야 했습니다.' },
-        { title: '줄인 반복을 더 많은 검증으로', body: 'AI는 작업량을 줄이는 도구를 넘어, 더 많은 가설과 상태를 실제 환경에서 확인할 수 있게 해주는 도구였습니다.' },
+        { title: '01', body: '좋은 화면을 그리는 것과 제품 경험을 완성하는 건 달랐어요.' },
+        { title: '02', body: 'AI에게 더 많이 맡길수록 제 판단 기준은 더 분명해야 했어요.' },
+        { title: '03', body: 'AI로 아낀 시간은 더 다양한 사용 상황을 확인하는 데 썼어요.' },
       ] },
-      { kind: 'quote', text: '판단은 직접 하고, 반복은 AI로 줄였습니다.' },
     ],
   },
 ]

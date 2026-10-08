@@ -15,7 +15,7 @@ function About() {
         <li>
           <div className="career-entry">
             <h2 className="career-category">Agency</h2>
-            <p><strong>에이전시에서 시작했어요.</strong><br />17개 웹사이트를 구축하며 요구사항을 화면 구조와 서비스 흐름으로 정리했어요.</p>
+            <p><strong>에이전시에서 시작했어요.</strong><br />17개 웹사이트의 UI/UX 디자인과 퍼블리싱을 맡으며, 요구사항을 화면 구조와 서비스 흐름으로 정리했어요.</p>
           </div>
         </li>
         <li>

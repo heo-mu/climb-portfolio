@@ -185,10 +185,11 @@ export class ScrollController {
   }
   private onVisibility = () => {
     cancelAnimationFrame(this.raf)
-    if (!document.hidden) { this.lastTime = 0; this.raf = requestAnimationFrame(this.tick) }
+    if (this.started && !document.hidden) { this.lastTime = 0; this.raf = requestAnimationFrame(this.tick) }
   }
 
   private tick = (time: number) => {
+    if (!this.started) return
     const delta = this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.05) : 1 / 60
     this.lastTime = time
     const reducedMotion = this.media.matches
@@ -214,10 +215,15 @@ export class ScrollController {
   start(initialProgress: number) {
     if (this.started) return
     this.started = true
+    this.lastTime = 0
+    this.returningHome = false
+    this.trailingWheel = false
     this.measure()
     window.scrollTo({ top: clamp(initialProgress) * this.range, behavior: 'instant' })
     this.current = this.target = clamp(window.scrollY / this.range)
-    this.frame = { ...this.frame, journeyProgress: this.current, curveParameter: curveParameterAt(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current, false, this.projectsReady), projectsReady: this.projectsReady }
+    this.frame = { ...this.frame, journeyProgress: this.current, curveParameter: curveParameterAt(this.current), altitude: altitudeAt(this.current), active: activeCheckpoint(this.current), destination: dockingCheckpoint(this.current), sections: sectionUIAt(this.current, false, this.projectsReady), projectsReady: this.projectsReady, returningHome: false, delta: 0 }
+    // Resume camera, exhibit and HUD synchronously, before the restored layer paints.
+    this.emit()
     window.addEventListener('scroll', this.onScroll, { passive: true })
     window.addEventListener('resize', this.onResize)
     // svh layout can settle after the viewport resize event. Observe the actual

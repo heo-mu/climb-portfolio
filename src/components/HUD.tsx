@@ -6,12 +6,13 @@ import { TrailNavigation } from './TrailNavigation'
 
 const formatAltitude = (n: number) => String(Math.round(n))
 
-export function HUD({ controller, fallback }: { controller: ScrollController; fallback: boolean }) {
+export function HUD({ controller, fallback, enabled = true }: { controller: ScrollController; fallback: boolean; enabled?: boolean }) {
   const altitude = useRef<HTMLSpanElement>(null)
   const [active, setActive] = useState(0)
   const [homeVisible, setHomeVisible] = useState(false)
   const [altitudeVisible, setAltitudeVisible] = useState(false)
   useEffect(() => {
+    if (!enabled) return
     if (fallback) {
       const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
@@ -39,7 +40,7 @@ export function HUD({ controller, fallback }: { controller: ScrollController; fa
       const showHome = frame.journeyProgress > experienceConfig.home.exitRange
       if (showHome !== previousHome) { previousHome = showHome; setHomeVisible(showHome) }
     })
-  }, [controller, fallback])
+  }, [controller, fallback, enabled])
 
   const navigate = (index: number) => {
     if (fallback) document.getElementById(checkpoints[index].id)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })

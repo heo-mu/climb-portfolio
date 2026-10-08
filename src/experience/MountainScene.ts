@@ -40,6 +40,10 @@ export class MountainScene {
   private lastReducedMotion = false
   private poseRoute = -1
   private width = 1
+  private height = 1
+  private layoutHasExhibit = false
+  private active = true
+  private resumeBuild: (() => void) | null = null
   private resizeObserver: ResizeObserver
   private disposed = false
   private wind = { value: 0 }
@@ -90,11 +94,12 @@ export class MountainScene {
     this.unsubscribeSelection = projectSelection.subscribe(() => this.showcase.select(projectSelection.get()))
     this.unsubscribePreparation = projectSelection.prepareWith(index => this.showcase.prepare(index))
     const advance = () => {
-      if (this.disposed) return
+      this.deferred = 0
+      if (this.disposed || !this.active) return
       try {
         const stage = this.stages.next()
         this.lastProgress = -1
-        if (stage.done) { this.createSnow(mobile); this.resize(); void this.showcase.warmUp(this.scene, this.camera); return }
+        if (stage.done) { this.resumeBuild = null; this.createSnow(mobile); this.resize(); void this.showcase.warmUp(this.scene, this.camera); return }
         schedule()
       } catch (error) {
         // Visitors get the reading route; development keeps the actual cause.
@@ -103,10 +108,28 @@ export class MountainScene {
       }
     }
     const schedule = () => {
+      if (this.deferred || !this.active || this.disposed) return
       this.idle = typeof window.requestIdleCallback === 'function'
       this.deferred = this.idle ? window.requestIdleCallback(advance, { timeout: 300 }) : window.setTimeout(advance, 32)
     }
+    this.resumeBuild = schedule
     schedule()
+  }
+
+  /** Route suspension preserves GPU objects but does no per-frame scene work. */
+  setActive(active: boolean) {
+    if (this.disposed || this.active === active) return
+    this.active = active
+    if (!active) {
+      if (this.idle) window.cancelIdleCallback(this.deferred)
+      else window.clearTimeout(this.deferred)
+      this.deferred = 0
+      return
+    }
+    // resize() skips the placement solver and drawing-buffer reset when unchanged.
+    this.resize()
+    this.lastProgress = -1
+    this.resumeBuild?.()
   }
 
   private createSnow(mobile: boolean) {
@@ -147,17 +170,23 @@ export class MountainScene {
   private onContextLost = (event: Event) => { event.preventDefault(); this.options.onLost() }
 
   private resize = () => {
-    if (this.disposed) return
+    if (this.disposed || !this.active) return
     const rect = this.options.canvas.parentElement!.getBoundingClientRect()
     const width = Math.max(1, rect.width), height = Math.max(1, rect.height)
+    const hasExhibit = this.showcase.structures.items.length > 0
+    const pixelRatio = Math.min(window.devicePixelRatio, width / height < .95 ? 1.25 : 1.6)
+    // Route reveal and ResizeObserver can report the same size. Repeating
+    // setSize clears the drawing buffer and unnecessarily solves placement again.
+    if (width === this.width && height === this.height && hasExhibit === this.layoutHasExhibit && pixelRatio === this.renderer.getPixelRatio()) return
+    this.layoutHasExhibit = hasExhibit
     this.width = width
-    const mobile = width / height < 0.95
+    this.height = height
     this.camera.aspect = width / height
     this.camera.fov = cameraFieldOfView(Math.max(0, this.poseRoute), this.camera.aspect, width)
     this.camera.updateProjectionMatrix()
     this.spatialTransition.resize(this.camera, width, height)
     this.showcase.layout(this.camera, width, height)
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.25 : 1.6))
+    this.renderer.setPixelRatio(pixelRatio)
     this.renderer.setSize(width, height, false)
     this.snow.forEach(layer => { layer.points.material.uniforms.uHeight.value = height * this.renderer.getPixelRatio() })
     this.lastProgress = -1
@@ -165,7 +194,8 @@ export class MountainScene {
   }
 
   update = (frame: ExpeditionFrame) => {
-    if (this.disposed) return
+    if (this.disposed || !this.active) return
+    if (frame.delta === 0) this.showcase.select(projectSelection.get(), true)
     if (frame.journeyProgress !== this.poseRoute) {
       this.poseRoute = frame.journeyProgress
       cameraPose(frame.journeyProgress, this.position, this.target, frame.curveParameter)

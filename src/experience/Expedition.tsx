@@ -10,43 +10,49 @@ import { experienceConfig } from '../config/experience'
 import { projectSelection } from './projectSelection'
 import { projects } from '../data/projects'
 
-const routePositions = new Map<string, number>()
-
-export function Expedition() {
+export function Expedition({ active = true }: { active?: boolean }) {
   const location = useLocation()
   const navigationType = useNavigationType()
   const [controller] = useState(() => new ScrollController())
   const [fallback, setFallback] = useState(false)
   const root = useRef<HTMLElement>(null)
-  const lastProgress = useRef(0)
   const focusProjectsOnArrival = useRef(false)
+  const visited = useRef(false)
   const [initialProgress] = useState(() => {
     if (location.hash) return checkpoints.find(camp => `#${camp.id}` === location.hash)?.progress ?? 0
-    if (navigationType === 'POP') {
-      return routePositions.get(location.key) ?? 0
-    }
     return 0
   })
+  const lastProgress = useRef<number>(initialProgress)
 
   const onFallback = useCallback(() => setFallback(true), [])
 
   useLayoutEffect(() => {
+    if (!active) return
     const returning = Math.abs(initialProgress - checkpoints[4].progress) < experienceConfig.content.readableRange
     const restored = projects.findIndex(project => project.slug === (location.state as { project?: string } | null)?.project)
-    projectSelection.reset(returning ? (restored >= 0 ? restored : projectSelection.get()) : 0)
+    if (!visited.current) projectSelection.reset(returning ? (restored >= 0 ? restored : projectSelection.get()) : 0)
+    // A POP restores the live selection, not the stale state stored by an older
+    // Back-to-Projects link on that history entry.
+    else if (navigationType !== 'POP' && restored >= 0) projectSelection.reset(restored)
+    visited.current = true
+    // A selection still decoding when the visitor opens the current detail
+    // may populate the cache, but must not change their saved project later.
     return () => projectSelection.reset(projectSelection.get())
-  }, [initialProgress, location.state])
+  }, [active, initialProgress, location.state, navigationType])
 
   useLayoutEffect(() => {
+    if (!active) return
     document.title = 'Heo Chang Mu - Portfolio'
+    const destination = navigationType !== 'POP' && location.hash ? checkpoints.find(camp => `#${camp.id}` === location.hash)?.progress : undefined
+    const resumeProgress = destination ?? lastProgress.current
     const sections = Array.from(root.current!.querySelectorAll<HTMLElement>('[data-checkpoint]'))
     const projectsHeading = root.current!.querySelector<HTMLElement>('#title-high-camp')
     if (fallback) {
       sections.forEach(section => { section.removeAttribute('style'); section.inert = false; section.removeAttribute('aria-hidden') })
-      const camp = checkpoints.reduce((best, item) => Math.abs(item.progress - lastProgress.current) < Math.abs(best.progress - lastProgress.current) ? item : best)
-      const target = (lastProgress.current ? camp : checkpoints.find(item => item.progress === initialProgress)) ?? camp
+      const target = checkpoints.reduce((best, item) => Math.abs(item.progress - resumeProgress) < Math.abs(best.progress - resumeProgress) ? item : best)
       // Home is the top of the reading route, above it sits the note explaining the fallback.
-      const raf = requestAnimationFrame(() => target.progress ? document.getElementById(target.id)?.scrollIntoView() : window.scrollTo({ top: 0, behavior: 'instant' }))
+      if (target.progress) document.getElementById(target.id)?.scrollIntoView({ behavior: 'instant' })
+      else window.scrollTo({ top: 0, behavior: 'instant' })
       const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -56,11 +62,11 @@ export function Expedition() {
         })
       }, { rootMargin: '-15% 0px -45% 0px' })
       sections.forEach(section => observer.observe(section))
-      return () => { cancelAnimationFrame(raf); observer.disconnect() }
+      return () => observer.disconnect()
     }
     let previousActive = -1
     let previousSections: ExpeditionFrame['sections'] | null = null
-    controller.start(lastProgress.current || initialProgress)
+    controller.start(resumeProgress)
     const unsubscribe = controller.subscribe(frame => {
       lastProgress.current = frame.journeyProgress
       // The rendered camera owns visual approach/departure. This shared arrival
@@ -89,27 +95,25 @@ export function Expedition() {
       }
     })
     return () => { unsubscribe(); controller.stop() }
-  }, [controller, fallback, initialProgress])
+  }, [active, controller, fallback, initialProgress, location.hash, location.key, navigationType])
 
   useEffect(() => {
-    return () => {
-      routePositions.set(location.key, lastProgress.current)
-    }
-  }, [location.key])
-
-  useEffect(() => {
-    const hashChange = () => {
+    if (!active) return
+    const hashChange = (event: HashChangeEvent) => {
+      // Cross-route POP already restored the exact camera position. Its native
+      // hashchange must not start another trip to the checkpoint afterwards.
+      if (new URL(event.oldURL).pathname !== '/') return
       const checkpoint = checkpoints.find(camp => `#${camp.id}` === window.location.hash)
       if (checkpoint && !fallback) controller.goTo(checkpoint.progress)
     }
     window.addEventListener('hashchange', hashChange)
     return () => window.removeEventListener('hashchange', hashChange)
-  }, [controller, fallback])
+  }, [active, controller, fallback])
 
   return <main ref={root} className={`expedition ${fallback ? 'reading-mode' : ''}`} style={fallback ? undefined : { height: `${experienceConfig.route.scrollScreens * 100}svh` }}>
     <a className="skip-link" href="#high-camp" onClick={event => { if (!fallback) { event.preventDefault(); controller.goTo(checkpoints.find(camp => camp.id === 'high-camp')!.progress, true); focusProjectsOnArrival.current = true } }}>프로젝트로 바로 가요</a>
-    {fallback ? <div className="static-landscape" aria-hidden="true" /> : <Scene controller={controller} onFallback={onFallback} />}
-    <HUD controller={controller} fallback={fallback} />
+    {fallback ? <div className="static-landscape" aria-hidden="true" /> : <Scene controller={controller} onFallback={onFallback} active={active} />}
+    <HUD controller={controller} fallback={fallback} enabled={active} />
     <CheckpointSections onExplore={() => { if (fallback) document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); else controller.goTo(checkpoints[1].progress) }} />
     {fallback && <p className="fallback-note">3D 화면을 사용할 수 없어 콘텐츠를 바로 보여드려요.</p>}
   </main>

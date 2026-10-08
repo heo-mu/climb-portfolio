@@ -14,6 +14,7 @@ import { checkpoints } from '../src/data/checkpoints.ts'
 import { legacyProjectSlugs, processCaseStudy, projects } from '../src/data/projects.ts'
 import { profile } from '../src/data/profile.ts'
 import { experienceConfig } from '../src/config/experience.ts'
+import { installJourneyProbe } from './journeyProbe.ts'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 let base = process.env.ASCENT_URL?.replace(/\/$/, '')
@@ -553,7 +554,9 @@ try {
       await expect(page).toHaveURL(`${base}/project/${pick.slug}`)
       await expect(page.locator('.detail-title')).toHaveText(pick.name)
       await expect(page.locator('.detail-title')).toBeFocused()
-      await expect(page.locator('canvas')).toHaveCount(0)
+      await expect(page.locator('.journey-layer')).toHaveAttribute('data-active', 'false')
+      await expect(page.locator('.journey-layer')).toHaveAttribute('inert', '')
+      await expect(page.locator('canvas')).toHaveCount(1)
       await page.locator('.back-link').click()
       await expect(page).toHaveURL(`${base}/#high-camp`)
       await ready(page)
@@ -631,6 +634,131 @@ try {
   })
 
   // ─────────────────────────────── Project pages ───────────────────────────────
+  await step('warm detail returns: retained GPU resources, paused rendering, selection and history', async () => {
+    const { context, page } = await open({}, [], installJourneyProbe)
+    await page.goto(base)
+    await ready(page)
+    await goToCamp(page, 4)
+    // Warm every image and its intentional selection shader variants first.
+    for (const [index, project] of projects.entries()) {
+      await page.locator('#high-camp button[aria-selected]').nth(index).click()
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', project.slug)
+    }
+    const root = await page.locator('.expedition').elementHandle()
+    const canvas = await page.locator('.scene canvas').elementHandle()
+    const cdp = await context.newCDPSession(page)
+    await cdp.send('Performance.enable')
+    const memory = async () => {
+      await cdp.send('HeapProfiler.collectGarbage')
+      const dom = await cdp.send('Memory.getDOMCounters')
+      const metrics = await cdp.send('Performance.getMetrics')
+      return { ...dom, heap: metrics.metrics.find(item => item.name === 'JSHeapUsedSize')!.value }
+    }
+    const samples: number[] = []
+    let retained: Awaited<ReturnType<typeof memory>> | undefined
+    for (let round = 0; round < 10; round++) {
+      const index = round % projects.length, project = projects[index]
+      await page.locator('#high-camp button[aria-selected]').nth(index).click()
+      await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', project.slug)
+      const altitude = await page.locator('.altitude-number').textContent()
+      const before = await page.evaluate(() => ({ ...window.journeyProbe }))
+      await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
+      await expect(page.locator('.detail-title')).toHaveText(project.name)
+      await expect(page.locator('.journey-layer')).toHaveAttribute('inert', '')
+      await expect(page.locator('.journey-layer')).toHaveAttribute('aria-hidden', 'true')
+      await expect(page.getByRole('main')).toHaveCount(1)
+      const draws = await page.evaluate(() => window.journeyProbe.draws)
+      await page.evaluate(() => window.scrollTo(0, 300))
+      await page.waitForTimeout(120)
+      expect(await page.evaluate(() => window.journeyProbe.draws), 'no GPU rendering while reading').toBe(draws)
+      const start = await page.evaluate(() => performance.now())
+      if (index === 2) await page.goBack()
+      else await page.locator('.back-link').evaluate((element: HTMLElement) => element.click())
+      // First post-route frame: no delayed reactivation or texture readiness wait.
+      await page.waitForURL(`${base}/#high-camp`)
+      const first = await page.evaluate(() => new Promise<{ ms: number; lit: string | undefined; project: string | undefined; active: string | null; presence: string | undefined }>(resolve => requestAnimationFrame(() => {
+        const root = document.querySelector<HTMLElement>('.expedition')!
+        resolve({ ms: performance.now(), lit: root.dataset.showcaseLit, project: root.dataset.showcaseProject, active: document.querySelector('#high-camp')!.getAttribute('aria-hidden'), presence: root.dataset.showcasePresence })
+      })))
+      samples.push(Math.round(first.ms - start))
+      expect(first).toMatchObject({ lit: 'true', project: project.slug, active: 'false', presence: '1' })
+      expect(await root!.evaluate(element => element === document.querySelector('.expedition'))).toBe(true)
+      expect(await canvas!.evaluate(element => element === document.querySelector('.scene canvas'))).toBe(true)
+      await expect(page.locator('canvas')).toHaveCount(1)
+      await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(project.name)
+      await expect(page.locator('.altitude-number')).toHaveText(altitude!)
+      await expect(page.locator('.trail-checkpoint').nth(4)).toHaveAttribute('aria-current', 'step')
+      const after = await page.evaluate(() => ({ ...window.journeyProbe }))
+      for (const key of ['contexts', 'shaders', 'uploads', 'buffers', 'textures', 'decodes'] as const) expect(after[key], `return must reuse ${key}`).toBe(before[key])
+      expect(after.draws).toBeGreaterThan(before.draws)
+      if (round === 4) retained = await memory()
+    }
+    const final = await memory()
+    expect(final.jsEventListeners, 'listeners remain bounded over repeated returns').toBeLessThanOrEqual(retained!.jsEventListeners + 5)
+    expect(final.nodes, 'no retained detail DOM growth').toBeLessThanOrEqual(retained!.nodes + 20)
+    expect(final.heap, 'post-GC heap remains bounded').toBeLessThan(retained!.heap + 5_000_000)
+    console.log('Warm return samples (ms):', samples.join(', '), 'Memory after 5 / 10:', retained, final)
+    // A native hashchange on POP must not drag an off-centre Projects view
+    // back to the checkpoint after the exact position has already been restored.
+    await scrollToProgress(page, camps[4].progress + .0005)
+    await settle(page)
+    const parkedAltitude = await page.locator('.altitude-number').textContent()
+    const parkedScroll = await page.evaluate(() => scrollY)
+    await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
+    await page.goBack()
+    await settle(page)
+    await expect(page.locator('.altitude-number')).toHaveText(parkedAltitude!)
+    expect(await page.evaluate(() => scrollY)).toBe(parkedScroll)
+    // Browser forward restores the detail; reloading it never eagerly creates WebGL.
+    await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
+    await page.goBack()
+    await expectArrived(page, 4, { atCenter: false })
+    await page.goForward()
+    await expect(page.locator('.detail-title')).toHaveText(projects[4].name)
+    await page.reload()
+    await expect(page.locator('.detail-title')).toHaveText(projects[4].name)
+    await expect(page.locator('.expedition')).toHaveCount(0)
+    expect(await page.evaluate(() => window.journeyProbe.contexts)).toBe(0)
+    // A cold return from a shared detail is allowed to initialize once.
+    await page.locator('.back-link').click()
+    await ready(page)
+    await expectArrived(page, 4)
+    await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[4].slug)
+    await page.reload()
+    await ready(page)
+    await expectArrived(page, 0)
+    await root!.dispose(); await canvas!.dispose()
+    await context.close()
+  })
+
+  await step('warm return after a detail viewport change or background context loss', async () => {
+    const { context, page } = await open({}, [/WebGL/i, /context lost/i])
+    await page.goto(base)
+    await ready(page)
+    await goToCamp(page, 4)
+    await page.locator('#high-camp button[aria-selected]').nth(2).click()
+    await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[2].slug)
+    for (const viewport of [{ width: 390, height: 844 }, desktop]) {
+      await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
+      await page.setViewportSize(viewport)
+      await page.locator('.back-link').click()
+      await expectArrived(page, 4)
+      await expect(page.locator('#high-camp button[aria-selected]').nth(2)).toHaveAttribute('aria-selected', 'true')
+      if (viewport.width < 768) await expect(page.locator('#high-camp .project-screen img[data-active="true"]')).toBeVisible()
+      else await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[2].slug)
+      expect(await page.locator('.journey-layer').evaluate(element => getComputedStyle(element).opacity)).toBe('1')
+    }
+    await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
+    await page.evaluate(() => document.querySelector('canvas')!.getContext('webgl2')!.getExtension('WEBGL_lose_context')!.loseContext())
+    await expect(page.locator('canvas')).toHaveCount(0)
+    await expect(page.locator('.detail-title')).toHaveText(projects[2].name)
+    await page.locator('.back-link').click()
+    await expect(page.locator('.reading-mode')).toBeVisible()
+    await expect(page.locator('#high-camp')).toBeInViewport()
+    await expect(page.locator('#high-camp button[aria-selected]').nth(2)).toHaveAttribute('aria-selected', 'true')
+    await context.close()
+  })
+
   await step('project deep links, legacy slugs and the missing route', async () => {
     const { context, page } = await open()
     const cdp = await context.newCDPSession(page)
@@ -639,13 +767,38 @@ try {
       for (const [index, project] of projects.entries()) {
         await page.goto(`${base}/project/${project.slug}`)
         await expect(page.locator('.detail-title')).toHaveText(project.name)
+        await expect(page.locator('.detail-kicker')).toHaveCount(0)
+        const sectionFrames = await page.locator('.case-section').evaluateAll(elements => elements.map(element => {
+          const bounds = element.getBoundingClientRect()
+          const style = getComputedStyle(element)
+          return { left: bounds.left, right: bounds.right, viewport: document.documentElement.clientWidth, background: style.backgroundColor }
+        }))
+        for (const frame of sectionFrames) {
+          expect(frame.left).toBeCloseTo(0, 0)
+          expect(frame.right).toBeCloseTo(frame.viewport, 0)
+        }
+        expect(new Set(sectionFrames.map(frame => frame.background)).size).toBe(3)
+        const submission = page.locator('.case-external-link')
+        const submissionData = project.caseStudy?.find(section => section.externalLink)?.externalLink
+        if (submissionData) {
+          await expect(page.locator('.case-section--reflection .case-external-link')).toHaveCount(1)
+          await expect(submission).toHaveAttribute('href', submissionData.url)
+          await expect(submission).toHaveAttribute('target', '_blank')
+          await expect(submission).toHaveAttribute('rel', 'noopener noreferrer')
+          await expect(submission).toHaveAccessibleName(submissionData.accessibleName)
+          await submission.focus()
+          await expect(submission).toBeFocused()
+          expect(await submission.evaluate(element => getComputedStyle(element).outlineStyle)).not.toBe('none')
+        } else await expect(submission).toHaveCount(0)
         const heroImage = page.locator('.detail-hero img')
         if (project.detail?.heroSlot) {
           await expect(heroImage).toHaveCount(0)
-          await expect(page.locator('.detail-hero .case-image-placeholder')).toHaveText(`[IMAGE AREA — ${project.detail.heroSlot.label}]`)
-          await expect(page.locator('.case-section .case-image-slot')).toHaveCount(project.caseStudy!.filter(section => section.imageSlot).length)
-          await expect(page.locator('.case-principle')).toHaveCount(4)
-          await expect(page.locator('.case-decision')).toHaveCount(4)
+          await expect(page.locator('.detail-hero .case-image-placeholder')).toHaveText(`IMAGE — ${project.detail.heroSlot.label}`)
+          await expect(page.locator('.case-image-slot figcaption')).toHaveCount(0)
+          await expect(page.locator('.case-image-slot:not(.detail-hero)')).toHaveCount(project.caseStudy!.filter(section => section.imageSlot).length)
+          await expect(page.locator('.case-principle')).toHaveCount(2)
+          await expect(page.locator('.case-decision')).toHaveCount(3)
+          await expect(page.locator('.case-image-slot--mobile-pair .case-image-placeholder')).toHaveCount(2)
           await expect(page.locator('.case-section h2')).toHaveText(project.caseStudy!.map(section => section.heading))
           if (width <= 767) {
             // Legacy cases use smaller mobile copy; rich reading content must not inherit it.
@@ -677,8 +830,18 @@ try {
         }
         await expect(page.locator('.case-section')).toHaveCount((project.caseStudy ?? processCaseStudy).length)
         const metadata = project.detail?.metadata ?? [['Role', project.role], ['Period', project.period], ['Type', project.type], ...project.status ? [['Status', project.status]] : []]
-        await expect(page.locator('.detail-meta dt')).toHaveText(metadata.map(([term]) => term))
-        await expect(page.locator('.detail-meta dd')).toHaveText(metadata.map(([, value]) => value))
+        await expect(page.locator('.detail-meta dt')).toHaveText([...metadata.map(([term]) => term), ...project.detail?.liveUrl ? ['Live'] : []])
+        await expect(page.locator('.detail-meta dd')).toHaveText([...metadata.map(([, value]) => value), ...project.detail?.liveUrl ? [project.detail.liveLabel ?? '서비스 보러가기'] : []])
+        const live = page.locator('.detail-live-link')
+        if (project.detail?.liveUrl) {
+          await expect(live).toHaveAttribute('href', project.detail.liveUrl)
+          await expect(live).toHaveAttribute('target', '_blank')
+          await expect(live).toHaveAttribute('rel', 'noopener noreferrer')
+          await expect(live).toHaveAccessibleName(`${project.name} 서비스 보러가기 (새 창에서 열기)`)
+          await live.focus()
+          await expect(live).toBeFocused()
+          expect(await live.evaluate(element => getComputedStyle(element).outlineStyle)).not.toBe('none')
+        } else await expect(live).toHaveCount(0)
         await expect(page.locator('.next-project')).toHaveAttribute('href', `/project/${projects[(index + 1) % projects.length].slug}`)
         await expect(page.locator('.back-link')).toHaveAttribute('href', '/#high-camp')
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${project.slug} @${width}`).toBe(true)
@@ -762,6 +925,14 @@ try {
     await scrollToProgress(page, (camps[1].progress + camps[2].progress) / 2)
     await settle(page)
     expect((await campStates(page)).every(state => state.transform === 'none'), 'no transformed compositions').toBe(true)
+    await goToCamp(page, 4)
+    await page.locator('#high-camp button[aria-selected]').nth(2).click()
+    await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[2].slug)
+    await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
+    await page.locator('.back-link').click()
+    await expectArrived(page, 4)
+    await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', projects[2].slug)
+    await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-presence', '1')
     await context.close()
   })
 
@@ -780,6 +951,10 @@ try {
     await expect.poll(() => page.evaluate(() => { const img = document.querySelector<HTMLImageElement>('#high-camp .project-screen img[data-active="true"]'); return img ? img.complete && img.naturalWidth > 0 && /bees[-.]/.test(img.currentSrc) : false })).toBe(true)
     await page.getByRole('link', { name: '프로젝트 보기', exact: true }).tap()
     await expect(page.locator('.detail-title')).toHaveText(projects[1].name)
+    await page.locator('.back-link').tap()
+    await expectArrived(page, 4)
+    await expect(page.locator('#high-camp button[aria-selected]').nth(1)).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('#high-camp .project-screen img[data-active="true"]')).toBeVisible()
     await context.close()
   })
 
@@ -807,6 +982,10 @@ try {
     await expect(page.locator('#high-camp .project-screen img[data-active="true"]')).toBeVisible()
     await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
     await expect(page.locator('.detail-title')).toHaveText(projects[0].name)
+    await page.locator('.back-link').click()
+    await expect(page.locator('#high-camp')).toBeInViewport()
+    await expect(page.locator('canvas')).toHaveCount(0)
+    await expect(page.locator('#high-camp button[aria-selected]').first()).toHaveAttribute('aria-selected', 'true')
   }
 
   for (const viewport of [desktop, { width: 390, height: 844 }]) {

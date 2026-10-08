@@ -73,6 +73,7 @@ export class ProjectShowcase {
   private selected = 0
   private displayed = -1
   private transition = 1
+  private instantSelection = false
   private textures: (THREE.Texture | null)[] = projects.map(() => null)
   private bitmaps: ImageBitmap[] = []
   private decoder = new CaptureDecoder()
@@ -298,7 +299,7 @@ export class ProjectShowcase {
     if (!projects[index]) return
     if (index === this.selected && !instant) return
     this.selected = index
-    if (instant) this.transition = 1
+    if (instant) { this.transition = 1; this.instantSelection = true }
     this.dirty = true
   }
 
@@ -326,10 +327,12 @@ export class ProjectShowcase {
       screen.toMap.value = this.textures[this.selected]
       const { width, height } = projects[this.selected].screen
       screen.toFit.value.copy(captureFit(width, height))
-      this.transition = this.displayed < 0 ? 1 : 0
+      this.transition = this.displayed < 0 || this.instantSelection ? 1 : 0
       this.displayed = this.selected
       screen.mixAmount.value = this.transition
     }
+    if (this.instantSelection && this.displayed === this.selected) screen.mixAmount.value = 1
+    this.instantSelection = false
     if (this.transition < 1) {
       this.transition = frame.reducedMotion ? 1 : Math.min(1, this.transition + delta / CROSSFADE)
       screen.mixAmount.value = smootherstep(this.transition)
