@@ -35,7 +35,7 @@ export function ProjectDetail() {
     </header>
     <div className="detail-wrap">
       {deurim ? <div className="detail-heading-row"><h1 className="detail-title" tabIndex={-1}>{project.name}</h1>{liveLink && <div className="detail-heading-action">{liveLink}</div>}</div> : <h1 className="detail-title" tabIndex={-1}>{project.name}</h1>}
-      <p className="detail-summary"><CaseText text={project.detail?.summary ?? project.summary} /></p>{keywords.length > 0 && <ul className="project-tags" aria-label="프로젝트 키워드">{keywords.map(tag => <li key={tag}>#{tag}</li>)}</ul>}
+      <p className="detail-summary"><CaseText text={project.detail?.summary ?? project.summary} prose={deurim} /></p>{keywords.length > 0 && <ul className="project-tags" aria-label="프로젝트 키워드">{keywords.map(tag => <li key={tag}>#{tag}</li>)}</ul>}
       <dl className={`detail-meta${project.detail ? ' detail-meta-editorial' : ''}`}>{meta.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}
         {!deurim && project.detail?.liveUrl && <div><dt>Live</dt><dd>{liveLink}</dd></div>}
       </dl>
@@ -43,7 +43,7 @@ export function ProjectDetail() {
         <img src={project.screen.desktop} width={project.screen.width} height={project.screen.height} alt={`${project.name} 프로젝트 화면`} loading="eager" decoding="async" fetchPriority="high" />
       </div>)}
     </div>
-    <CaseStudy sections={project.caseStudy ?? processCaseStudy} heroSlot={editorial ? project.detail?.heroSlot : undefined} />
+    <CaseStudy sections={project.caseStudy ?? processCaseStudy} heroSlot={editorial ? project.detail?.heroSlot : undefined} sentenceBreaks={deurim} />
     <footer className="detail-closing"><div className="detail-closing-inner">
       <Link className="next-project" to={`/project/${next.slug}`}><span className="mono">Next Project / {next.number}</span><span>{next.name}<i aria-hidden="true">↗</i></span></Link>
     </div></footer>

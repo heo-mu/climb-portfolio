@@ -1,0 +1,20 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+.project-detail-deurim .visual-measure-demo {
+  grid-column: 2;
+  justify-self: end;
+  /* Original service panel width, minus its two 20px insets and border. */
+  width: calc(clamp(20rem, 24vw, 21.75rem) - 42px);
+  max-width: 100%;
+  min-width: 0;
+}
+.project-detail-deurim .visual-measure-demo__service {
+  background: #fff;
+  border-radius: var(--case-radius-default, 10px);
+}
+@media (max-width: 900px) {
+  .project-detail-deurim .case-section--visual-measure {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .project-detail-deurim .visual-measure-demo { grid-column: 1; }
+}

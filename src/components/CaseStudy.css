@@ -7,6 +7,7 @@
   --case-space-narrative: 88px;
   --case-space-image: 48px;
 }
+.project-detail-deurim { --case-radius-small: 8px; --case-radius-default: 10px; }
 .project-detail .case-section {
   --case-section-space: var(--case-space-standard);
   padding: var(--case-section-space) max(var(--gutter), calc((100% - 1120px) / 2));
@@ -26,6 +27,15 @@
 .case-external-link:hover .case-external-arrow { transform: translate(2px, -2px); }
 .case-external-link:focus-visible { outline: 1px solid var(--color-accent); outline-offset: 6px; }
 .project-detail .case-external > p { margin: 0 0 12px; font-size: 14px; }
+.project-detail-deurim .case-external { display: flex; align-items: center; justify-content: space-between; gap: 32px; margin-top: 32px; padding: 22px 24px; border: 1px solid rgb(220 229 225 / 14%); border-radius: var(--case-radius-default); background: rgb(255 255 255 / 2%); }
+.project-detail-deurim .case-external-copy { min-width: 0; }
+.project-detail-deurim .case-external-copy h3 { margin: 0; color: #edf0ee; font-size: 15px; font-weight: 550; line-height: 24px; }
+.project-detail-deurim .case-external-copy p { margin: 4px 0 0; color: #b9c7c4; font-size: 14px; line-height: 22px; }
+.project-detail-deurim .case-external-rank { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; color: #a8b6b5; font-size: 12px; line-height: 20px; }
+.project-detail-deurim .case-external-rank strong { color: #edf0ee; font-size: 16px; font-weight: 600; line-height: 22px; }
+.project-detail-deurim .case-external .case-external-link { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 44px; padding: 9px 12px; border: 1px solid rgb(220 229 225 / 20%); border-radius: var(--case-radius-small); color: #dce5e1; font-size: 13px; font-weight: 500; line-height: 22px; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
+.project-detail-deurim .case-external .case-external-link:hover { border-color: #71858a; background: rgb(255 255 255 / 5%); color: #edf0ee; }
+.project-detail-deurim .case-external .case-external-link:focus-visible { outline-offset: 3px; }
 
 /* Opt-in editorial narrative. Other project detail pages keep their grid. */
 .mobile-break-space { display: none; }
@@ -37,6 +47,8 @@
 .detail-live-arrow { width: 16px; height: 16px; transition: transform 160ms ease; }
 .detail-live-link:hover { color: var(--color-accent); }
 .detail-live-link:hover .detail-live-arrow { transform: translate(2px, -2px); }
+.project-detail-deurim .detail-live-arrow { color: #d5ff40; }
+.project-detail-deurim .detail-live-link:hover { color: #dce5e1; }
 .detail-live-link:focus-visible { outline: 1px solid var(--color-accent); outline-offset: 6px; }
 .project-detail-editorial .detail-meta { margin-bottom: 0; }
 .project-detail-editorial .case-section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
@@ -51,6 +63,8 @@
 .project-detail-editorial .case-principle { max-width: 1040px; margin: 48px 0; font-size: clamp(26px, 2.2vw, 30px); line-height: 1.6; font-weight: 450; letter-spacing: -.025em; text-wrap: pretty; }
 .project-detail-editorial .case-row > p { margin-top: 12px; }
 .project-detail-editorial .case-image-slot { min-width: 0; background: rgb(217 233 240 / 2%); }
+.project-detail-deurim .case-image-slot { overflow: hidden; border-radius: var(--case-radius-default); }
+.project-detail-deurim .case-image-slot--mobile-pair .case-image-panel { border-radius: var(--case-radius-small); }
 .project-detail-editorial .case-image-panel { min-width: 0; aspect-ratio: 16 / 8; }
 .project-detail-editorial .case-image-placeholder { width: 100%; height: 100%; aspect-ratio: auto; padding: 24px; }
 .project-detail-editorial .case-image-placeholder > span { max-width: 360px; font-size: 12px; line-height: 1.8; letter-spacing: 0; word-break: keep-all; text-wrap: pretty; }
@@ -59,6 +73,7 @@
 /* A short introduction, then the first wide product screen. */
 .project-detail-editorial .case-section--overview .case-content,
 .project-detail-editorial .case-section--product .case-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 64px; align-items: start; }
+.project-detail-deurim .case-section--overview .case-content { grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); }
 .project-detail-editorial .case-section--overview .case-content > p,
 .project-detail-editorial .case-section--product .case-content > p { margin-top: 0; }
 .project-detail-editorial .case-section--overview .case-image-carousel { grid-column: 1 / -1; margin-top: 8px; }
@@ -73,49 +88,86 @@
 
 /* The problem reads as a statement, with quiet supporting copy. */
 .project-detail-editorial .case-section--statement { grid-template-columns: 180px minmax(0, 1fr); gap: 48px; }
-.project-detail-editorial .case-section--statement .case-label { padding-top: 12px; }
-.project-detail-editorial .case-section--statement h2 { font-size: clamp(24px, 2vw, 28px); }
 .project-detail-editorial .case-section--statement p { margin-top: 32px; }
 
+/* Deurim's three installation questions share one aligned editorial grid. */
+.project-detail-deurim .case-section--statement { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.project-detail-deurim .case-problems { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
+.project-detail-deurim .case-problem { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 20px; border: 1px solid rgb(199 210 207 / 14%); border-radius: var(--case-radius-default); background: var(--detail-tone-base); }
+.project-detail-deurim .case-problem-index { color: rgb(199 210 207 / 34%); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; font-weight: 400; line-height: 18px; letter-spacing: .08em; font-variant-numeric: tabular-nums; }
+.project-detail-deurim .case-problem h3 { margin: 0; color: #edf0ee; font-size: 16px; font-weight: 550; line-height: 25px; letter-spacing: -.02em; word-break: keep-all; text-wrap: balance; }
+.project-detail-deurim .case-problem p { max-width: none; margin: 0; color: #bac6c4; font-size: 14px; line-height: 1.8; }
+@media (max-width: 900px) {
+  .project-detail-deurim .case-problems { grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; gap: 16px; }
+  .project-detail-deurim .case-problem { min-height: 0; }
+}
+
 /* The flow leads; the explanation supports it. */
-.project-detail-editorial .case-section--structure .case-flows { margin: 0 0 32px; }
+.project-detail-editorial .case-section--structure .case-flows { margin: 32px 0 0; }
 .project-detail-editorial .case-section--structure .case-flows > div { padding: 20px 0 24px; border-bottom: 1px solid var(--rule); }
 .project-detail-editorial .case-section--structure .case-flows h3 { font-size: 12px; color: #9dadae; font-weight: 400; }
 .project-detail-editorial .case-section--structure .case-flows ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-top: 20px; }
 .project-detail-editorial .case-section--structure .case-flows li { display: flex; justify-content: space-between; font-size: 24px; color: #edf0ee; }
-.project-detail-editorial .case-section--structure h2 { font-size: 20px; }
 .project-detail-editorial .case-section--structure .case-content > p { margin-top: 12px; }
 
 /* Keep the ruler UI a small, unframed proof point beside the copy. */
 .project-detail-deurim .case-section--visual-measure,
-.project-detail-deurim .case-section--trust { grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr); gap: 32px 48px; align-items: start; }
+.project-detail-deurim .case-section--trust { grid-template-columns: minmax(0, 1fr) auto; gap: 32px 48px; align-items: start; }
 .project-detail-deurim .case-section--visual-measure > .case-label,
 .project-detail-deurim .case-section--trust > .case-label { grid-column: 1 / -1; }
 .project-detail-deurim .case-section--visual-measure .case-content,
 .project-detail-deurim .case-section--trust .case-content { grid-column: 1; }
 .project-detail-editorial .case-section--visual-measure .case-content > p { margin-top: 20px; }
-.project-detail-deurim .case-section--visual-measure .case-image-slot,
 .project-detail-deurim .case-section--trust .case-image-slot { grid-column: 2; width: 306px; max-width: 100%; justify-self: start; border: 0; background: none; }
-.project-detail-editorial .case-section--visual-measure .case-image-panel { background: none; }
-.project-detail-editorial .case-section--visual-measure .case-image-panel > img { display: block; width: 100%; max-width: 306px; height: auto; object-fit: contain; }
 
 /* One principle, supported by a quiet image and short explanation. */
-.project-detail-editorial .case-section--trust h2 { font-size: clamp(28px, 2.4vw, 34px); }
 .project-detail-editorial .case-section--trust .case-image-panel > img { display: block; width: 100%; max-width: 306px; height: auto; }
 .project-detail-editorial .case-image-slot--split .case-image-panel { aspect-ratio: 4 / 3; }
 
 /* Equal columns, common rules and aligned rows make the comparisons scannable. */
 .project-detail-editorial .case-section--workflow .case-flows,
+.project-detail-editorial .case-section--workflow .case-comparison,
 .project-detail-editorial .case-section--comparison .case-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px; margin-top: 32px; }
 .project-detail-editorial .case-section--workflow .case-flows > div,
+.project-detail-editorial .case-section--workflow .case-comparison > div,
 .project-detail-editorial .case-section--comparison .case-comparison > div { padding: 20px 0 0; border-top: 1px solid var(--rule); }
 .project-detail-editorial .case-section--workflow .case-flows h3,
+.project-detail-editorial .case-section--workflow .case-comparison h3,
 .project-detail-editorial .case-section--comparison .case-comparison h3 { font-size: 12px; line-height: 20px; letter-spacing: .08em; color: #c7d2cf; }
+.project-detail-deurim .case-section--workflow .case-list { list-style: none; margin-top: 16px; padding: 0; }
+.project-detail-deurim .case-section--workflow .case-list li { margin: 0; padding: 8px 0; font-size: 16px; line-height: 24px; }
 .project-detail-editorial .case-section--workflow .case-flows ol { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: 16px; }
 .project-detail-editorial .case-section--comparison .case-list { list-style: none; padding: 0; margin-top: 16px; }
 .project-detail-editorial .case-section--workflow .case-flows li,
 .project-detail-editorial .case-section--comparison .case-list li { padding: 8px 0; margin: 0; font-size: 16px; line-height: 24px; }
 .project-detail-editorial .case-section--workflow .case-flows li::after { content: none; }
+
+/* Each AI execution leads to a designer judgment within the same row. */
+.project-detail-deurim .case-section--workflow .case-ai-pairs { margin-top: 32px; }
+.project-detail-deurim .case-section--workflow .case-content > p .case-copy-unit { display: block; text-wrap: pretty; }
+.project-detail-deurim .case-section--workflow .case-ai-pair-header { display: grid; grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr); gap: 24px; padding-bottom: 14px; color: #a9b8be; font-size: 12px; line-height: 20px; }
+.project-detail-deurim .case-section--workflow .case-ai-pair-header > :last-child { grid-column: 3; }
+.project-detail-deurim .case-section--workflow .case-ai-pair { padding: 24px 0; border-top: 1px solid var(--rule); }
+.project-detail-deurim .case-section--workflow .case-ai-pair h3 { margin: 0; font-size: 16px; font-weight: 500; line-height: 24px; color: #edf0ee; text-wrap: pretty; }
+.project-detail-deurim .case-section--workflow .case-ai-pair-content { display: grid; grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr); align-items: start; gap: 24px; }
+.project-detail-deurim .case-section--workflow .case-ai-pair-label { display: none; color: #91a1a7; font-size: 11px; line-height: 18px; }
+.project-detail-deurim .case-section--workflow .case-ai-pair p { max-width: none; margin: 6px 0 0; font-size: 15px; line-height: 26px; text-wrap: pretty; word-break: keep-all; overflow-wrap: anywhere; }
+.project-detail-deurim .case-section--workflow .case-ai-pair-arrow { color: #788b93; font-size: 14px; line-height: 24px; text-align: center; }
+.project-detail-deurim .case-section--workflow .case-ai-pair-arrow::after { content: '→'; }
+.project-detail-deurim .case-section--workflow .case-ai-insight { margin-top: 24px; padding: 28px 32px; border: 1px solid rgb(180 196 193 / 14%); border-radius: var(--case-radius-default); background: var(--detail-tone-base); }
+.project-detail-deurim .case-section--workflow .case-ai-insight-label { display: block; margin-bottom: 12px; color: #91a1a7; font-size: 11px; line-height: 18px; }
+.project-detail-deurim .case-section--workflow .case-ai-takeaway { max-width: none; margin: 0; color: #edf0ee; font-size: 20px; line-height: 32px; text-wrap: pretty; word-break: keep-all; }
+.project-detail-deurim .case-section--workflow .case-ai-takeaway strong { font-weight: 500; }
+@media (max-width: 767px) {
+  .project-detail-deurim .case-section--workflow .case-ai-pair-header { display: none; }
+  .project-detail-deurim .case-section--workflow .case-ai-pair-label { display: block; margin-bottom: 6px; }
+  .project-detail-deurim .case-section--workflow .case-ai-pair { padding: 20px 0; }
+  .project-detail-deurim .case-section--workflow .case-ai-pair-content { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .project-detail-deurim .case-section--workflow .case-ai-pair-arrow { justify-self: start; }
+  .project-detail-deurim .case-section--workflow .case-ai-pair-arrow::after { content: '↓'; }
+  .project-detail-deurim .case-section--workflow .case-ai-insight { padding: 22px 20px; }
+  .project-detail-deurim .case-section--workflow .case-ai-takeaway { font-size: 18px; line-height: 30px; }
+}
 
 /* Three concise decisions, followed by two portrait mobile states. */
 .project-detail-editorial .case-decisions--compact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin-top: 32px; }
@@ -131,22 +183,35 @@
 
 .project-detail-editorial .case-section--product .case-rows { grid-column: 2; margin: 0; }
 .project-detail-editorial .case-section--product .case-row { padding: 0; border: 0; }
-.project-detail-editorial .case-section--reflection h2 { max-width: 780px; font-size: clamp(28px, 2.4vw, 34px); }
 .project-detail-editorial .case-section--reflection .case-rows { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin-top: 40px; }
 .project-detail-editorial .case-section--reflection .case-row h3 { font-size: 12px; color: #9dadae; }
 .project-detail-editorial .case-section--reflection .case-row p { color: #edf0ee; font-size: 16px; }
 .project-detail-editorial .case-section--reflection .case-principle { margin-bottom: 32px; }
+/* Lessons and synthesis have separate visual levels, scoped to Deurim. */
+.project-detail-deurim .case-section--reflection .case-rows { gap: 0; margin-top: 36px; }
+.project-detail-deurim .case-section--reflection .case-row { display: block; min-width: 0; padding: 8px 28px 8px 0; border: 0; }
+.project-detail-deurim .case-section--reflection .case-row + .case-row { padding-left: 28px; border-left: 1px solid var(--rule); }
+.project-detail-deurim .case-section--reflection .case-row:last-child { padding-right: 0; }
+.project-detail-deurim .case-section--reflection .case-row h3 { margin: 0 0 18px; padding: 0; color: #7e9093; font-size: 11px; font-weight: 400; line-height: 16px; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.project-detail-deurim .case-section--reflection .case-row p { margin: 0; font-size: 17px; line-height: 1.8; letter-spacing: -.02em; word-break: keep-all; text-wrap: pretty; }
+.project-detail-deurim .case-section--reflection .case-reflection-summary { margin-top: 48px; padding: 36px; border-radius: var(--case-radius-default); background: var(--detail-tone-elevated); }
+.project-detail-deurim .case-section--reflection .case-reflection-process { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; margin: 0; padding: 0; border: 0; font-size: clamp(18px, 1.6vw, 22px); font-weight: 500; line-height: 1.5; letter-spacing: -.03em; }
+.project-detail-deurim .case-section--reflection .case-reflection-process span { color: #edf0ee; text-align: center; word-break: keep-all; }
+.project-detail-deurim .case-section--reflection .case-reflection-process i { color: rgb(213 255 64 / 55%); font-size: 14px; font-weight: 400; font-style: normal; }
+.project-detail-deurim .case-section--reflection .case-reflection-insight { width: 100%; max-width: none; margin: 28px 0 0; padding: 16px 20px; border-radius: var(--case-radius-small); background: rgb(255 255 255 / 3%); color: #dbe3e0; font-size: 16px; font-weight: 500; line-height: 1.8; letter-spacing: -.02em; text-align: left; text-wrap: pretty; }
+.project-detail-deurim .case-section--reflection .case-reflection-insight::before { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 10px 2px 0; border-radius: 50%; background: rgb(213 255 64 / 62%); vertical-align: middle; }
 
 @media (max-width: 900px) {
   .desktop-break { display: none; }
   .mobile-break-space { display: inline; }
   .project-detail-editorial h2 .case-text-unit { display: inline-block; max-width: 100%; text-wrap: balance; }
   .project-detail-editorial .case-section--statement { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-  .project-detail-editorial .case-section--statement .case-label { padding: 0; }
   .project-detail-deurim .case-section--visual-measure,
   .project-detail-deurim .case-section--trust { column-gap: 32px; }
   .project-detail-editorial .case-section--overview .case-content,
   .project-detail-editorial .case-section--product .case-content { column-gap: 32px; }
+  .project-detail-deurim .case-section--overview .case-content,
+  .project-detail-deurim .case-section--product .case-content { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .case-image-tabs { gap: 12px; }
   .project-detail-editorial .case-image-slot--mobile-pair .case-image-stage { gap: 16px; }
 }
@@ -158,7 +223,6 @@
   .project-detail-deurim .detail-heading-action { padding: 0; }
   .detail-live-link { min-height: 32px; }
   .project-detail-editorial .case-section { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .project-detail-deurim .case-section--visual-measure .case-image-slot,
   .project-detail-deurim .case-section--trust .case-image-slot { grid-column: 1; }
   .project-detail-editorial .case-section h2 { font-size: 24px; line-height: 1.5; }
   .project-detail-editorial .case-section p,
@@ -170,11 +234,10 @@
   .project-detail-editorial .case-section--structure .case-flows ol { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .project-detail-editorial .case-section--structure .case-flows li { align-items: center; font-size: 22px; padding: 8px 0; }
   .project-detail-editorial .case-section--structure .case-flows li:not(:last-child)::after { content: '\2193'; font-size: 16px; }
-  .project-detail-editorial .case-section--structure h2 { font-size: 18px; }
-  .project-detail-editorial .case-section--trust h2,
-  .project-detail-editorial .case-section--reflection h2 { font-size: 26px; }
   .project-detail-editorial .case-section--workflow .case-flows,
+  .project-detail-editorial .case-section--workflow .case-comparison,
   .project-detail-editorial .case-section--comparison .case-comparison { gap: 20px; }
+  .project-detail-editorial .case-section--workflow .case-comparison { grid-template-columns: minmax(0, 1fr); }
   .project-detail-editorial .case-section--workflow .case-flows li,
   .project-detail-editorial .case-section--comparison .case-list li { font-size: 14px; line-height: 24px; }
   .project-detail-editorial .case-decisions--compact { grid-template-columns: minmax(0, 1fr); gap: 24px; }
@@ -185,6 +248,16 @@
   .project-detail-editorial .case-section--reflection .case-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 16px; padding: 20px 0; }
   .project-detail-editorial .case-section--reflection .case-row h3 { padding-top: 4px; }
   .project-detail-editorial .case-section--reflection .case-row p { margin: 0; font-size: 15px; }
+  .project-detail-deurim .case-section--reflection .case-rows { grid-template-columns: minmax(0, 1fr); margin-top: 28px; }
+  .project-detail-deurim .case-section--reflection .case-row,
+  .project-detail-deurim .case-section--reflection .case-row + .case-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 16px; padding: 20px 0; border-left: 0; border-bottom: 1px solid var(--rule); }
+  .project-detail-deurim .case-section--reflection .case-row h3 { margin: 0; padding-top: 6px; }
+  .project-detail-deurim .case-section--reflection .case-row p { font-size: 16px; }
+  .project-detail-deurim .case-section--reflection .case-reflection-summary { margin-top: 32px; padding: 24px; }
+  .project-detail-deurim .case-section--reflection .case-reflection-process { grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 8px; font-size: 21px; }
+  .project-detail-deurim .case-section--reflection .case-reflection-process span { text-align: left; }
+  .project-detail-deurim .case-section--reflection .case-reflection-process i { margin-left: 2px; transform: rotate(90deg); }
+  .project-detail-deurim .case-section--reflection .case-reflection-insight { margin-top: 24px; padding: 14px 16px; font-size: 15px; line-height: 1.8; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -193,52 +266,44 @@
 }
 
 /* Directing AI: decision flow, a complete specification, then reflection. */
-.project-detail-deurim .case-prompt { margin-top: 40px; }
-.project-detail-deurim .case-prompt-workflow { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0 0 32px; padding: 0 0 8px; list-style: none; }
-.project-detail-deurim .case-prompt-workflow::before { position: absolute; top: 56px; right: 12.5%; left: 12.5%; height: 1px; background: rgba(180, 196, 193, .22); content: ''; }
-.project-detail-deurim .case-prompt-workflow li { position: relative; min-width: 0; margin: 0; padding: 0 16px; text-align: center; }
-.project-detail-deurim .case-prompt-workflow span { display: block; margin: 0; color: #819196; font-size: 36px; font-weight: 300; line-height: 48px; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
-.project-detail-deurim .case-prompt-workflow li:first-child span { color: #d5ff40; }
-.project-detail-deurim .case-prompt-workflow li::before { position: absolute; top: 53px; left: calc(50% - 3px); width: 7px; height: 7px; border: 1px solid #a5b4b3; border-radius: 50%; background: #172126; content: ''; }
-.project-detail-deurim .case-prompt-workflow strong { display: block; margin-top: 22px; color: #d3dedb; font-size: 15px; font-weight: 500; line-height: 24px; text-wrap: balance; }
-.project-detail-deurim .case-prompt-workflow i { display: none; }
-.project-detail-deurim .case-prompt-document { padding: 40px 48px; background: #202b31; border-block: 1px solid #45545a; }
-.project-detail-deurim .case-prompt-masthead { display: flex; justify-content: flex-start; flex-wrap: wrap; gap: 8px 24px; font-size: 11px; line-height: 20px; color: #97aaad; }
-.project-detail-deurim .case-prompt-masthead > :first-child { color: #d5ff40; }
-.project-detail-deurim .case-prompt .case-prompt-request { margin: 20px 0 32px; color: #edf0ee; font-size: 24px; line-height: 1.5; letter-spacing: -.02em; }
-.project-detail-deurim .case-prompt-section { display: grid; grid-template-columns: 176px minmax(0, 1fr); gap: 32px; padding-block: 24px; border-top: 1px solid #39494f; }
-.project-detail-deurim .case-prompt-section:last-child { padding-bottom: 0; }
-.project-detail-deurim .case-prompt-section h3 { margin: 0; color: #d1ddda; font-size: 13px; line-height: 22px; }
-.project-detail-deurim .case-prompt-section > div { min-width: 0; }
-.project-detail-deurim .case-prompt-section p { margin: 0; font-size: 15px; line-height: 1.8; text-wrap: pretty; }
-.project-detail-deurim .case-prompt-section ul { margin: 0; padding-left: 16px; list-style-type: '–  '; }
-.project-detail-deurim .case-prompt-section p + ul { margin-top: 8px; }
-.project-detail-deurim .case-prompt-section li { margin: 0; padding-block: 3px; color: #b4c3c0; font-size: 15px; line-height: 1.8; }
-.project-detail-deurim .case-prompt-section li::marker { color: #71858b; }
-.project-detail-deurim .case-prompt-notes { margin-top: 32px; }
-.project-detail-deurim .case-prompt-notes-label { color: #8fa2a6; font-size: 11px; line-height: 20px; }
-.project-detail-deurim .case-prompt-notes ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; list-style: none; margin: 20px 0 0; padding: 0; }
-.project-detail-deurim .case-prompt-notes li { margin: 0; padding: 0; }
-.project-detail-deurim .case-prompt-note-index { display: block; margin-bottom: 8px; color: #7f949a; font-size: 11px; line-height: 20px; font-variant-numeric: tabular-nums; }
-.project-detail-deurim .case-prompt-notes h3 { font-size: 15px; line-height: 1.6; color: #cbd6d3; }
-.project-detail-deurim .case-prompt-notes p { margin-top: 8px; font-size: 14px; line-height: 1.8; color: #96aaae; }
-.project-detail-deurim .case-prompt-takeaway { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--rule); }
-.project-detail-deurim .case-prompt-takeaway p { max-width: none; margin: 0; font-size: 20px; line-height: 1.7; color: #d7e0dc; text-wrap: pretty; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt { margin-top: 40px; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0; padding: 0 0 8px; list-style: none; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow::before { position: absolute; top: 56px; right: 12.5%; left: 12.5%; height: 1px; background: rgba(180, 196, 193, .22); content: ''; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow li { position: relative; min-width: 0; margin: 0; padding: 0 16px; text-align: center; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow span { display: block; margin: 0; color: #819196; font-size: 28px; font-weight: 300; line-height: 48px; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow li:first-child span { color: #d5ff40; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow li::before { position: absolute; top: 53px; left: calc(50% - 3px); width: 7px; height: 7px; border: 1px solid #a5b4b3; border-radius: 50%; background: #172126; content: ''; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow strong { display: block; margin-top: 22px; color: #d3dedb; font-size: 15px; font-weight: 500; line-height: 24px; text-wrap: balance; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-example { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--rule); }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-context { margin: 0 0 20px; color: #a8b9b8; font-size: 14px; line-height: 24px; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-document { overflow: hidden; background: #202b31; border: 1px solid #3d4b51; border-radius: var(--case-radius-default); }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-masthead { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; padding: 22px 28px 0; font-family: inherit; font-size: 15px; font-weight: 550; line-height: 24px; letter-spacing: normal; color: #edf0ee; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-input { padding: 20px 28px 24px; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section { min-width: 0; padding-top: 12px; border-top: 1px solid rgb(180 196 193 / 16%); }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section h3 { margin: 0 0 8px; color: #edf0ee; font-family: inherit; font-size: 15px; font-weight: 550; line-height: 1.6; letter-spacing: normal; word-break: keep-all; overflow-wrap: anywhere; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section > div { min-width: 0; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section p { margin: 0; color: #b9c7c4; font-size: 14px; line-height: 22px; text-wrap: pretty; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section p + p { margin-top: 8px; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section ul { margin: 0; padding-left: 18px; list-style: disc; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section p + ul { margin-top: 8px; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section li { margin: 0; padding-block: 0; color: #b9c7c4; font-size: 14px; line-height: 22px; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section li::marker { color: #71858b; font-size: 10px; }
 @media (max-width: 767px) {
-  .project-detail-deurim .case-prompt { margin-top: 28px; }
-  .project-detail-deurim .case-prompt-workflow { grid-template-columns: minmax(0, 1fr); gap: 0; margin-bottom: 24px; padding: 0; }
-  .project-detail-deurim .case-prompt-workflow::before { top: 12px; bottom: 12px; left: 3px; right: auto; width: 1px; height: auto; }
-  .project-detail-deurim .case-prompt-workflow li,
-  .project-detail-deurim .case-prompt-workflow li:first-child { min-height: 0; padding: 0 0 28px 32px; text-align: left; }
-  .project-detail-deurim .case-prompt-workflow li:last-child { padding-bottom: 0; }
-  .project-detail-deurim .case-prompt-workflow span { font-size: 30px; line-height: 40px; }
-  .project-detail-deurim .case-prompt-workflow li::before { top: 16px; left: 0; }
-  .project-detail-deurim .case-prompt-workflow strong { margin-top: 4px; font-size: 15px; line-height: 23px; text-wrap: pretty; }
-  .project-detail-deurim .case-prompt-document { padding: 24px 20px; }
-  .project-detail-deurim .case-prompt .case-prompt-request { font-size: 20px; }
-  .project-detail-deurim .case-prompt-section { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .project-detail-deurim .case-prompt-notes ol { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .project-detail-deurim .case-prompt-takeaway p { font-size: 18px; }
+  .project-detail-deurim .case-external { align-items: stretch; flex-direction: column; gap: 20px; padding: 20px; }
+  .project-detail-deurim .case-external .case-external-link { width: 100%; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt { margin-top: 28px; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow { grid-template-columns: minmax(0, 1fr); gap: 0; margin-bottom: 0; padding: 0; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow::before { top: 12px; bottom: 12px; left: 3px; right: auto; width: 1px; height: auto; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow li,
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow li:first-child { min-height: 0; padding: 0 0 28px 32px; text-align: left; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow li:last-child { padding-bottom: 0; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow span { font-size: 22px; line-height: 32px; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow li::before { top: 16px; left: 0; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-workflow strong { margin-top: 4px; font-size: 15px; line-height: 23px; text-wrap: pretty; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-example { margin-top: 32px; padding-top: 24px; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-document { border-radius: var(--case-radius-default); }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-masthead { padding: 20px 20px 0; }
+  .project-detail-deurim :where(.case-section--directing-ai) .case-prompt-input { padding: 20px; }
 }
 
 /* Deurim's screen selector reads as an image index, not a boxed tab bar. */
@@ -313,4 +378,78 @@
 .project-detail-deurim .case-decision dd { max-width: none; }
 .project-detail-deurim .case-section--visual-measure .case-content > p,
 .project-detail-deurim .case-section--trust .case-content > p,
-.project-detail-deurim .case-prompt-section p { max-width: none; }
+.project-detail-deurim :where(.case-section--directing-ai) .case-prompt-section p { max-width: none; }
+
+/* Deurim section typography: one shared label and heading scale. */
+.project-detail-deurim .case-content > p { max-width: none; }
+.project-detail-deurim .case-content p { text-wrap: balance; }
+.project-detail-deurim .case-copy-unit { display: block; text-wrap: balance; }
+.project-detail-deurim .case-problem .case-copy-unit { display: inline; }
+.project-detail-deurim .case-content h3 { text-wrap: balance; }
+.project-detail-deurim .case-rows p,
+.project-detail-deurim .case-decision p,
+.project-detail-deurim .detail-summary,
+.project-detail-deurim .detail-meta dd { max-width: none; text-wrap: balance; }
+.project-detail-deurim .case-section .case-label.mono {
+  display: flex; align-items: flex-start; gap: 16px; margin: 0; padding: 0;
+  font-family: inherit; font-size: 11px; font-weight: 500; line-height: 20px;
+  letter-spacing: .06em; color: #c7d2cf;
+}
+.project-detail-deurim .case-section .case-label.mono > span { color: var(--color-accent); }
+.project-detail-deurim .case-section h2 {
+  max-width: none; margin: 0; font-family: inherit; font-size: clamp(24px, 2vw, 28px);
+  font-weight: 500; line-height: 1.5; letter-spacing: -.025em; color: #edf0ee;
+  word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty;
+}
+@media (max-width: 900px) {
+  .project-detail-deurim .case-section h2 { text-wrap: balance; }
+  .project-detail-deurim .case-section h2 .case-text-unit { display: inline-block; text-wrap: balance; }
+}
+@media (max-width: 767px) {
+  .project-detail-deurim .case-section h2 { font-size: 24px; line-height: 1.5; }
+}
+@media (max-width: 900px) {
+  .project-detail-deurim .case-section--visual-measure { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Small supporting copy and one concrete work cycle, scoped to Deurim. */
+.project-detail-deurim .case-section--visual-measure .case-supporting { margin-top: 20px; padding-top: 12px; border-top: 1px solid rgb(180 196 193 / 16%); }
+.project-detail-deurim .case-section--visual-measure .case-supporting > span { display: block; margin-bottom: 4px; color: #b6d84a; font-size: 10px; font-weight: 500; line-height: 16px; letter-spacing: .04em; }
+.project-detail-deurim .case-section--visual-measure .case-supporting p { max-width: none; margin: 0; color: #96aaae; font-size: 13px; line-height: 1.75; text-wrap: pretty; }
+.project-detail-deurim .case-section--directing-ai .case-prompt-cycle { margin: 0 28px; padding: 24px 0 28px; border-top: 1px solid var(--rule); }
+.project-detail-deurim .case-section--directing-ai .case-prompt-cycle > h3 { margin: 0 0 16px; font-size: 15px; font-weight: 550; line-height: 24px; }
+.project-detail-deurim .case-section--directing-ai .case-prompt-cycle .case-prompt-cycle-intro { margin-bottom: 6px; color: #96aaae; font-size: 12px; line-height: 20px; }
+@media (max-width: 767px) {
+  .project-detail-deurim .case-section--directing-ai .case-prompt-cycle { margin-inline: 20px; padding-block: 20px; }
+}
+.project-detail-deurim .case-section--reflection .case-closing-copy { margin-top: 24px; font-size: 16px; line-height: 1.85; color: #d7e0dc; }
+
+/* One field grid maps the reusable request structure to its application. */
+.project-detail-deurim .case-section--directing-ai .case-prompt-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 32px; }
+@media (max-width: 767px) {
+  .project-detail-deurim .case-section--directing-ai .case-prompt-fields { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+}
+
+/* Evidence screens belong to Deurim's decision section only. */
+.project-detail-deurim .case-section--decisions .case-decision-visual { grid-column: 1 / -1; min-width: 0; margin: 16px 0 0; padding-top: 24px; border-top: 1px solid rgb(180 196 193 / 14%); }
+.project-detail-deurim .case-section--decisions .case-decision-visual-stage { box-sizing: border-box; padding: 18px 22px; border-radius: var(--case-radius-default); background: #1d292f; display: grid; grid-template-columns: 208px minmax(370px, 400px) 208px; grid-template-rows: 1fr repeat(2, minmax(118px, auto)) 1fr; justify-content: center; gap: 12px 20px; }
+.project-detail-deurim .case-section--decisions .case-decision-visual-screen { display: contents; }
+.project-detail-deurim .case-section--decisions .case-decision-visual-screen img { grid-column: 1; grid-row: 1 / 5; align-self: center; display: block; width: 208px; max-width: 100%; height: auto; border-radius: var(--case-radius-small); object-fit: contain; }
+.project-detail-deurim .case-section--decisions .case-decision-visual-screen:nth-child(2) img { grid-column: 3; }
+.project-detail-deurim .case-section--decisions .case-decision-visual-note { position: relative; grid-column: 2; grid-row: 2; box-sizing: border-box; min-width: 0; padding: 12px 18px; border: 1px solid rgb(255 255 255 / 10%); border-radius: var(--case-radius-small); background: #29373d; display: flex; flex-direction: column; justify-content: center; }
+.project-detail-deurim .case-section--decisions .case-decision-visual-screen:nth-child(2) .case-decision-visual-note { grid-row: 3; }
+.project-detail-deurim .case-section--decisions .case-decision-visual-note::before { content: ''; position: absolute; width: 8px; height: 8px; top: calc(50% - 4px); left: -5px; background: #29373d; border-left: 1px solid rgb(255 255 255 / 10%); border-bottom: 1px solid rgb(255 255 255 / 10%); transform: rotate(45deg); }
+.project-detail-deurim .case-section--decisions .case-decision-visual-screen:nth-child(2) .case-decision-visual-note::before { left: auto; right: -5px; border: 0; border-top: 1px solid rgb(255 255 255 / 10%); border-right: 1px solid rgb(255 255 255 / 10%); }
+.project-detail-deurim .case-section--decisions .case-decision-visual-note h3 { margin: 0; font-size: 14px; font-weight: 500; line-height: 22px; color: #d9e0e2; word-break: keep-all; }
+.project-detail-deurim .case-section--decisions .case-decision-visual-note p { max-width: none; margin: 8px 0 0; font-size: 12px; line-height: 20px; color: #9caaae; word-break: keep-all; overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .project-detail-deurim .case-section--decisions .case-decision-visual { margin-top: 8px; padding-top: 20px; }
+  .project-detail-deurim .case-section--decisions .case-decision-visual-stage { grid-template-columns: minmax(0, 340px); grid-template-rows: none; gap: 24px; }
+  .project-detail-deurim .case-section--decisions .case-decision-visual-screen { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .project-detail-deurim .case-section--decisions .case-decision-visual-screen img,
+  .project-detail-deurim .case-section--decisions .case-decision-visual-screen:nth-child(2) img { grid-column: auto; grid-row: auto; justify-self: center; }
+  .project-detail-deurim .case-section--decisions .case-decision-visual-note,
+  .project-detail-deurim .case-section--decisions .case-decision-visual-screen:nth-child(2) .case-decision-visual-note { grid-column: auto; grid-row: auto; }
+  .project-detail-deurim .case-section--decisions .case-decision-visual-note::before,
+  .project-detail-deurim .case-section--decisions .case-decision-visual-screen:nth-child(2) .case-decision-visual-note::before { top: -5px; left: calc(50% - 4px); right: auto; border: 0; border-top: 1px solid rgb(255 255 255 / 10%); border-left: 1px solid rgb(255 255 255 / 10%); }
+}
