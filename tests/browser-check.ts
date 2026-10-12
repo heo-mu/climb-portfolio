@@ -15,6 +15,7 @@ import { legacyProjectSlugs, processCaseStudy, projects } from '../src/data/proj
 import { profile } from '../src/data/profile.ts'
 import { experienceConfig } from '../src/config/experience.ts'
 import { installJourneyProbe } from './journeyProbe.ts'
+import { installJourneyPaintProbe } from './journeyPaintProbe.ts'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 let base = process.env.ASCENT_URL?.replace(/\/$/, '')
@@ -634,6 +635,65 @@ try {
   })
 
   // ─────────────────────────────── Project pages ───────────────────────────────
+  await step('visible scene paint on repeated detail returns, including reduced motion', async () => {
+    for (const viewport of [desktop, { width: 390, height: 844 }]) for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+      const { context, page } = await open({ viewport, reducedMotion }, [], installJourneyProbe)
+      await context.addInitScript(installJourneyPaintProbe)
+      await page.goto(base)
+      await ready(page)
+      await goToCamp(page, 4)
+      for (const [index, project] of projects.entries()) {
+        await page.locator('#high-camp button[aria-selected]').nth(index).click()
+        await expect(page.locator('#high-camp .project-open:visible')).toHaveAttribute('href', `/project/${project.slug}`)
+      }
+      await settle(page)
+      const canvas = await page.locator('.scene canvas').elementHandle()
+      for (let round = 0; round < 10; round++) {
+        const index = round % projects.length, project = projects[index]
+        await page.locator('#high-camp button[aria-selected]').nth(index).click()
+        await expect(page.locator('#high-camp .project-open:visible')).toHaveAttribute('href', `/project/${project.slug}`)
+        await settle(page)
+        const altitude = await page.locator('.altitude-number').textContent()
+        const resources = await page.evaluate(() => ({ ...window.journeyProbe }))
+        await page.locator('#high-camp .project-open:visible').click()
+        await expect(page.locator('.detail-title')).toHaveText(project.name)
+        await page.evaluate(() => { window.scrollTo(0, 300); window.journeyPaint.frames.length = 0 })
+        await page.waitForTimeout(100)
+        expect(await page.evaluate(() => window.journeyPaint.frames.length)).toBe(0)
+        if (round % 2) await page.goBack()
+        else await page.locator('.back-link').click()
+        await expectArrived(page, 4)
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+        const frames = await page.evaluate(() => window.journeyPaint.frames)
+        expect(frames.length, `${viewport.width}/${reducedMotion}/${project.slug}: resume draws`).toBeGreaterThanOrEqual(2)
+        expect(frames[0].visible, 'the synchronous restored scene must already be visible').toBe(true)
+        for (const frame of frames) {
+          expect(frame.visible).toBe(true)
+          expect(frame.opaque, 'opaque rendered scenery, not an empty buffer').toBe(12)
+          expect(frame.colors, 'scenery has spatial variation, not a flat clear color').toBeGreaterThan(3)
+        }
+        expect(await canvas!.evaluate(el => el === document.querySelector('.scene canvas'))).toBe(true)
+        await expect(page.locator('canvas')).toHaveCount(1)
+        await expect(page.locator('#high-camp button[aria-selected]').nth(index)).toHaveAttribute('aria-selected', 'true')
+        await expect(page.locator('.altitude-number')).toHaveText(altitude!)
+        await expect(page.locator('.trail-checkpoint').nth(4)).toHaveAttribute('aria-current', 'step')
+        if (viewport.width >= 768) await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-lit', 'true')
+        else await expect(page.locator('#high-camp .project-screen img[data-active=true]')).toBeVisible()
+        const after = await page.evaluate(() => ({ ...window.journeyProbe }))
+        for (const key of ['contexts', 'shaders', 'uploads', 'buffers', 'textures'] as const) expect(after[key], `retained ${key}`).toBe(resources[key])
+        if (reducedMotion === 'reduce') {
+          await settle(page)
+          const paints = await page.evaluate(() => window.journeyPaint.frames.length)
+          await page.waitForTimeout(100)
+          expect(await page.evaluate(() => window.journeyPaint.frames.length), 'no perpetual forced rendering').toBe(paints)
+        }
+      }
+      console.log(`Scene return paints: ${viewport.width}px / ${reducedMotion} / 10 round trips`)
+      await canvas!.dispose()
+      await context.close()
+    }
+  })
+
   await step('warm detail returns: retained GPU resources, paused rendering, selection and history', async () => {
     const { context, page } = await open({}, [], installJourneyProbe)
     await page.goto(base)
@@ -759,6 +819,151 @@ try {
     await context.close()
   })
 
+  await step('full case reads return to the selected project on desktop and mobile', async () => {
+    for (const viewport of [desktop, { width: 390, height: 844 }]) {
+      const { context, page } = await open({ viewport })
+      await page.goto(base)
+      await ready(page)
+      await goToCamp(page, 4)
+      const root = await page.locator('.expedition').elementHandle()
+      for (const [index, project] of projects.entries()) {
+        await page.locator('#high-camp button[aria-selected]').nth(index).click()
+        await expect(page.locator('#high-camp button[aria-selected]').nth(index)).toHaveAttribute('aria-selected', 'true')
+        await expect(page.getByRole('link', { name: '프로젝트 보기', exact: true })).toHaveAttribute('href', `/project/${project.slug}`)
+        await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
+        await expect(page.locator('.detail-title')).toHaveText(project.name)
+        for (const section of await page.locator('.case-section').all()) await section.scrollIntoViewIfNeeded()
+        await expect(page.locator('.case-section--reflection')).toBeInViewport()
+        await page.locator('.back-link').click()
+        await expectArrived(page, 4)
+        await expect(page.locator('#high-camp button[aria-selected]').nth(index)).toHaveAttribute('aria-selected', 'true')
+        expect(await root!.evaluate(element => element === document.querySelector('.expedition'))).toBe(true)
+        if (viewport.width < 768) {
+          const preview = page.locator('#high-camp .project-screen img[data-active="true"]')
+          await expect(preview).toBeVisible()
+          const filename = new URL(project.screen.desktop).pathname.split('/').at(-1)!
+          await expect.poll(() => preview.evaluate(element => new URL((element as HTMLImageElement).currentSrc).pathname.split('/').at(-1)!.replace(/-[\da-z_-]{8,}(?=\.png$)/i, ''))).toBe(filename)
+        } else {
+          await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-project', project.slug)
+          await expect(page.locator('.expedition')).toHaveAttribute('data-showcase-lit', 'true')
+        }
+      }
+      await root!.dispose()
+      await context.close()
+    }
+  })
+
+  await step('shared overview galleries: order, images, placeholders and keyboard across screen sizes', async () => {
+    const { context, page } = await open()
+    for (const width of [1440, 768, 390]) {
+      await page.setViewportSize({ width, height: 900 })
+      let sharedStyle: string | undefined
+      for (const project of projects) {
+        await page.goto(`${base}/project/${project.slug}`)
+        const overview = page.locator('.case-section').first()
+        const gallery = overview.locator('.case-image-carousel')
+        const tabs = gallery.getByRole('tab')
+        const panel = gallery.getByRole('tabpanel')
+        const panels = project.detail!.heroSlot.panels!
+        await expect(gallery).toHaveCount(1)
+        await expect(page.locator('.detail-wrap .case-image-slot, .detail-wrap .detail-hero')).toHaveCount(0)
+        await expect(overview.locator('.case-label')).toContainText('01Overview')
+        await expect(tabs).toHaveCount(panels.length)
+        await gallery.scrollIntoViewIfNeeded()
+        const order = await gallery.evaluate(el => {
+          const section = el.closest('.case-section')!
+          const copy = section.querySelector('.case-content')!.getBoundingClientRect()
+          const bounds = el.getBoundingClientRect()
+          const meta = document.querySelector('.detail-meta')!.getBoundingClientRect()
+          return meta.bottom <= copy.top && copy.bottom <= bounds.top && bounds.bottom <= section.nextElementSibling!.getBoundingClientRect().top
+        })
+        expect(order, project.slug + ' overview/gallery order').toBe(true)
+        const style = await tabs.first().evaluate(el => {
+          const s = getComputedStyle(el)
+          return [s.fontSize, s.lineHeight, s.padding, s.gap, s.color, s.backgroundImage, s.borderRadius].join('|')
+        })
+        sharedStyle ??= style
+        expect(style).toBe(sharedStyle)
+        for (const [index, content] of panels.entries()) {
+          await tabs.nth(index).click()
+          await expect(tabs.nth(index)).toHaveAttribute('aria-selected', 'true')
+          await expect(panel).toHaveAttribute('aria-labelledby', `${project.slug}-screen-tab-${index}`)
+          if (content.image) {
+            const img = panel.locator('img')
+            await expect(img).toHaveAttribute('alt', content.image.alt)
+            await expect.poll(() => img.evaluate(el => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true)
+            const size = await img.evaluate(el => { const r = el.getBoundingClientRect(), i = el as HTMLImageElement; return { ratio: r.width / r.height, source: i.naturalWidth / i.naturalHeight, fit: getComputedStyle(el).objectFit } })
+            expect(size.ratio).toBeCloseTo(size.source, 2)
+            expect(size.fit).toBe('contain')
+          } else {
+            await expect(panel.locator('img')).toHaveCount(0)
+            await expect(panel.locator('.case-image-placeholder')).toHaveText('IMAGE — ' + (content.description ?? content.label))
+          }
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        }
+        await page.keyboard.press('Home')
+        await expect(tabs.first()).toBeFocused()
+        await page.keyboard.press('ArrowLeft')
+        await expect(tabs.last()).toBeFocused()
+        await page.keyboard.press('ArrowRight')
+        await expect(tabs.first()).toBeFocused()
+        await page.keyboard.press('End')
+        await expect(tabs.last()).toHaveAttribute('aria-selected', 'true')
+        await expect(gallery.locator('figcaption')).toHaveCount(0)
+        // A new route must start on its own first screen, including 5 -> 4 tabs.
+        await page.locator('.next-project').click()
+        await expect(page.locator('.case-image-tab').first()).toHaveAttribute('aria-selected', 'true')
+        await expect(page.locator('.case-image-carousel-frame img')).toBeVisible()
+      }
+    }
+    await context.close()
+  })
+
+  await step('Deurim interactions: image index, ruler and problem focus remain independent', async () => {
+    const { context, page } = await open()
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`${base}/project/deurim`)
+      const tabs = page.locator('.case-image-tab')
+      await tabs.first().focus()
+      await page.keyboard.press('End')
+      await expect(tabs.last()).toHaveAttribute('aria-selected', 'true')
+      await expect(tabs.last()).toBeFocused()
+      await expect(page.locator('.case-image-carousel-frame img')).toHaveAttribute('alt', projects[0].detail!.heroSlot.panels!.at(-1)!.image!.alt)
+      await page.keyboard.press('Home')
+      await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+
+      const slider = page.locator('.visual-measure-demo input[type=range]')
+      await slider.scrollIntoViewIfNeeded()
+      await expect(slider).toHaveAttribute('aria-valuenow', '150')
+      const reference = await page.locator('.ds-slider__reference').getAttribute('style')
+      await slider.focus()
+      await page.keyboard.press('ArrowRight')
+      expect(Number(await slider.getAttribute('aria-valuenow'))).toBeGreaterThan(150)
+      expect(await page.locator('.ds-slider__reference').getAttribute('style')).toBe(reference)
+      await page.keyboard.press('Home')
+      await expect(slider).toHaveAttribute('aria-valuenow', '30')
+      await page.keyboard.press('End')
+      await expect(slider).toHaveAttribute('aria-valuenow', '400')
+
+      const rows = page.locator('.validation-demo .problem')
+      await rows.first().scrollIntoViewIfNeeded()
+      const viewer = page.locator('.validation-demo__viewer')
+      await expect(viewer.locator('canvas')).toBeVisible()
+      await expect(rows.first()).toHaveAttribute('aria-pressed', 'true')
+      await rows.last().click()
+      await expect(rows.last()).toHaveAttribute('aria-pressed', 'true')
+      await expect(rows.first()).toHaveAttribute('aria-pressed', 'false')
+      await expect(viewer).toHaveAttribute('aria-label', /오른쪽/)
+      await rows.first().focus()
+      await page.keyboard.press('Enter')
+      await expect(rows.first()).toHaveAttribute('aria-pressed', 'true')
+      await expect(viewer).toHaveAttribute('aria-label', /왼쪽/)
+      await expect(viewer.locator('canvas')).toHaveCount(1)
+    }
+    await context.close()
+  })
+
   await step('project deep links, legacy slugs and the missing route', async () => {
     const { context, page } = await open()
     const cdp = await context.newCDPSession(page)
@@ -792,46 +997,84 @@ try {
         } else await expect(submission).toHaveCount(0)
         const heroImage = page.locator('.detail-hero img')
         if (project.detail?.heroSlot) {
-          await expect(heroImage).toHaveCount(0)
-          await expect(page.locator('.detail-hero .case-image-placeholder')).toHaveText(`IMAGE — ${project.detail.heroSlot.label}`)
+          const slot = project.detail.heroSlot
+          const carousel = !!slot.panels
+          if (carousel) {
+            await expect(page.locator('.case-image-tab')).toHaveCount(slot.panels!.length)
+            await expect(page.locator('.case-image-tab[aria-selected=true]')).toHaveCount(1)
+            await expect(page.locator('.case-image-carousel-frame img')).toHaveAttribute('alt', slot.panels![0].image!.alt)
+          } else {
+            await expect(heroImage).toHaveCount(0)
+            await expect(page.locator('.detail-hero .case-image-placeholder')).toHaveText('IMAGE — ' + slot.label)
+          }
+          const sections = project.caseStudy!
+          const imageSlots = sections.flatMap(section => section.imageSlot ? [section.imageSlot] : [])
+          const expectedGuides = [slot.panels?.[0] ?? slot, ...imageSlots.flatMap(imageSlot => imageSlot.panels ?? [imageSlot])].filter(panel => !panel.image).map(panel => 'IMAGE — ' + panel.label)
+          await expect(page.locator('.case-image-placeholder')).toHaveText(expectedGuides)
           await expect(page.locator('.case-image-slot figcaption')).toHaveCount(0)
-          await expect(page.locator('.case-image-slot:not(.detail-hero)')).toHaveCount(project.caseStudy!.filter(section => section.imageSlot).length)
-          await expect(page.locator('.case-principle')).toHaveCount(2)
-          await expect(page.locator('.case-decision')).toHaveCount(3)
-          await expect(page.locator('.case-image-slot--mobile-pair .case-image-placeholder')).toHaveCount(2)
-          await expect(page.locator('.case-section h2')).toHaveText(project.caseStudy!.map(section => section.heading))
-          if (width <= 767) {
-            // Legacy cases use smaller mobile copy; rich reading content must not inherit it.
-            expect(await page.locator('.case-content > p').first().evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
+          const blocks = sections.flatMap(section => [...section.lead ? [section.lead] : [], ...section.blocks ?? []])
+          await expect(page.locator('.case-principle')).toHaveCount(blocks.filter(block => block.kind === 'quote').length)
+          await expect(page.locator('.case-decision')).toHaveCount(blocks.reduce((sum, block) => sum + (block.kind === 'compact-decisions' || block.kind === 'decisions' ? block.items.length : 0), 0))
+          const headingText = await page.locator('.case-section h2').evaluateAll(elements => elements.map(el => (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim()))
+          expect(headingText).toEqual(sections.map(section => section.heading.replace(/\s+/g, ' ').trim()))
+          await page.evaluate(() => document.fonts.ready)
+          for (const section of await page.locator('.case-section').all()) await section.scrollIntoViewIfNeeded()
+          for (const img of await page.locator('.project-detail img').all()) {
+            await img.scrollIntoViewIfNeeded()
+            await expect.poll(() => img.evaluate(el => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true)
+            const picture = await img.evaluate(el => { const i = el as HTMLImageElement, r = i.getBoundingClientRect(); return { fit: getComputedStyle(i).objectFit, ratio: r.width / r.height, source: i.naturalWidth / i.naturalHeight, width: r.width, natural: i.naturalWidth } })
+            expect(picture.fit).toBe('contain')
+            expect(picture.ratio).toBeCloseTo(picture.source, 2)
+            expect(picture.width).toBeLessThanOrEqual(picture.natural)
           }
-          const overflowing = await page.locator('.case-section, .case-image-slot, .detail-meta').evaluateAll(elements => elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.className))
-          expect(overflowing, `case content @${width}`).toEqual([])
+          const overflowing = await page.locator('.case-section, .case-image-slot, .detail-meta, .case-content').evaluateAll(elements => elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.className))
+          expect(overflowing, project.slug + ' content @' + width).toEqual([])
+          const type = await page.locator('.case-section h2').evaluateAll(elements => elements.map(el => {const c=getComputedStyle(el); return [c.fontFamily,c.fontSize,c.fontWeight,c.lineHeight,c.letterSpacing,c.color].join('|')}))
+          expect(new Set(type).size, 'common section heading style').toBe(1)
+          const labels = await page.locator('.case-section > .case-label').evaluateAll(elements => elements.map(el => {const c=getComputedStyle(el); return [c.fontFamily,c.fontSize,c.fontWeight,c.lineHeight,c.letterSpacing,c.color,c.margin,c.padding].join('|')}))
+          expect(new Set(labels).size, 'common section labels').toBe(1)
+          const precision = await page.locator('.project-detail').evaluate(root => {
+            const issues: string[] = []
+            for (const grid of root.querySelectorAll('.case-problems, .case-decisions--compact')) {
+              const children = [...grid.children].map(e => e.getBoundingClientRect())
+              if (children.length > 1 && Math.abs(children[0].top - children[1].top) < 1) {
+                if (Math.max(...children.map(r => r.height)) - Math.min(...children.map(r => r.height)) > 1) issues.push('unequal card heights')
+                if (Math.max(...children.map(r => r.width)) - Math.min(...children.map(r => r.width)) > 1) issues.push('unequal column widths')
+              }
+            }
+            for (const section of root.querySelectorAll('.case-section')) {
+              const label = section.querySelector('.case-label')!.getBoundingClientRect()
+              const heading = section.querySelector('h2')!.getBoundingClientRect()
+              if (Math.abs(label.left - heading.left) > 1) issues.push('section axis: ' + heading.x)
+            }
+            for (const el of root.querySelectorAll('.case-problem, .case-image-slot, .case-reflection-summary')) {
+              const c=getComputedStyle(el)
+              if (!['8px','10px'].includes(c.borderTopLeftRadius)) issues.push('surface radius: ' + c.borderTopLeftRadius)
+              if (c.borderTopStyle !== 'none' && c.borderTopWidth !== '1px') issues.push('non-hairline border')
+            }
+            if (root.classList.contains('project-detail-expanded')) {
+              for (const el of root.querySelectorAll('.case-problem, .case-decision, .case-section--split > .case-image-slot, .case-section--reflection .case-row')) {
+                const x = el.getBoundingClientRect().left
+                if (Math.abs(x - Math.round(x)) > .05) issues.push('fractional column edge: ' + el.className)
+              }
+            }
+            return issues
+          })
+          expect(precision, project.slug + ' precision @' + width).toEqual([])
+          if (width <= 767) expect(await page.locator('.case-content > p').first().evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
+          if (project.slug !== 'deurim') {
+            await expect(page.locator('.validation-demo, .visual-measure-demo, .case-prompt-document, .case-external')).toHaveCount(0)
+            expect(sections.length).toBeGreaterThanOrEqual(7)
+            expect(sections.length).toBeLessThanOrEqual(10)
+          }
         } else {
-        await expect.poll(() => heroImage.evaluate(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true)
-        const hero = await heroImage.evaluate(image => {
-          const element = image as HTMLImageElement
-          const box = element.getBoundingClientRect()
-          const heroBox = element.parentElement!.getBoundingClientRect()
-          return {
-            file: new URL(element.currentSrc).pathname.split('/').pop()!.replace(/-[\da-z_-]{8,}(?=\.png$)/i, ''),
-            imageRatio: element.naturalWidth / element.naturalHeight,
-            heroRatio: heroBox.width / heroBox.height,
-            fit: getComputedStyle(element).objectFit,
-            box: { left: box.left, right: box.right, width: box.width, height: box.height },
-          }
-        })
-        const expectedFile = new URL(project.screen.desktop, import.meta.url).pathname.split('/').pop()!
-        expect(hero.file, `${project.slug} image mapping`).toBe(expectedFile)
-        expect(hero.imageRatio, `${project.slug} source aspect ratio`).toBeCloseTo(16 / 9, 3)
-        expect(hero.heroRatio, `${project.slug} hero aspect ratio`).toBeCloseTo(16 / 9, 3)
-        expect(hero.fit, `${project.slug} image fit`).toBe('contain')
-        expect(hero.box.left, `${project.slug} hero left edge @${width}`).toBeGreaterThanOrEqual(0)
-        expect(hero.box.right, `${project.slug} hero right edge @${width}`).toBeLessThanOrEqual(width)
+          await expect.poll(() => heroImage.evaluate(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true)
+          expect(await heroImage.evaluate(image => getComputedStyle(image).objectFit)).toBe('contain')
         }
         await expect(page.locator('.case-section')).toHaveCount((project.caseStudy ?? processCaseStudy).length)
         const metadata = project.detail?.metadata ?? [['Role', project.role], ['Period', project.period], ['Type', project.type], ...project.status ? [['Status', project.status]] : []]
-        await expect(page.locator('.detail-meta dt')).toHaveText([...metadata.map(([term]) => term), ...project.detail?.liveUrl ? ['Live'] : []])
-        await expect(page.locator('.detail-meta dd')).toHaveText([...metadata.map(([, value]) => value), ...project.detail?.liveUrl ? [project.detail.liveLabel ?? '서비스 보러가기'] : []])
+        await expect(page.locator('.detail-meta dt')).toHaveText([...metadata.map(([term]) => term), ...project.detail?.liveUrl && project.slug !== 'deurim' ? ['Live'] : []])
+        await expect(page.locator('.detail-meta dd')).toHaveText([...metadata.map(([, value]) => value), ...project.detail?.liveUrl && project.slug !== 'deurim' ? [project.detail.liveLabel ?? '서비스 보러가기'] : []])
         const live = page.locator('.detail-live-link')
         if (project.detail?.liveUrl) {
           await expect(live).toHaveAttribute('href', project.detail.liveUrl)
@@ -844,6 +1087,11 @@ try {
         } else await expect(live).toHaveCount(0)
         await expect(page.locator('.next-project')).toHaveAttribute('href', `/project/${projects[(index + 1) % projects.length].slug}`)
         await expect(page.locator('.back-link')).toHaveAttribute('href', '/#high-camp')
+        await page.locator('.back-link').focus()
+        await expect(page.locator('.back-link')).toBeFocused()
+        expect(await page.locator('.back-link').evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none')
+        await page.locator('.next-project').focus()
+        expect(await page.locator('.next-project').evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none')
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${project.slug} @${width}`).toBe(true)
         if (width === 1440 || width === 390) {
           await page.reload()
@@ -854,6 +1102,13 @@ try {
           if (!project.detail?.heroSlot) await expect.poll(() => heroImage.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(project.screen.width)
         }
       }
+    }
+    for (const [index, project] of projects.entries()) {
+      await page.goto(base + '/project/' + project.slug)
+      await page.locator('.next-project').click()
+      await expect(page.locator('.detail-title')).toHaveText(projects[(index + 1) % projects.length].name)
+      await expect(page.locator('.detail-title')).toBeFocused()
+      expect(await page.evaluate(() => scrollY)).toBe(0)
     }
     for (const [legacy, slug] of Object.entries(legacyProjectSlugs)) {
       await page.goto(`${base}/project/${legacy}`)

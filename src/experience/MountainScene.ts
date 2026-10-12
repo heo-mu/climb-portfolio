@@ -43,6 +43,7 @@ export class MountainScene {
   private height = 1
   private layoutHasExhibit = false
   private active = true
+  private needsResumePaint = false
   private resumeBuild: (() => void) | null = null
   private resizeObserver: ResizeObserver
   private disposed = false
@@ -121,6 +122,7 @@ export class MountainScene {
     if (this.disposed || this.active === active) return
     this.active = active
     if (!active) {
+      this.needsResumePaint = false
       if (this.idle) window.cancelIdleCallback(this.deferred)
       else window.clearTimeout(this.deferred)
       this.deferred = 0
@@ -129,6 +131,10 @@ export class MountainScene {
     // resize() skips the placement solver and drawing-buffer reset when unchanged.
     this.resize()
     this.lastProgress = -1
+    // start() emits a synchronous delta=0 frame during route layout. Keep one
+    // paint pending for the first controller RAF, after the canvas is revealed,
+    // even at unchanged progress / dimensions or with reduced motion enabled.
+    this.needsResumePaint = true
     this.resumeBuild?.()
   }
 
@@ -211,7 +217,7 @@ export class MountainScene {
     // A project change crossfades the capture; the exhibit stays fixed in world space.
     const exhibit = this.showcase.update(frame, this.camera) || this.showcase.drawWarmUp(this.camera)
     this.options.onProjectsReady(this.showcase.ready)
-    const moving = frame.journeyProgress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit
+    const moving = this.needsResumePaint || frame.journeyProgress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit
     if (frame.reducedMotion && !moving) return
     if (!moving && frame.time - this.lastRender < 1 / 30) return
     const elapsed = Math.min(.1, Math.max(0, frame.time - this.lastRender))
@@ -245,6 +251,7 @@ export class MountainScene {
       uniforms.uOpacity.value = .55 + mood.storm * .4 - mood.summit * .2
     })
     this.renderer.render(this.scene, this.camera)
+    if (frame.delta > 0) this.needsResumePaint = false
   }
 
   dispose() {

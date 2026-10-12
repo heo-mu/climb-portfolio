@@ -1,0 +1,120 @@
+/* BEES graph handoff: one connected process, followed by its collaboration insight. */
+.project-detail-samsung-bees .case-graph-workflow { margin-top: 36px; }
+.project-detail-samsung-bees .case-graph-workflow-label { margin: 0 0 24px; color: #9dadae; font-size: 12px; line-height: 20px; }
+.project-detail-samsung-bees .case-graph-workflow-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+.project-detail-samsung-bees .case-graph-workflow-steps > li { position: relative; min-width: 0; padding: 26px 24px 0 0; border-top: 1px solid rgb(180 196 193 / 22%); }
+.project-detail-samsung-bees .case-graph-workflow-steps > li:last-child { padding-right: 0; }
+.project-detail-samsung-bees .case-graph-workflow-steps > li::before { content: ''; position: absolute; top: -3px; left: 0; width: 5px; height: 5px; border-radius: 50%; background: #b7cc71; }
+.project-detail-samsung-bees .case-graph-workflow-index { display: block; margin-bottom: 12px; font-size: 10px; font-weight: 400; line-height: 16px; letter-spacing: .08em; color: #8e9da0; }
+.project-detail-samsung-bees .case-graph-workflow-steps h3 { min-height: 56px; margin: 0 0 12px; font-size: 18px; font-weight: 550; line-height: 28px; letter-spacing: -.02em; color: #edf0ee; word-break: keep-all; }
+.project-detail-samsung-bees .case-graph-workflow-steps p { margin: 0; font-size: 14px; line-height: 1.85; color: #9dadae; word-break: keep-all; }
+.project-detail-samsung-bees .case-graph-workflow-insight { margin-top: 0; }
+.project-detail-samsung-bees .case-graph-workflow-supporting { display: block; max-width: none; margin-top: 8px; color: #9dadae; font-size: 14px; font-weight: 400; line-height: 1.85; letter-spacing: 0; }
+@media (max-width: 900px) {
+  .project-detail-samsung-bees .case-graph-workflow-steps { grid-template-columns: minmax(0, 1fr); }
+  .project-detail-samsung-bees .case-graph-workflow-steps > li,
+  .project-detail-samsung-bees .case-graph-workflow-steps > li:last-child { padding: 0 0 26px 24px; border-top: 0; border-left: 1px solid rgb(180 196 193 / 22%); }
+  .project-detail-samsung-bees .case-graph-workflow-steps > li:last-child { padding-bottom: 0; }
+  .project-detail-samsung-bees .case-graph-workflow-steps > li::before { top: 5px; left: -3px; }
+  .project-detail-samsung-bees .case-graph-workflow-index { margin-bottom: 6px; }
+  .project-detail-samsung-bees .case-graph-workflow-steps h3 { min-height: 0; margin-bottom: 8px; }
+  .project-detail-samsung-bees .case-graph-workflow-supporting { margin-top: 6px; }
+}
+
+/* Layouts for the four expanded studies. Primitives, type and surfaces live in
+   CaseStudy.css; Deurim's established composition deliberately stays untouched. */
+.project-detail-expanded .detail-summary { max-width: none; text-wrap: pretty; }
+.project-detail-expanded .detail-meta dd { word-break: keep-all; text-wrap: pretty; }
+.project-detail-expanded .case-content > p { max-width: 76ch; }
+.project-detail-expanded .case-content p { text-wrap: pretty; }
+.project-detail-expanded .case-content h3 { text-wrap: pretty; }
+.project-detail-expanded .case-section--overview .case-content,
+.project-detail-expanded .case-section--product .case-content { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 32px 48px; }
+.project-detail-expanded .case-section--overview .case-content > p,
+.project-detail-expanded .case-section--product .case-content > p { max-width: none; }
+
+/* A screen and the reasoning beside it, sharing the same content axes. */
+.project-detail-expanded .case-section--split { --case-split-gap: 48px; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: var(--case-split-gap); align-items: start; }
+.project-detail-expanded .case-section--split > .case-label { grid-column: 1 / -1; }
+.project-detail-expanded .case-section--split > .case-content { grid-column: 1; }
+.project-detail-expanded .case-section--split > .case-image-slot { grid-column: 2; }
+.project-detail-expanded .case-section--split .case-content > p { max-width: none; }
+.project-detail-expanded .case-section--split .case-row { padding: 20px 0; }
+.project-detail-expanded .case-section--split .case-row p { margin-top: 8px; font-size: 15px; }
+.project-detail-expanded .case-section--split .case-list { padding-left: 18px; }
+
+/* Editorial rows establish problems without turning every page into a card grid. */
+.project-detail-expanded .case-section--narrative .case-rows { margin-top: 32px; }
+.project-detail-expanded .case-section--narrative .case-row { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr); gap: 32px; padding: 24px 0; }
+.project-detail-expanded .case-section--narrative .case-row > p { margin: 0; max-width: none; }
+
+/* Flows accommodate their actual number of steps, rather than assuming four. */
+.project-detail-expanded .case-section .case-flows > div { padding: 24px 0; border-block: 1px solid var(--rule); }
+.project-detail-expanded .case-section .case-flows h3 { margin: 0; color: #9dadae; font-size: 12px; font-weight: 400; line-height: 20px; }
+.project-detail-expanded .case-section .case-flows ol { display: grid; grid-template-columns: repeat(var(--case-flow-count), minmax(0, 1fr)); gap: 24px; margin: 24px 0 0; }
+.project-detail-expanded .case-section .case-flows li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 21px; line-height: 32px; color: #edf0ee; }
+.project-detail-expanded .case-section .case-flows li::after { margin: 0; font-size: 14px; color: #8b9c91; }
+.project-detail-expanded .case-section--hierarchy .case-rows { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 32px; }
+.project-detail-expanded .case-section--hierarchy .case-row { padding: 24px 0 0; }
+.project-detail-expanded .case-section--hierarchy .case-row > p { max-width: none; }
+
+/* The same comparison grammar serves scope, permission and state decisions. */
+.project-detail-expanded .case-section .case-comparison { gap: 40px; }
+.project-detail-expanded .case-section .case-comparison > div { padding-top: 20px; }
+.project-detail-expanded .case-section .case-comparison h3 { font-size: 16px; font-weight: 550; line-height: 26px; letter-spacing: -.01em; color: #edf0ee; }
+.project-detail-expanded .case-section .case-comparison .case-list { list-style: none; padding: 0; margin-top: 16px; }
+.project-detail-expanded .case-section .case-comparison li { max-width: none; padding: 8px 0; margin: 0; }
+.project-detail-expanded .case-decisions--compact p { max-width: none; }
+.project-detail-expanded .case-decision-index { color: #9dadae; }
+
+/* Compact image handoffs; replacing a slot with a real image keeps contain. */
+.project-detail-expanded .case-image-stage { display: grid; grid-template-columns: minmax(0, 1fr); }
+.project-detail-expanded .case-image-slot--wide:not(.case-image-carousel-frame) .case-image-panel { aspect-ratio: 16 / 6; }
+.project-detail-expanded .case-image-slot--split .case-image-stage:has(> :nth-child(2)) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.project-detail-expanded .case-image-slot--split:has(.case-image-stage > :nth-child(2)) { padding: 16px; }
+.project-detail-expanded .case-image-slot--split .case-image-stage:has(> :nth-child(2)) .case-image-panel { border-radius: var(--case-radius-small); background: rgb(217 233 240 / 2%); }
+.project-detail-expanded .case-image-panel:has(> img) { max-width: 100%; }
+.project-detail-expanded .case-image-panel > img { height: auto; max-width: 100%; object-fit: contain; }
+.project-detail-expanded .case-image-placeholder > span { max-width: 40ch; }
+
+/* Reflection reuses Deurim's lesson / synthesis hierarchy with variable step counts. */
+.project-detail-expanded .case-section--reflection .case-reflection-process { grid-template-columns: repeat(calc(var(--case-process-count) - 1), minmax(0, 1fr) auto) minmax(0, 1fr); }
+.project-detail-expanded .case-section--reflection .case-reflection-process span { min-width: 0; }
+
+/* Keep hairline edges on whole CSS pixels; the last column absorbs rounding. */
+@supports (width: round(nearest, 1px, 1px)) {
+  @media (min-width: 901px) {
+    .project-detail-expanded .case-problems { grid-template-columns: repeat(2, round(nearest, calc((100% - 32px) / 3), 1px)) minmax(0, 1fr); }
+    .project-detail-expanded .case-section--split { grid-template-columns: round(nearest, calc((100% - var(--case-split-gap)) * .45), 1px) minmax(0, 1fr); }
+  }
+  @media (min-width: 768px) {
+    .project-detail-expanded .case-decisions--compact { grid-template-columns: repeat(2, round(nearest, calc((100% - 64px) / 3), 1px)) minmax(0, 1fr); }
+    .project-detail-expanded .case-section--reflection .case-rows { grid-template-columns: repeat(2, round(nearest, calc(100% / 3), 1px)) minmax(0, 1fr); }
+  }
+}
+
+@media (max-width: 1024px) {
+  .project-detail-expanded .case-section--split { --case-split-gap: 32px; }
+  .project-detail-expanded .case-section .case-flows ol { gap: 16px; }
+  .project-detail-expanded .case-section .case-flows li { font-size: 18px; gap: 8px; }
+}
+@media (max-width: 900px) {
+  .project-detail-expanded .case-section--split,
+  .project-detail-expanded .case-section--overview .case-content,
+  .project-detail-expanded .case-section--product .case-content { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .project-detail-expanded .case-section--split > .case-image-slot { grid-column: 1; }
+  .project-detail-expanded .case-section--split .case-image-panel { aspect-ratio: 16 / 8; }
+  .project-detail-expanded .case-section--narrative .case-row { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 24px; }
+}
+@media (max-width: 767px) {
+  .project-detail-expanded .case-image-slot--wide:not(.case-image-carousel-frame) .case-image-panel,
+  .project-detail-expanded .case-section--split .case-image-panel { aspect-ratio: 4 / 3; }
+  .project-detail-expanded .case-section--narrative .case-row { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 20px 0; }
+  .project-detail-expanded .case-section--hierarchy .case-rows { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .project-detail-expanded .case-section .case-comparison,
+  .project-detail-expanded .case-image-slot--split .case-image-stage:has(> :nth-child(2)) { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .project-detail-expanded .case-section .case-flows ol { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: 16px; }
+  .project-detail-expanded .case-section .case-flows li { padding: 10px 0; font-size: 20px; line-height: 30px; }
+  .project-detail-expanded .case-section .case-flows li:not(:last-child)::after { content: '\2193'; font-size: 14px; }
+  .project-detail-expanded .case-section--reflection .case-reflection-process { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
+}

@@ -2,7 +2,6 @@ import type { CaseSection, ProjectDetailContent } from './caseStudy.ts'
 
 export const deurimDetail: ProjectDetailContent = {
   presentation: 'editorial',
-  keywords: [],
   liveUrl: 'https://deurim.co.kr/',
   liveLabel: '서비스 보러가기',
   summary: '구매 전에 우리 집에 냉장고를 설치할 수 있는지,\n3D로 확인하는 웹 서비스예요.',

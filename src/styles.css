@@ -22,6 +22,10 @@ h1:focus { outline: none; }
 .expedition { position: relative; }
 /* Keep the warm canvas at its viewport size without contributing to detail
    scroll height, painting over it, or exposing hidden navigation to input. */
+/* The global reduced-motion duration must not create transitions for inherited
+   visibility on these otherwise static containers: WebGL resumes in layout. */
+.journey-layer, .journey-layer .expedition, .journey-layer .scene, .journey-layer .scene-vignette { transition-property: none; }
+.journey-layer[data-active=true] { visibility: visible; opacity: 1; }
 .journey-layer[data-active=false] { position: fixed; inset: 0; overflow: hidden; visibility: hidden; opacity: 0; pointer-events: none; }
 .journey-layer[data-active=false] * { animation-play-state: paused !important; }
 .scene { position: fixed; inset: 0; pointer-events: none; overflow: hidden; background: linear-gradient(155deg, #263944, #3e5663 55%, #1b2b33); }
@@ -372,7 +376,7 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 .process-line i { color: var(--color-accent); font-style: normal; }
 .case-media { margin-top: 32px; }
 /* Rich case-study blocks are opt-in; existing project narratives keep their layout. */
-.detail-meta.detail-meta-editorial { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
+.detail-meta.detail-meta-editorial { grid-template-columns: repeat(var(--detail-meta-columns, 4), minmax(0, 1fr)); gap: 32px; }
 .case-section-editorial > .case-content { min-width: 0; }
 .case-section-editorial h2 { font-size: clamp(24px, 2.4vw, 34px); line-height: 1.45; letter-spacing: -.025em; }
 .case-section-editorial p, .case-section-editorial li, .case-decision dd { font-size: 15px; line-height: 1.9; color: #bac6c4; word-break: keep-all; overflow-wrap: anywhere; }

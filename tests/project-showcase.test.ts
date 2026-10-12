@@ -300,7 +300,9 @@ describe('Projects exhibit', () => {
       expect(values.some(value => value > 0 && value < 1), `spatial fade @${width}`).toBe(true)
       for (let i = 150; i >= 0; i--) expect(presence(.72 + i * .0004)).toBeCloseTo(values[i], 8)
     }
-  })
+  // This exhaustive CPU geometry sweep is not a real-time frame-budget test.
+  // Keep every viewport/ray assertion; allow slower and parallel CI workers.
+  }, 15_000)
 
   it('keeps the exhibit and its shadows fixed in world space through approach, dwell and departure in both directions', () => {
     const camera = campCamera(1920, 1080), target = new THREE.Vector3()

@@ -1,9 +1,10 @@
-import { Fragment, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import type { CaseBlock, CaseSection, ImageSlot } from '../data/caseStudy'
 import { ArrowUpRight } from './ArrowUpRight'
 import { VisualMeasureDemo } from './VisualMeasureDemo'
 import { ValidationDemo } from './ValidationDemo'
 import './CaseStudy.css'
+import './CaseStudyExpanded.css'
 
 export function CaseImageSlot({ slot, hero = false }: { slot: ImageSlot; hero?: boolean }) {
   const panels = slot.panels ?? [slot]
@@ -21,7 +22,7 @@ export function CaseImageSlot({ slot, hero = false }: { slot: ImageSlot; hero?: 
   </figure>
 }
 
-function CaseImageCarousel({ slot }: { slot: ImageSlot }) {
+function CaseImageCarousel({ slot, projectSlug, projectName }: { slot: ImageSlot; projectSlug: string; projectName: string }) {
   const panels = slot.panels ?? [slot]
   const [activeIndex, setActiveIndex] = useState(0)
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -37,26 +38,26 @@ function CaseImageCarousel({ slot }: { slot: ImageSlot }) {
     setActiveIndex(nextIndex)
     tabRefs.current[nextIndex]?.focus()
   }
-  return <div className="case-image-carousel" aria-label="들임 대표 화면">
-    <div className="case-image-tabs" role="tablist" aria-label="들임 대표 화면 선택">
+  return <div className="case-image-carousel" aria-label={`${projectName} 대표 화면`}>
+    <div className="case-image-tabs" role="tablist" aria-label={`${projectName} 대표 화면 선택`} style={{ '--case-image-tab-count': panels.length } as CSSProperties}>
       {panels.map((panel, index) => <button
         key={panel.label}
         ref={element => { tabRefs.current[index] = element }}
         className="case-image-tab"
-        id={`deurim-screen-tab-${index}`}
+        id={`${projectSlug}-screen-tab-${index}`}
         type="button"
         role="tab"
         aria-selected={activeIndex === index}
-        aria-controls="deurim-screen-panel"
+        aria-controls={`${projectSlug}-screen-panel`}
         tabIndex={activeIndex === index ? 0 : -1}
         onClick={() => setActiveIndex(index)}
         onKeyDown={onTabKeyDown}
       ><span className="case-image-tab-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><span>{panel.label}</span></button>)}
     </div>
-    <figure className="case-image-slot case-image-slot--wide case-image-carousel-frame" role="tabpanel" id="deurim-screen-panel" aria-labelledby={`deurim-screen-tab-${activeIndex}`}>
+    <figure className="case-image-slot case-image-slot--wide case-image-carousel-frame" role="tabpanel" id={`${projectSlug}-screen-panel`} aria-labelledby={`${projectSlug}-screen-tab-${activeIndex}`}>
       <div className="case-image-stage"><div className="case-image-panel" style={activePanel.image ? { aspectRatio: `${activePanel.image.width} / ${activePanel.image.height}` } : undefined}>
         {activePanel.image ? <img src={activePanel.image.src} alt={activePanel.image.alt} width={activePanel.image.width} height={activePanel.image.height} loading="eager" decoding="async" />
-          : <div className="case-image-placeholder" aria-hidden="true"><span>IMAGE — {activePanel.label}</span></div>}
+          : <div className="case-image-placeholder"><span>IMAGE — {activePanel.description ?? activePanel.label}</span></div>}
       </div></div>
     </figure>
   </div>
@@ -110,6 +111,14 @@ function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sen
         </article>
       </div>
     </div>
+    case 'graph-workflow': return <div className="case-graph-workflow">
+      <p className="case-graph-workflow-label">{block.title}</p>
+      <ol className="case-graph-workflow-steps">{block.steps.map((step, index) => <li key={step.title}>
+        <span className="case-graph-workflow-index mono">STEP {String(index + 1).padStart(2, '0')}</span>
+        <h3>{step.title}</h3><p>{step.body}</p>
+      </li>)}</ol>
+      <div className="case-graph-workflow-insight"><p className="case-reflection-insight"><CaseText text={block.insight} /><span className="case-graph-workflow-supporting">{block.conclusion}</span></p></div>
+    </div>
     case 'quote': return <blockquote className="case-principle"><CaseText text={block.text} /></blockquote>
     case 'list': return <ul className="case-list">{block.items.map(item => <li key={item}>{item}</li>)}</ul>
     case 'comparison': return <div className="case-comparison">{block.columns.map(column => <div key={column.title}>
@@ -123,7 +132,7 @@ function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sen
       <h3>{item.title}</h3><p>{copy(item.body)}</p>
     </article>)}</div>
     case 'flows': return <div className="case-flows">{block.items.map(flow => <div key={flow.title}>
-      <h3>{flow.title}</h3><ol>{flow.steps.map(step => <li key={step}>{step}</li>)}</ol>
+      <h3>{flow.title}</h3><ol style={{ '--case-flow-count': flow.steps.length } as CSSProperties}>{flow.steps.map(step => <li key={step}>{step}</li>)}</ol>
     </div>)}</div>
     case 'decisions': return <div className="case-decisions">{block.items.map((decision, index) => <article className="case-decision" key={decision.title}>
       <span className="case-decision-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
@@ -133,7 +142,7 @@ function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sen
   }
 }
 
-export function CaseStudy({ sections, heroSlot, sentenceBreaks = false }: { sections: readonly CaseSection[]; heroSlot?: ImageSlot; sentenceBreaks?: boolean }) {
+export function CaseStudy({ sections, heroSlot, projectSlug, projectName, sentenceBreaks = false }: { sections: readonly CaseSection[]; heroSlot?: ImageSlot; projectSlug: string; projectName: string; sentenceBreaks?: boolean }) {
   return <div className="case-study">{sections.map((section, index) => <section className={`case-section${section.blocks ? ' case-section-editorial' : ''}${section.layout ? ` case-section--${section.layout}` : ''}`} data-tone={section.tone ?? 'base'} data-spacing={section.spacing ?? 'standard'} key={section.title} aria-labelledby={`case-${index}`}>
     <div className="case-label mono"><span>{String(index + 1).padStart(2, '0')}</span>{section.title}</div>
     <div className="case-content">
@@ -143,7 +152,7 @@ export function CaseStudy({ sections, heroSlot, sentenceBreaks = false }: { sect
       {section.supporting && <aside className="case-supporting" aria-label="AI 활용 정보"><span>AI 활용</span><p>{section.supporting}</p></aside>}
       {section.reflectionSummary && section.blocks?.map((block, i) => <ContentBlock key={i} block={block} sentenceBreaks={sentenceBreaks} />)}
       {section.reflectionSummary && (section.process || section.closing) ? <div className="case-reflection-summary">
-        {section.process && <div className="case-reflection-process">{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}
+        {section.process && <div className="case-reflection-process" style={{ '--case-process-count': section.process.length } as CSSProperties}>{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}
         {section.closing && <p className="case-reflection-insight">{section.closing}</p>}
       </div> : <>{section.process && <div className="process-line mono">{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}{section.closing && <p className="case-closing-copy">{section.closing}</p>}</>}
       {section.media && <div className="case-media media-surface" aria-hidden="true" />}
@@ -157,7 +166,7 @@ export function CaseStudy({ sections, heroSlot, sentenceBreaks = false }: { sect
         <a className="case-external-link" href={section.externalLink.url} target="_blank" rel="noopener noreferrer" aria-label={section.externalLink.accessibleName}>{section.externalLink.label}<ArrowUpRight className="case-external-arrow" /></a>
       </div>}
     </div>
-    {index === 0 && heroSlot && (heroSlot.panels ? <CaseImageCarousel slot={heroSlot} /> : <CaseImageSlot slot={heroSlot} hero />)}
+    {index === 0 && heroSlot && <CaseImageCarousel key={projectSlug} slot={heroSlot} projectSlug={projectSlug} projectName={projectName} />}
     {section.layout === 'visual-measure' ? <VisualMeasureDemo /> : section.layout === 'trust' ? <ValidationDemo /> : section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
   </section>)}</div>
 }

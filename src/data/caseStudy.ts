@@ -10,6 +10,7 @@ export type ImageSlot = CaseImage & {
 }
 
 export type CaseBlock =
+  | { kind: 'graph-workflow'; title: string; steps: readonly { title: string; body: string }[]; insight: string; conclusion: string }
   | { kind: 'execution-judgment'; items: readonly { title: string; judgmentTitle: string; execution: string; judgment: string }[]; takeaway: string }
   | { kind: 'problems'; items: readonly { title: string; body: string }[] }
   | { kind: 'prompt-document'; request: string; intro: string; workflow: readonly string[]; sections: readonly { title: string; paragraphs?: readonly string[]; items?: readonly string[]; application: string }[]; cycle?: { intro: string; title: string } }
@@ -25,7 +26,7 @@ export type CaseSection = {
   tone?: 'base' | 'elevated' | 'focus'
   spacing?: 'standard' | 'narrative' | 'image'
   externalLink?: { url: string; label: string; accessibleName: string; title?: string; context?: string; metaLabel?: string; metaValue?: string }
-  layout?: 'overview' | 'statement' | 'structure' | 'visual-measure' | 'trust' | 'workflow' | 'directing-ai' | 'comparison' | 'decisions' | 'product' | 'reflection'
+  layout?: 'overview' | 'statement' | 'structure' | 'visual-measure' | 'trust' | 'workflow' | 'directing-ai' | 'comparison' | 'decisions' | 'product' | 'reflection' | 'split' | 'narrative' | 'hierarchy'
   title: string
   heading: string
   body?: string

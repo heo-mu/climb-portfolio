@@ -1,5 +1,9 @@
 import type { CaseSection, ProjectDetailContent } from './caseStudy.ts'
 import { deurimCaseStudy, deurimDetail } from './deurimCaseStudy.ts'
+import { beesCaseStudy, beesDetail } from './beesCaseStudy.ts'
+import { edkCaseStudy, edkDetail } from './edkCaseStudy.ts'
+import { axCaseStudy, axDetail } from './axCaseStudy.ts'
+import { groupwareCaseStudy, groupwareDetail } from './groupwareCaseStudy.ts'
 export type { CaseSection } from './caseStudy.ts'
 
 export type Project = {
@@ -26,10 +30,10 @@ const screen = (source: URL, width: number, height: number) => ({ desktop: sourc
 
 export const projects: readonly Project[] = [
   { slug: 'deurim', navigationName: '들임', number: '01', name: '들임', tags: ['SoloBuild', 'AIAssisted', 'WebGL', 'WebService'], type: 'Web Service', period: '2026.09 — 2026.10', role: '기획 · 디자인 · 구현', summary: '구매 전 설치 가능 여부를 확인하는 웹 서비스', screen: screen(new URL('../../img/projects/deurim.png', import.meta.url), 7680, 4320), detail: deurimDetail, caseStudy: deurimCaseStudy },
-  { slug: 'samsung-bees', navigationName: 'BEES', number: '02', name: '삼성 BEES', tags: ['UnrealEngine', 'DigitalTwin', 'EnergyData'], type: 'Energy Platform', period: '2025.12 — 2026.07', role: 'UX Research / Service Design', summary: '건물 · 층 · 설비의 에너지 데이터를 공간 단위로 읽고 관리하는 플랫폼', screen: screen(new URL('../../img/projects/bees.png', import.meta.url), 7680, 4320) },
-  { slug: 'edk', navigationName: 'EDK', number: '03', name: 'EDK', tags: ['ESGPlatform', 'B2BSaaS', 'RBAC'], type: 'B2B Platform', period: '2024.12 — 2025.12', role: 'Design Systems', summary: '기업의 ESG 지표를 종합적으로 관리하는 B2B 플랫폼', screen: screen(new URL('../../img/projects/edk.png', import.meta.url), 7680, 4320) },
-  { slug: 'moel-ax', navigationName: 'AX', number: '04', name: '고용노동부 AX', tags: ['OCR', 'GovernmentService', 'AIAnalysis'], type: 'Public Service', period: '2026.01 — 2026.06', role: 'Interaction / Prototyping', summary: 'AI가 서류와 현장 사진을 분석해 필요한 솔루션을 제안하는 공공 서비스', screen: screen(new URL('../../img/projects/ax.png', import.meta.url), 7680, 4320) },
-  { slug: 'groupware', navigationName: '그룹웨어', number: '05', name: '사내 그룹웨어', tags: ['HRPlatform', 'RBAC', 'HRManagement'], type: 'HR Platform', period: '2025.12 — 2026.04', role: 'Creative Development', summary: '인사관리를 종합적으로 지원하는 HR 플랫폼', screen: screen(new URL('../../img/projects/groupware.png', import.meta.url), 7680, 4320) },
+  { slug: 'samsung-bees', navigationName: 'BEES', number: '02', name: '삼성 BEES', tags: ['UnrealEngine', 'DigitalTwin', 'EnergyData'], type: 'Energy Platform', period: '2025.12 — 2026.07', role: 'UI/UX 디자인 · UX 리서치 · 서비스 설계 · 디자인 시스템 구축', summary: '건물 · 층 · 설비의 에너지 데이터를 공간 단위로 읽고 관리하는 플랫폼', screen: screen(new URL('../../img/projects/bees.png', import.meta.url), 7680, 4320), detail: beesDetail, caseStudy: beesCaseStudy },
+  { slug: 'edk', navigationName: 'EDK', number: '03', name: 'EDK', tags: ['ESGPlatform', 'B2BSaaS', 'RBAC'], type: 'B2B Platform', period: '2024.12 — 2025.12', role: 'UI/UX 디자인 · 디자인 시스템 구축', summary: '기업의 ESG 지표를 종합적으로 관리하는 B2B 플랫폼', screen: screen(new URL('../../img/projects/edk.png', import.meta.url), 7680, 4320), detail: edkDetail, caseStudy: edkCaseStudy },
+  { slug: 'moel-ax', navigationName: 'AX', number: '04', name: '고용노동부 AX', tags: ['OCR', 'GovernmentService', 'AIAnalysis'], type: 'Public Service', period: '2026.01 — 2026.06', role: 'UI/UX 디자인 · 인터랙션 · 프로토타이핑', summary: 'AI가 서류와 현장 사진을 분석해 필요한 솔루션을 제안하는 공공 서비스', screen: screen(new URL('../../img/projects/ax.png', import.meta.url), 7680, 4320), detail: axDetail, caseStudy: axCaseStudy },
+  { slug: 'groupware', navigationName: '그룹웨어', number: '05', name: '사내 그룹웨어', tags: ['HRPlatform', 'RBAC', 'HRManagement'], type: 'HR Platform', period: '2025.12 — 2026.04', role: 'UI/UX 디자인 · UX 설계 · 디자인 시스템 구축', summary: '인사관리를 종합적으로 지원하는 HR 플랫폼', screen: screen(new URL('../../img/projects/groupware.png', import.meta.url), 7680, 4320), detail: groupwareDetail, caseStudy: groupwareCaseStudy },
 ]
 
 /** Prototype routes that may already have been shared; they resolve to the semantic slugs. */
