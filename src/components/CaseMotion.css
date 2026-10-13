@@ -1,0 +1,43 @@
+/* Shared reading feedback. Existing demos, gallery and navigation own their motion. */
+.project-detail {
+  --case-motion-fast: 180ms;
+  --case-motion-normal: 320ms;
+  --case-motion-reveal: 480ms;
+  --case-motion-ease: cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes case-enter {
+  from { opacity: 0; transform: translateY(var(--case-motion-distance, 8px)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes case-rule-enter {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .case-study [data-case-reveal]:not(.case-conclusion) { --case-motion-distance: 8px; }
+  .case-study .case-label[data-case-reveal] { --case-motion-distance: 4px; }
+  .case-study [data-case-reveal="pending"]:not(.case-conclusion) { opacity: 0; transform: translateY(var(--case-motion-distance)); }
+  .case-study [data-case-reveal="visible"]:not(.case-conclusion) { animation: case-enter var(--case-motion-reveal) var(--case-motion-ease) var(--case-motion-delay, 0ms) both; }
+  .case-conclusion[data-case-reveal="pending"]::before { transform: scaleX(0); }
+  .case-conclusion[data-case-reveal="pending"] > * { opacity: 0; }
+  .case-conclusion[data-case-reveal="visible"]::before { animation: case-rule-enter var(--case-motion-normal) var(--case-motion-ease) both; }
+  .case-conclusion[data-case-reveal="visible"] > * { --case-motion-distance: 6px; animation: case-enter var(--case-motion-reveal) var(--case-motion-ease) 50ms both; }
+  .case-study [data-case-immediate="true"],
+  .case-study [data-case-immediate="true"] > *,
+  .case-study [data-case-immediate="true"]::before { animation: none !important; opacity: 1; transform: none; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .project-detail-editorial .case-problem,
+  .project-detail-editorial .case-ai-insight { transition: background-color var(--case-motion-fast) var(--case-motion-ease), border-color var(--case-motion-fast) var(--case-motion-ease); }
+  .project-detail-editorial :is(.case-problem-index, .case-ai-insight-label, .case-ai-insight-body) { transition: color var(--case-motion-fast) var(--case-motion-ease); }
+  .project-detail-editorial .case-problem:hover { background: var(--case-surface-hover); border-color: rgb(199 210 207 / 25%); }
+  .project-detail-editorial .case-problem:hover .case-problem-index { color: rgb(199 210 207 / 55%); }
+  .project-detail-editorial .case-ai-insight:is(:hover, :focus-within) { background: var(--case-surface-hover); }
+  .project-detail-editorial .case-ai-insight:is(:hover, :focus-within) > .case-ai-insight-label { color: #bac6c4; }
+  .project-detail-editorial .case-ai-insight:is(:hover, :focus-within) > .case-ai-insight-body { color: #edf0ee; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .case-study [data-case-reveal], .case-study [data-case-reveal] > *, .case-study [data-case-reveal]::before { animation: none !important; opacity: 1; transform: none; }
+  .project-detail-editorial :is(.case-problem, .case-problem-index, .case-ai-insight, .case-ai-insight-label, .case-ai-insight-body),
+  .project-detail-editorial .case-ai-insight-label::before { transition: none; }
+}

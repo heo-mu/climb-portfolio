@@ -5,10 +5,13 @@ export const edkDetail: ProjectDetailContent = {
   presentation: 'editorial', summary: '기업의 ESG 지표를 종합적으로 관리하는 B2B 플랫폼',
   metadata: [['TYPE', '기업 ESG 관리 플랫폼'], ['PERIOD', '2024.12 — 2025.12'], ['ROLE', 'UI/UX 디자인 · 디자인 시스템 구축'], ['SCOPE', '지표 관리 · 권한 UX · 화면 일관성']],
   heroSlot: { label: 'EDK 대표 화면', layout: 'wide', panels: [
-    { label: '대시보드', image: { src: new URL('../../img/projects/edk.png', import.meta.url).href, alt: 'ESG 목표와 주요 지표를 함께 보여주는 EDK 대시보드', width: 7680, height: 4320 } },
-    { label: '지표 관리', description: '조직·기간·상태 필터로 ESG 지표와 담당자를 확인하는 목록 화면' },
-    { label: '데이터 상세', description: '선택한 ESG 지표의 입력값과 근거·검토 상태를 확인하는 상세 화면' },
-    { label: '권한 관리', description: '사용자 역할에 따른 열람·수정·승인 범위를 관리하는 화면' },
+    { label: '업무 현황', image: { src: new URL('../../img/projects/edk/edk_main01.png', import.meta.url).href, alt: 'EDK ESG 업무 현황 대시보드', width: 1920, height: 1080 } },
+    { label: '목표 탐색', image: { src: new URL('../../img/projects/edk/edk_main04.png', import.meta.url).href, alt: 'EDK ESG 목표 탐색 화면', width: 1920, height: 1080 } },
+    { label: '목표 상세', image: { src: new URL('../../img/projects/edk/edk_main05.png', import.meta.url).href, alt: 'EDK ESG 목표 상세 화면', width: 1920, height: 1080 } },
+    { label: '결과보고서', image: { src: new URL('../../img/projects/edk/edk_main02.webp', import.meta.url).href, alt: 'EDK ESG 결과보고서 작성 화면', width: 1920, height: 1080 } },
+    { label: 'AI 진단', image: { src: new URL('../../img/projects/edk/edk_main03.webp', import.meta.url).href, alt: 'EDK AI 진단 화면', width: 1920, height: 1080 } },
+    { label: '평가 문항', image: { src: new URL('../../img/projects/edk/edk_main06.png', import.meta.url).href, alt: 'EDK ESG 평가 문항 수정 화면', width: 1920, height: 1080 } },
+    { label: '평가 등급', image: { src: new URL('../../img/projects/edk/edk_main07.png', import.meta.url).href, alt: 'EDK ESG 평가 등급 화면', width: 1920, height: 1080 } },
   ] },
 }
 
@@ -29,7 +32,7 @@ export const edkCaseStudy: readonly CaseSection[] = [
     ] }],
   },
   {
-    layout: 'hierarchy', title: 'Information Architecture', tone: 'elevated', spacing: 'narrative',
+    layout: 'hierarchy', title: 'Structure', tone: 'elevated', spacing: 'narrative',
     heading: '화면보다 먼저, 정보의 연결 기준을 정했어요.',
     body: '조직과 기간으로 대상 범위를 정하고, 그 안에서 지표·상태·담당자를 읽도록 구조화했어요. 같은 기준으로 목록을 좁힐 수 있어야 상세 화면에서도 맥락이 이어져요.',
     blocks: [{ kind: 'flows', items: [{ title: '관리할 대상을 찾는 기준', steps: ['조직', '기간', '지표', '상태', '담당자'] }] }],
@@ -46,7 +49,7 @@ export const edkCaseStudy: readonly CaseSection[] = [
     imageSlot: { label: '동일한 지표를 입력 담당자와 검토자 권한으로 각각 본 화면', layout: 'split', panels: [{ label: '입력 담당자의 수정·제출 가능 범위' }, { label: '검토자의 확인·승인 가능 범위' }] },
   },
   {
-    layout: 'split', title: 'Data Density', tone: 'focus',
+    layout: 'split', title: 'Information Priority', tone: 'focus',
     heading: '많이 보여줘도, 읽는 순서는 분명하게 했어요.',
     body: '목록에서는 이름과 현재 상태를 먼저 읽고, 상세 값은 필요한 순간에 확인하도록 정리했어요. 필터는 찾는 범위를, 테이블은 항목 간 차이를 알려주는 역할로 나눴어요.',
     imageSlot: { label: '지표 이름·상태·담당자 위계를 정리한 테이블과 상세 정보 화면', layout: 'split' },
@@ -72,7 +75,7 @@ export const edkCaseStudy: readonly CaseSection[] = [
     ] }],
   },
   {
-    layout: 'comparison', title: 'Consistency Check', tone: 'focus',
+    layout: 'comparison', title: 'Consistency', tone: 'focus',
     heading: '한 화면의 수정이 다른 화면에서도 이어져야 해요.',
     body: '여러 화면에 반복되는 용어와 상태, 컴포넌트가 같은 의미로 쓰이는지 살폈어요. 정상 화면뿐 아니라 입력 오류와 권한 제한 상황도 같은 기준으로 확인해요.',
     blocks: [{ kind: 'comparison', columns: [

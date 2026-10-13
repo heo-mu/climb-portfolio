@@ -10,10 +10,15 @@ export type ImageSlot = CaseImage & {
 }
 
 export type CaseBlock =
-  | { kind: 'graph-workflow'; title: string; steps: readonly { title: string; body: string }[]; insight: string; conclusion: string }
-  | { kind: 'execution-judgment'; items: readonly { title: string; judgmentTitle: string; execution: string; judgment: string }[]; takeaway: string }
+  | { kind: 'supporting'; text: string }
+  | { kind: 'spatial-hierarchy'; steps: readonly { title: string; detail: string }[]; principles: readonly { title: string; body: string }[] }
+  | { kind: 'image-workflow'; steps: readonly { title: string; responsibility: '직접 판단' | 'AI 활용'; body: string }[]; images: readonly CaseImage[] }
+  | { kind: 'insight'; label?: '핵심 정리' | '배운 점' | '다음에 가져갈 기준'; text: string; supporting?: string }
+  | { kind: 'production-workflow'; steps: readonly { title: string; body: string }[] }
+  | { kind: 'graph-workflow'; title: string; steps: readonly { title: string; body: string }[]; evidence?: { stepIndex: number; label: string; image: NonNullable<CaseImage['image']> }; supporting?: string; insight: string; conclusion: string }
+  | { kind: 'execution-judgment'; items: readonly { title: string; judgmentTitle: string; execution: string; judgment: string }[] }
   | { kind: 'problems'; items: readonly { title: string; body: string }[] }
-  | { kind: 'prompt-document'; request: string; intro: string; workflow: readonly string[]; sections: readonly { title: string; paragraphs?: readonly string[]; items?: readonly string[]; application: string }[]; cycle?: { intro: string; title: string } }
+  | { kind: 'prompt-document'; request: string; workflow: readonly string[]; sections: readonly { title: string; paragraphs?: readonly string[]; items?: readonly string[] }[] }
   | { kind: 'quote'; text: string }
   | { kind: 'list'; items: readonly string[] }
   | { kind: 'comparison'; columns: readonly { title: string; items: readonly string[] }[] }
@@ -26,7 +31,7 @@ export type CaseSection = {
   tone?: 'base' | 'elevated' | 'focus'
   spacing?: 'standard' | 'narrative' | 'image'
   externalLink?: { url: string; label: string; accessibleName: string; title?: string; context?: string; metaLabel?: string; metaValue?: string }
-  layout?: 'overview' | 'statement' | 'structure' | 'visual-measure' | 'trust' | 'workflow' | 'directing-ai' | 'comparison' | 'decisions' | 'product' | 'reflection' | 'split' | 'narrative' | 'hierarchy'
+  layout?: 'overview' | 'statement' | 'structure' | 'visual-measure' | 'trust' | 'workflow' | 'directing-ai' | 'comparison' | 'decisions' | 'product' | 'reflection' | 'split' | 'narrative' | 'hierarchy' | 'spatial-structure' | 'ai-agent'
   title: string
   heading: string
   body?: string

@@ -17,7 +17,7 @@
   grid-template-columns: minmax(160px, 1fr) minmax(280px, 1.5fr);
   gap: 12px;
   align-items: stretch;
-  background: #1d292f;
+  background: var(--case-surface);
   border-radius: var(--case-radius-default, 10px);
 }
 .project-detail-deurim .validation-demo__viewer {

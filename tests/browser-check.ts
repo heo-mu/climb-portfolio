@@ -868,6 +868,7 @@ try {
         await expect(gallery).toHaveCount(1)
         await expect(page.locator('.detail-wrap .case-image-slot, .detail-wrap .detail-hero')).toHaveCount(0)
         await expect(overview.locator('.case-label')).toContainText('01Overview')
+        await expect(page.locator('.case-section').nth(1).locator('.case-label')).toContainText('02The Problem')
         await expect(tabs).toHaveCount(panels.length)
         await gallery.scrollIntoViewIfNeeded()
         const order = await gallery.evaluate(el => {
@@ -911,7 +912,7 @@ try {
         await expect(tabs.last()).toHaveAttribute('aria-selected', 'true')
         await expect(gallery.locator('figcaption')).toHaveCount(0)
         // A new route must start on its own first screen, including 5 -> 4 tabs.
-        await page.locator('.next-project').click()
+        await page.locator('.project-route--next').click()
         await expect(page.locator('.case-image-tab').first()).toHaveAttribute('aria-selected', 'true')
         await expect(page.locator('.case-image-carousel-frame img')).toBeVisible()
       }
@@ -1015,8 +1016,13 @@ try {
           const blocks = sections.flatMap(section => [...section.lead ? [section.lead] : [], ...section.blocks ?? []])
           await expect(page.locator('.case-principle')).toHaveCount(blocks.filter(block => block.kind === 'quote').length)
           await expect(page.locator('.case-decision')).toHaveCount(blocks.reduce((sum, block) => sum + (block.kind === 'compact-decisions' || block.kind === 'decisions' ? block.items.length : 0), 0))
+          const expectedSections = [...sections]
+          const overviewIndex = expectedSections.findIndex(section => section.title.trim().toLowerCase() === 'overview')
+          if (overviewIndex > 0) expectedSections.unshift(expectedSections.splice(overviewIndex, 1)[0])
+          const problemIndex = expectedSections.findIndex(section => ['problem', 'the problem'].includes(section.title.trim().toLowerCase()))
+          if (problemIndex > 1) expectedSections.splice(1, 0, expectedSections.splice(problemIndex, 1)[0])
           const headingText = await page.locator('.case-section h2').evaluateAll(elements => elements.map(el => (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim()))
-          expect(headingText).toEqual(sections.map(section => section.heading.replace(/\s+/g, ' ').trim()))
+          expect(headingText).toEqual(expectedSections.map(section => section.heading.replace(/\s+/g, ' ').trim()))
           await page.evaluate(() => document.fonts.ready)
           for (const section of await page.locator('.case-section').all()) await section.scrollIntoViewIfNeeded()
           for (const img of await page.locator('.project-detail img').all()) {
@@ -1085,13 +1091,14 @@ try {
           await expect(live).toBeFocused()
           expect(await live.evaluate(element => getComputedStyle(element).outlineStyle)).not.toBe('none')
         } else await expect(live).toHaveCount(0)
-        await expect(page.locator('.next-project')).toHaveAttribute('href', `/project/${projects[(index + 1) % projects.length].slug}`)
+        await expect(page.locator('.project-route--next')).toHaveAttribute('href', `/project/${projects[(index + 1) % projects.length].slug}`)
+        await expect(page.locator('.project-route--previous')).toHaveAttribute('href', `/project/${projects[(index - 1 + projects.length) % projects.length].slug}`)
         await expect(page.locator('.back-link')).toHaveAttribute('href', '/#high-camp')
         await page.locator('.back-link').focus()
         await expect(page.locator('.back-link')).toBeFocused()
         expect(await page.locator('.back-link').evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none')
-        await page.locator('.next-project').focus()
-        expect(await page.locator('.next-project').evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none')
+        await page.locator('.project-route--next').focus()
+        expect(await page.locator('.project-route--next').evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none')
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${project.slug} @${width}`).toBe(true)
         if (width === 1440 || width === 390) {
           await page.reload()
@@ -1105,7 +1112,7 @@ try {
     }
     for (const [index, project] of projects.entries()) {
       await page.goto(base + '/project/' + project.slug)
-      await page.locator('.next-project').click()
+      await page.locator('.project-route--next').click()
       await expect(page.locator('.detail-title')).toHaveText(projects[(index + 1) % projects.length].name)
       await expect(page.locator('.detail-title')).toBeFocused()
       expect(await page.evaluate(() => scrollY)).toBe(0)

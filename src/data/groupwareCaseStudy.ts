@@ -5,10 +5,13 @@ export const groupwareDetail: ProjectDetailContent = {
   presentation: 'editorial', summary: '반복적인 인사 업무와 권한·상태를 하나의 흐름으로 연결하는 HR 플랫폼',
   metadata: [['TYPE', '사내 인사관리 플랫폼'], ['PERIOD', '2025.12 — 2026.04'], ['ROLE', 'UI/UX 디자인 · UX 설계 · 디자인 시스템 구축']],
   heroSlot: { label: '사내 그룹웨어 대표 화면', layout: 'wide', panels: [
-    { label: '홈', image: { src: new URL('../../img/projects/groupware.png', import.meta.url).href, alt: '오늘의 근무·일정·결재 현황과 빠른 신청을 보여주는 사내 그룹웨어 홈', width: 7680, height: 4320 } },
-    { label: '인사 관리', description: '직원과 조직 정보를 역할에 맞게 확인하고 관리하는 화면' },
-    { label: '업무 처리', description: '처리할 요청을 선택하고 현재 상태와 가능한 행동을 확인하는 화면' },
-    { label: '상세 / 승인', description: '요청 상세와 처리 이력을 확인하고 승인·반려하는 화면' },
+    { label: '사용자 홈', image: { src: new URL('../../img/projects/groupware/groupware_user01.png', import.meta.url).href, alt: '사내 그룹웨어 사용자 홈 화면', width: 1920, height: 911 } },
+    { label: '내 근태', image: { src: new URL('../../img/projects/groupware/groupware_user03.png', import.meta.url).href, alt: '사내 그룹웨어 내 근태 확인 화면', width: 1920, height: 911 } },
+    { label: '신청 · 요청', image: { src: new URL('../../img/projects/groupware/groupware_user04.png', import.meta.url).href, alt: '사내 그룹웨어 신청 및 요청 화면', width: 1920, height: 911 } },
+    { label: '관리자 현황', image: { src: new URL('../../img/projects/groupware/groupware_admin01.png', import.meta.url).href, alt: '사내 그룹웨어 관리자 현황 화면', width: 1920, height: 911 } },
+    { label: '조직 관리', image: { src: new URL('../../img/projects/groupware/groupware_admin04.png', import.meta.url).href, alt: '사내 그룹웨어 조직 관리 화면', width: 1920, height: 911 } },
+    { label: '조직 근태', image: { src: new URL('../../img/projects/groupware/groupware_admin05.png', import.meta.url).href, alt: '사내 그룹웨어 조직 근태 관리 화면', width: 1920, height: 911 } },
+    { label: '회원 상세', image: { src: new URL('../../img/projects/groupware/groupware_admin03.png', import.meta.url).href, alt: '사내 그룹웨어 관리자 회원 상세 화면', width: 1920, height: 911 } },
   ] },
 }
 
@@ -17,6 +20,19 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
     layout: 'overview', title: 'Overview', tone: 'base',
     heading: '매일 하는 일을, 망설임 없이 이어가게 했어요.',
     body: '직원과 관리자가 인사 업무를 한 시스템에서 처리하는 내부 플랫폼이에요. 새로운 사용법을 익히기보다 현재 상태와 해야 할 일을 빠르게 알 수 있는 흐름에 집중했어요.',
+  },
+  {
+    layout: 'narrative', title: 'Roles', tone: 'focus', spacing: 'narrative',
+    heading: '역할과 동작의 기준으로, 복잡한 업무를 정리했어요.',
+    body: '누가 어떤 정보를 보고 처리할 수 있는지, 업무 상태가 어떻게 이어지는지 먼저 정리했어요. 반복되는 조작도 같은 규칙으로 맞춰, 디자인과 개발이 화면을 다르게 해석하지 않도록 기준을 만들었어요.',
+    blocks: [
+      { kind: 'compact-decisions', items: [
+        { title: '사용자', body: '내 인사 정보와 근태를 확인하고, 신청부터 결재 결과 확인까지 이어지는 업무를 기준으로 묶었어요.' },
+        { title: '관리자', body: '조직과 구성원, 권한을 관리하는 범위를 구분하고, 운영에 필요한 정보와 처리할 일을 정리했어요.' },
+        { title: '공통 상태', body: '대기·승인·반려·완료의 의미와 다음 행동을 맞춰, 어느 화면에서든 같은 기준으로 상태를 읽게 했어요.' },
+      ] },
+      { kind: 'insight', label: '핵심 정리', text: '화면이 달라져도, 조작하는 방식은 익숙하게 이어지도록 했어요.', supporting: '모달의 열기·닫기, 드롭다운 선택, 토스트 안내, 탭 전환, 상태 표시와 페이지 이동 규칙을 디자인 시스템에 연결했어요. 반복되는 동작을 함께 정리해, 화면마다 사용 방식이 달라지지 않도록 했어요.' },
+    ],
   },
   {
     layout: 'structure', title: 'Workflow', tone: 'elevated', spacing: 'narrative',
@@ -45,7 +61,7 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
     imageSlot: { label: '같은 직원·조직 정보를 역할별로 확인하고 관리하는 화면', layout: 'wide' },
   },
   {
-    layout: 'split', title: 'Repetitive Work', tone: 'elevated',
+    layout: 'split', title: 'Efficiency', tone: 'elevated',
     heading: '반복할수록, 조작은 덜 필요하게 했어요.',
     body: '반복 업무에서는 어떤 항목을 선택했는지와 무엇을 한 번에 처리할 수 있는지가 중요해요. 다중 선택과 일괄 처리를 가까이 두되, 실행 전 대상과 가능한 범위를 확인하도록 정리했어요.',
     blocks: [{ kind: 'rows', items: [
@@ -82,6 +98,22 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
       { title: '확인하는 방식', items: ['목록에서 같은 순서로 정보를 읽어요.', '필터로 대상 범위를 좁혀요.', '상태 용어를 화면마다 동일하게 써요.'] },
       { title: '처리하는 방식', items: ['입력과 오류 안내 위치를 통일해요.', '주요 행동과 보조 행동을 구분해요.', '변경 후 결과를 같은 방식으로 알려줘요.'] },
     ] }],
+  },
+  {
+    layout: 'narrative', title: 'AI Workflow', tone: 'focus', spacing: 'narrative',
+    heading: '요구사항에서 실제 시안까지, AI를 제작 과정에 연결했어요.',
+    body: '요구사항부터 와이어프레임, 실제 Figma 시안까지 하나의 제작 흐름으로 연결했어요. 직접 정의한 디자인 시스템을 기준으로 컴포넌트와 스타일을 일관되게 적용했어요.',
+    blocks: [
+      { kind: 'production-workflow', steps: [
+        { title: '요구사항 정리', body: '기능, 사용자 역할, 상태와 예외 조건을 먼저 정리했어요.' },
+        { title: 'Claude로 화면 구조 설계', body: 'Claude를 활용해 요구사항을 화면 단위와 정보 구조로 빠르게 분해했어요.' },
+        { title: 'Figma MCP로 와이어프레임 제작', body: 'Claude에 Figma MCP를 연결하고, 정리한 구조를 실제 Figma 와이어프레임으로 만들었어요.' },
+        { title: 'Design System 적용', body: '직접 정의한 컴포넌트와 스타일, UI 규칙을 기준으로 Claude가 일관된 화면을 만들게 했어요.' },
+        { title: '직접 검토해 시안 완성', body: '업무 흐름과 정보 위계, 상태, 컴포넌트 사용과 일관성을 직접 확인하고 수정해 최종 시안을 완성했어요.' },
+      ] },
+      { kind: 'supporting', text: '화면 구조를 정리하고 와이어프레임과 시안을 반복 제작하는 데 Claude와 Figma MCP를 활용했어요. 업무 흐름과 정보 위계, 상태와 최종 UI는 직접 검토했어요.' },
+      { kind: 'insight', text: '반복되는 화면 제작은 AI와 나누고, 업무 흐름과 사용성에 대한 판단에 더 집중했어요.', supporting: '요구사항부터 Figma 시안까지 하나의 흐름으로 연결하면서, 디자인 시스템을 더 일관되게 적용하고 수정 속도도 높일 수 있었어요.' },
+    ],
   },
   {
     layout: 'reflection', title: 'What I Learned', tone: 'base', spacing: 'narrative', reflectionSummary: true,

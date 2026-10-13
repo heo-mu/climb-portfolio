@@ -1,0 +1,23 @@
+/* BEES: one simple spatial sequence and two supporting decisions. */
+.project-detail-samsung-bees .case-section--spatial-structure .case-content > p { max-width: none; margin-top: 0; }
+.project-detail-samsung-bees .case-spatial-hierarchy { grid-column: 1 / -1; min-width: 0; }
+.project-detail-samsung-bees .case-spatial-path { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; padding: 24px 0 32px; list-style: none; }
+.project-detail-samsung-bees .case-spatial-path > li { position: relative; min-width: 0; max-width: none; padding: 0 32px 0 0; }
+.project-detail-samsung-bees .case-spatial-index { display: block; margin-bottom: 12px; color: #839391; font-size: 11px; line-height: 18px; }
+.project-detail-samsung-bees .case-spatial-path h3 { margin: 0; color: #edf0ee; font-size: clamp(24px, 2.2vw, 30px); font-weight: 500; line-height: 40px; letter-spacing: -.025em; white-space: nowrap; }
+.project-detail-samsung-bees .case-spatial-detail { display: block; margin-top: 6px; color: #9dadae; font-size: 13px; line-height: 22px; }
+.project-detail-samsung-bees .case-spatial-arrow { position: absolute; top: 40px; right: 24px; color: #9dadae; font-size: 16px; line-height: 20px; }
+.project-detail-samsung-bees .case-spatial-principles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px; }
+.project-detail-samsung-bees .case-spatial-principles > div { padding-top: 24px; border-top: 1px solid var(--rule); }
+.project-detail-samsung-bees .case-spatial-principles h3 { margin: 0; color: #edf0ee; font-weight: 550; }
+.project-detail-samsung-bees .case-spatial-principles p { max-width: none; margin-top: 10px; color: #bac6c4; font-size: 14px; line-height: 1.85; }
+@media (max-width: 767px) {
+  .project-detail-samsung-bees .case-spatial-path { grid-template-columns: minmax(0, 1fr); padding: 0 0 28px; }
+  .project-detail-samsung-bees .case-spatial-path > li { display: grid; grid-template-columns: 24px auto minmax(0, 1fr); align-items: baseline; gap: 12px; padding: 12px 0 34px; }
+  .project-detail-samsung-bees .case-spatial-path > li:last-child { padding-bottom: 0; }
+  .project-detail-samsung-bees .case-spatial-index { margin: 0; }
+  .project-detail-samsung-bees .case-spatial-path h3 { font-size: 24px; line-height: 36px; }
+  .project-detail-samsung-bees .case-spatial-detail { margin: 0; justify-self: end; }
+  .project-detail-samsung-bees .case-spatial-arrow { top: auto; bottom: 5px; left: 36px; right: auto; transform: rotate(90deg); }
+  .project-detail-samsung-bees .case-spatial-principles { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+}

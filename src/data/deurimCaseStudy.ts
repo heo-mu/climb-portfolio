@@ -4,7 +4,7 @@ export const deurimDetail: ProjectDetailContent = {
   presentation: 'editorial',
   liveUrl: 'https://deurim.co.kr/',
   liveLabel: '서비스 보러가기',
-  summary: '구매 전에 우리 집에 냉장고를 설치할 수 있는지,\n3D로 확인하는 웹 서비스예요.',
+  summary: '구매 전에 우리 집에 냉장고를 설치할 수 있는지, 3D로 확인하는 웹 서비스예요.',
   metadata: [
     ['Type', '개인 프로젝트'],
     ['Period', '2026.09 · 3주'],
@@ -63,37 +63,36 @@ export const deurimCaseStudy: readonly CaseSection[] = [
     layout: 'visual-measure', title: 'Visual Measure', tone: 'elevated', spacing: 'standard',
     heading: '공간을 조절하면서,\n제품 크기도 바로 비교할 수 있게 했어요.',
     body: '숫자만으로는 공간 크기를 가늠하기 어려웠어요.\n슬라이더를 자처럼 만들고, 현재 공간과 제품 너비를 같은 축에 보여줬어요.\n파란 선은 공간, 빨간 선은 제품 너비를 보여줘요.',
-    supporting: '여러 표현 방식을 AI로 빠르게 구현해 비교한 뒤, 공간과 제품 크기를 같은 축에서 읽는 방식으로 정리했어요.',
+    supporting: '공간 크기를 직관적으로 보여주기 위해 여러 표현 방식을 AI로 빠르게 구현해 비교했어요. 직접 조작해보며 이해하기 쉬운 방식을 골랐고, 현재 공간과 제품 너비를 같은 축에서 읽도록 정리했어요.',
   },
   {
     layout: 'trust', title: 'Validation', tone: 'focus', spacing: 'narrative',
     heading: '설치가 어렵다는 결과보다,\n왜 어려운지를 먼저 보여줬어요.',
-    body: '결과 표현도 실제 화면에서 빠르게 확인하며 다듬었어요.\n단순 실패 표시보다 부족한 위치와 필요한 수치를 함께 보여줬어요.\n문제 항목을 누르면 3D 시점도 해당 위치로 이동해 바로 확인할 수 있어요.',
+    body: '실제 화면에서 빠르게 다듬어, 단순 실패 표시 대신 부족한 위치와 필요 수치를 보여줬어요. 문제를 누르면 3D 시점이 해당 위치로 이동해요.',
   },
   {
-    layout: 'workflow', title: 'Working with AI', tone: 'elevated', spacing: 'standard',
-    heading: '반복은 AI와 나누고,\n판단은 직접 했어요.',
-    body: 'AI가 구현과 검증의 반복을 줄여준 덕분에,\n저는 더 나은 방향을 비교하고 판단하는 데 집중할 수 있었어요.',
+    layout: 'workflow', title: 'AI Workflow', tone: 'elevated', spacing: 'standard',
+    heading: '반복은 AI와 나누고, 판단은 직접 했어요.',
+    body: 'AI가 구현과 검증의 반복을 줄여준 덕분에, 저는 더 나은 방향을 비교하고 판단하는 데 집중할 수 있었어요.',
     blocks: [{ kind: 'execution-judgment', items: [
       { title: '빠르게 구현', judgmentTitle: '직접 써보고 판단', execution: '여러 UI 안을 실제 동작하는 화면으로 만들었어요.', judgment: '직접 사용해보고 어떤 방식이 더 이해하기 쉬운지 선택했어요.' },
       { title: '여러 안 비교', judgmentTitle: '더 명확한 방향 선택', execution: '레이아웃과 인터랙션의 여러 대안을 빠르게 만들어 비교할 수 있게 했어요.', judgment: '정보의 우선순위와 다음 행동이 가장 명확한 안을 결정했어요.' },
       { title: '상태 확인', judgmentTitle: '제품이 책임질 범위 설정', execution: '화면 크기와 다양한 상태를 반복해서 확인했어요.', judgment: '어떤 상태까지 제품에서 책임져야 하는지 기준을 정했어요.' },
       { title: '수정과 검증', judgmentTitle: '처음 의도와 다시 비교', execution: '수정 내용을 빠르게 반영하고 연결된 화면까지 다시 확인했어요.', judgment: '결과가 처음 의도한 경험과 맞는지 보고 다시 수정했어요.' },
-    ], takeaway: 'AI로 줄인 건 판단이 아니라,\n판단하기까지 걸리는 시간이었어요.' }],
+    ] }],
   },
   {
-    layout: 'directing-ai', title: 'Directing AI', tone: 'base', spacing: 'standard',
+    layout: 'directing-ai', title: 'Prompt Design', tone: 'base', spacing: 'standard',
     heading: 'AI에게 바로 작업을 맡기지 않았어요.\n먼저 판단 기준을 설계하고, 실행 가능한 지시로 바꿨어요.',
-    blocks: [{ kind: 'prompt-document', request: 'Claude / Codex에 전달한 Meta Prompt', intro: '작업은 달라도, 요청의 구조는 같게 가져갔어요.',
-      workflow: ['판단', '구조화', 'Claude / Codex 전달', '결과 확인'],
+    blocks: [{ kind: 'prompt-document', request: 'Claude / Codex에 전달한 Meta Prompt', workflow: ['판단', '구조화', 'Claude / Codex 전달', '결과 확인'],
       sections: [
-        { title: '목표', paragraphs: ['사용자가 더 쉽게 이해하거나 실행할 수 있게 개선해줘.'], application: '제품 변경 액션이 더 잘 보이게 해줘.' },
-        { title: '바꿀 범위', paragraphs: ['지정한 영역과 동작 안에서만 수정해줘.'], application: '제품 정보 영역의 hover와 변경 액션을 다듬어줘.' },
-        { title: '유지할 것', paragraphs: ['기존 구조와 확정된 동작은 유지해줘.'], application: '3D 화면·공간 조절·결과 버튼·모바일 구조는 유지해줘.' },
-        { title: '변경하지 말 것', paragraphs: ['요청하지 않은 UI와 문구는 건드리지 마.'], application: '다른 UI와 전체 레이아웃, 확정 문구는 바꾸지 마.' },
-        { title: '화면 기준', paragraphs: ['첨부 화면을 기준으로 간격·정렬·위계를 맞춰줘.'], application: '기존 화면 안에서 버튼 위치와 노출 방식을 맞춰줘.' },
-        { title: '확인할 것', paragraphs: ['데스크톱·모바일 동작과 요청 외 변경 여부를 확인해줘.'], application: '직접 눌러보고, 변경 액션과 기존 동작을 확인해줘.' },
-      ], cycle: { intro: '실제 적용 예시 · 같은 요청 구조', title: '제품 변경 UI에 이렇게 적용했어요.' } }],
+        { title: '목표', paragraphs: ['사용자가 더 쉽게 이해하거나 실행할 수 있게 개선해줘.'] },
+        { title: '바꿀 범위', paragraphs: ['지정한 영역과 동작 안에서만 수정해줘.'] },
+        { title: '유지할 것', paragraphs: ['기존 구조와 확정된 동작은 유지해줘.'] },
+        { title: '변경하지 말 것', paragraphs: ['요청하지 않은 UI와 문구는 건드리지 마.'] },
+        { title: '화면 기준', paragraphs: ['첨부 화면을 기준으로 간격·정렬·위계를 맞춰줘.'] },
+        { title: '확인할 것', paragraphs: ['데스크톱·모바일 동작과 요청 외 변경 여부를 확인해줘.'] },
+      ] }, { kind: 'supporting', text: 'Git 저장소를 AI와 연결해 현재 구현 상태를 이해시키고, 그 맥락으로 수정 프롬프트를 만들어 Claude와 Codex 작업에 활용했어요. 변경 규모가 큰 작업은 Git 상태와 체크포인트, 커밋·푸시 기준까지 프롬프트에 포함해 안전하게 진행하도록 했어요.' }],
   },
   {
     layout: 'decisions', title: 'Key Decisions', tone: 'elevated', spacing: 'standard',
@@ -105,20 +104,21 @@ export const deurimCaseStudy: readonly CaseSection[] = [
       { title: '강조는 필요한 곳에', body: '주요 행동과 선택·활성 상태에만 강조색을 남겼어요.' },
     ] }],
     imageSlot: { label: '모바일 시안 비교', panels: [
-      { label: '3D를 중심에 두고 조작은 가까이에 뒀어요.', description: '공간을 확인하는 동안 화면을 가리지 않고 필요한 기능에 바로 접근할 수 있게 정리했어요.', image: {
+      { label: '모바일에서는 3D를 먼저 보여주고, 조작은 가까이에 뒀어요.', description: '좁은 화면에서도 공간 확인이 먼저 보이도록 3D 영역을 중심에 두고, 필요한 조작만 가까이에 배치했어요.', image: {
         src: new URL('../../img/projects/deurim/key_01.png', import.meta.url).href,
         alt: '3D 공간을 중심에 두고 조작과 결과 보기 버튼을 배치한 들임 모바일 화면', width: 490, height: 1064,
       } },
-      { label: '결과는 별도 화면에서 집중해서 볼 수 있게 했어요.', description: '조작 화면과 상세 결과를 분리해, 부족한 위치와 필요한 수치를 더 명확하게 확인할 수 있게 했어요.', image: {
+      { label: '모바일에서는 상세 결과를 별도 화면으로 분리했어요.', description: '3D 조작 화면과 설치 결과를 분리해, 부족한 위치와 필요한 수치를 작은 화면에서도 명확하게 확인할 수 있게 했어요.', image: {
         src: new URL('../../img/projects/deurim/key_02.png', import.meta.url).href,
         alt: '조작 화면에서 분리된 결과 패널에 부족한 공간과 공식 기준을 보여주는 들임 모바일 화면', width: 490, height: 1064,
       } },
     ], layout: 'decision-visual' },
   },
   {
-    layout: 'product', title: 'Building the Product', tone: 'focus', spacing: 'image',
+    layout: 'product', title: 'Build', tone: 'focus', spacing: 'image',
     heading: '직접 써보며 다듬었어요.',
-    body: 'AI로 동작하는 화면을 빠르게 만들고, 실제 브라우저에서 직접 확인했어요.\n화면 크기와 상태, 터치처럼 Figma에서 놓치기 쉬운 문제를 찾아 다시 수정했어요.',
+    body: '동작하는 화면을 실제 브라우저에서 직접 확인했어요.\n화면 크기와 상태, 터치처럼 Figma에서 놓치기 쉬운 문제를 찾아 다시 수정했어요.',
+    supporting: '상태·반응형·인터랙션 조건을 묶어 Coding Agent에 구현을 맡기고, 실제 브라우저에서 직접 확인했어요. 화면 크기나 터치, 예외 상태에서 발견한 문제는 맥락과 함께 다시 전달해 수정하며 구현과 검증을 반복했어요.',
     imageSlot: { label: '같은 기능을 Desktop · Tablet · Mobile 화면 크기에서 구현하고 직접 검증한 화면', layout: 'wide', image: {
       src: new URL('../../img/projects/deurim/building_01.png', import.meta.url).href,
       alt: '들임 서비스를 여러 화면 크기에서 구현하고 검증한 화면', width: 1774, height: 887,
