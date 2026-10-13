@@ -116,7 +116,7 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
     ],
   },
   {
-    layout: 'reflection', title: 'What I Learned', tone: 'base', spacing: 'narrative', reflectionSummary: true,
+    layout: 'reflection', title: '핵심 시사점', tone: 'base', spacing: 'narrative', reflectionSummary: true,
     heading: '업무 제품에서는, 예측할 수 있는 경험이 중요해요.',
     blocks: [{ kind: 'rows', items: [
       { title: '01', body: '역할과 상태의 차이를 이해해야 사용자가 할 일을 분명하게 보여줄 수 있었어요.' },

@@ -6,8 +6,8 @@ export const deurimDetail: ProjectDetailContent = {
   liveLabel: '서비스 보러가기',
   summary: '구매 전에 우리 집에 냉장고를 설치할 수 있는지, 3D로 확인하는 웹 서비스예요.',
   metadata: [
-    ['Type', '개인 프로젝트'],
-    ['Period', '2026.09 · 3주'],
+    ['Type', '웹 서비스'],
+    ['Period', '2026.09 — 3주'],
     ['Role', '기획 · UX/UI · AI 활용 구현'],
   ],
   heroSlot: {
@@ -125,7 +125,7 @@ export const deurimCaseStudy: readonly CaseSection[] = [
     } },
   },
   {
-    layout: 'reflection', title: 'What I Learned', tone: 'base', spacing: 'narrative',
+    layout: 'reflection', title: '핵심 시사점', tone: 'base', spacing: 'narrative',
     reflectionSummary: true,
     heading: 'AI는 제 판단을 대신하지 않았어요.\n제 판단을 제품으로 옮겼어요.',
     body: '혼자 제품을 만들며, 직접 판단해야 할 일도 더 선명해졌어요.',

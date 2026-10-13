@@ -1,23 +1,30 @@
-/* BEES: one simple spatial sequence and two supporting decisions. */
-.project-detail-samsung-bees .case-section--spatial-structure .case-content > p { max-width: none; margin-top: 0; }
-.project-detail-samsung-bees .case-spatial-hierarchy { grid-column: 1 / -1; min-width: 0; }
-.project-detail-samsung-bees .case-spatial-path { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; padding: 24px 0 32px; list-style: none; }
-.project-detail-samsung-bees .case-spatial-path > li { position: relative; min-width: 0; max-width: none; padding: 0 32px 0 0; }
+/* BEES: a continuous selection path, followed by two supporting principles. */
+.project-detail-samsung-bees .case-section.case-section--spatial-structure { --case-section-space: 96px; }
+.project-detail-samsung-bees .case-section--spatial-structure .case-content > p { max-width: none; margin-top: 12px; }
+.project-detail-samsung-bees .case-spatial-hierarchy { grid-column: 1 / -1; min-width: 0; margin-top: 32px; }
+.project-detail-samsung-bees .case-spatial-path { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; padding: 24px 0 48px; list-style: none; }
+.project-detail-samsung-bees .case-spatial-path > li { position: relative; min-width: 0; max-width: none; padding: 0 8px; text-align: center; }
 .project-detail-samsung-bees .case-spatial-index { display: block; margin-bottom: 12px; color: #839391; font-size: 11px; line-height: 18px; }
-.project-detail-samsung-bees .case-spatial-path h3 { margin: 0; color: #edf0ee; font-size: clamp(24px, 2.2vw, 30px); font-weight: 500; line-height: 40px; letter-spacing: -.025em; white-space: nowrap; }
+.project-detail-samsung-bees .case-spatial-node { display: block; width: 6px; height: 6px; margin: 0 auto 18px; border-radius: 50%; background: #839391; }
+.project-detail-samsung-bees .case-spatial-path > li:last-child .case-spatial-node { background: rgb(213 255 64 / 75%); }
+.project-detail-samsung-bees .case-spatial-path h3 { margin: 0; color: #edf0ee; font-size: clamp(26px, 2.2vw, 30px); font-weight: 500; line-height: 40px; letter-spacing: -.025em; white-space: nowrap; }
 .project-detail-samsung-bees .case-spatial-detail { display: block; margin-top: 6px; color: #9dadae; font-size: 13px; line-height: 22px; }
-.project-detail-samsung-bees .case-spatial-arrow { position: absolute; top: 40px; right: 24px; color: #9dadae; font-size: 16px; line-height: 20px; }
-.project-detail-samsung-bees .case-spatial-principles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px; }
-.project-detail-samsung-bees .case-spatial-principles > div { padding-top: 24px; border-top: 1px solid var(--rule); }
-.project-detail-samsung-bees .case-spatial-principles h3 { margin: 0; color: #edf0ee; font-weight: 550; }
-.project-detail-samsung-bees .case-spatial-principles p { max-width: none; margin-top: 10px; color: #bac6c4; font-size: 14px; line-height: 1.85; }
+.project-detail-samsung-bees .case-spatial-arrow { position: absolute; top: 33px; left: calc(50% + 12px); width: calc(100% - 24px); height: 1px; background: rgb(180 196 193 / 24%); }
+.project-detail-samsung-bees .case-spatial-arrow::after { position: absolute; right: 0; top: -2px; width: 5px; height: 5px; border-top: 1px solid #718186; border-right: 1px solid #718186; transform: rotate(45deg); content: ''; }
+.project-detail-samsung-bees .case-spatial-principles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px; padding: 16px 24px; border: 1px solid rgb(199 210 207 / 10%); border-radius: var(--case-radius-default); background: rgb(255 255 255 / 2%); }
+.project-detail-samsung-bees .case-spatial-principles h3 { margin: 0; color: #d3dedb; font-size: 16px; font-weight: 500; }
+.project-detail-samsung-bees .case-spatial-principles p { max-width: none; margin: 8px 0 0; color: #a5b4b3; font-size: 14px; line-height: 1.85; }
 @media (max-width: 767px) {
-  .project-detail-samsung-bees .case-spatial-path { grid-template-columns: minmax(0, 1fr); padding: 0 0 28px; }
-  .project-detail-samsung-bees .case-spatial-path > li { display: grid; grid-template-columns: 24px auto minmax(0, 1fr); align-items: baseline; gap: 12px; padding: 12px 0 34px; }
+  .project-detail-samsung-bees .case-section.case-section--spatial-structure { --case-section-space: 64px; }
+  .project-detail-samsung-bees .case-spatial-path { grid-template-columns: minmax(0, 1fr); padding: 0 0 40px; }
+  .project-detail-samsung-bees .case-spatial-path > li { display: grid; grid-template-columns: 16px 24px minmax(0, 1fr); align-items: center; column-gap: 12px; padding: 0 0 28px; text-align: left; }
   .project-detail-samsung-bees .case-spatial-path > li:last-child { padding-bottom: 0; }
-  .project-detail-samsung-bees .case-spatial-index { margin: 0; }
-  .project-detail-samsung-bees .case-spatial-path h3 { font-size: 24px; line-height: 36px; }
-  .project-detail-samsung-bees .case-spatial-detail { margin: 0; justify-self: end; }
-  .project-detail-samsung-bees .case-spatial-arrow { top: auto; bottom: 5px; left: 36px; right: auto; transform: rotate(90deg); }
-  .project-detail-samsung-bees .case-spatial-principles { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .project-detail-samsung-bees .case-spatial-index { grid-column: 2; grid-row: 1; margin: 0; }
+  .project-detail-samsung-bees .case-spatial-node { grid-column: 1; grid-row: 1; margin: 0 auto; }
+  .project-detail-samsung-bees .case-spatial-path h3 { grid-column: 3; grid-row: 1; font-size: 24px; line-height: 36px; }
+  .project-detail-samsung-bees .case-spatial-detail { grid-column: 3; grid-row: 2; margin: 2px 0 0; }
+  .project-detail-samsung-bees .case-spatial-arrow { top: 28px; bottom: -8px; left: 7.5px; width: 1px; height: auto; }
+  .project-detail-samsung-bees .case-spatial-arrow::after { top: auto; bottom: 0; right: -2px; transform: rotate(135deg); }
+  .project-detail-samsung-bees .case-spatial-principles { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 14px 20px; }
+  .project-detail-samsung-bees .case-spatial-principles > div + div { padding-top: 20px; border-top: 1px solid rgb(180 196 193 / 14%); }
 }

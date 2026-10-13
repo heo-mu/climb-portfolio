@@ -46,7 +46,7 @@ function AI() {
     <h1 className="portfolio-heading" id="title-camp-one" tabIndex={-1}>Working with AI<span className="heading-accent">.</span></h1>
     <div className="panel-body"><p className="body-copy section-intro">AI로 반복을 줄이고, 더 중요한 판단과 설계에 집중해요.</p>
       <ol className="workflow">{workflow.map((step, index) => <li key={step.name} data-active={active === index}>
-        <button className="workflow-step" onClick={() => setActive(index)} onFocus={() => setActive(index)} onPointerEnter={event => { if (event.pointerType === 'mouse') setActive(index) }} aria-expanded={active === index} aria-controls={`workflow-${index}`}>
+        <button className="workflow-step" onClick={() => setActive(index)} onFocus={() => setActive(index)} aria-expanded={active === index} aria-controls={`workflow-${index}`}>
           <span className="step-number">0{index + 1}</span><span className="step-name">{step.name}</span><span className="step-symbol" aria-hidden="true" />
         </button>
         <div className="workflow-description" id={`workflow-${index}`} aria-hidden={active !== index} inert={active !== index}><div><p>{step.description[0]}<br />{step.description[1]}</p></div></div>

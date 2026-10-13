@@ -93,7 +93,7 @@ export const axCaseStudy: readonly CaseSection[] = [
     ] }, { kind: 'supporting', text: '직접 정의한 위험 상황을 장면으로 구체화하고 이미지를 반복 제작하는 데 AI를 활용했어요. 설명 목적에 맞는지 직접 검토하며 프롬프트와 결과를 다듬었어요.' }],
   },
   {
-    layout: 'reflection', title: 'What I Learned', tone: 'base', spacing: 'narrative', reflectionSummary: true,
+    layout: 'reflection', title: '핵심 시사점', tone: 'base', spacing: 'narrative', reflectionSummary: true,
     heading: '이해하고 행동할 수 있어야, 결과가 경험이 돼요.',
     blocks: [{ kind: 'rows', items: [
       { title: '01', body: 'AI의 답을 보여주는 것과 사용자가 이해하도록 돕는 것은 달랐어요.' },

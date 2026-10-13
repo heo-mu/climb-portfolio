@@ -11,16 +11,31 @@ import './CaseStudyExpanded.css'
 import './SpatialHierarchy.css'
 import './CaseMotion.css'
 
-export function CaseImageSlot({ slot, hero = false }: { slot: ImageSlot; hero?: boolean }) {
+export function CaseImageSlot({ slot, hero = false, naturalImageRatio = false }: { slot: ImageSlot; hero?: boolean; naturalImageRatio?: boolean }) {
   const panels = slot.panels ?? [slot]
+  if (slot.layout === 'agent-sequence') return <div className="case-agent-visuals" role="group" aria-label={slot.label}>
+    {[panels.slice(0, 2), panels.slice(2)].map((group, index) => {
+      const intro = slot.introductions?.[index]
+      return <div className={`case-agent-stage case-agent-stage--${index === 0 ? 'character' : 'experience'}`} key={index}>
+        {intro && <header className="case-agent-stage-heading">
+          <span className="case-agent-stage-label">{intro.label}</span>
+          <h3>{intro.heading}</h3><p>{intro.body}</p>
+        </header>}
+        <div className={index === 0 ? 'case-agent-characters' : 'case-agent-application'}>
+          {group.map(({ label, image }) => image && <img key={label} src={image.src} alt={image.alt} width={image.width} height={image.height} loading="lazy" decoding="async" />)}
+        </div>
+        {intro?.aiUsage && <CaseAIInsight text={intro.aiUsage} />}
+      </div>
+    })}
+  </div>
   if (slot.layout === 'decision-visual') return <figure className="case-decision-visual" aria-label="UX 판단을 적용한 실제 모바일 화면">
     <div className="case-decision-visual-stage">{panels.map(({ label, description, image }) => image && <div className="case-decision-visual-screen" key={label}>
       <img src={image.src} alt={image.alt} width={image.width} height={image.height} loading="lazy" decoding="async" />
       <div className="case-decision-visual-note"><h3>{label}</h3>{description && <p>{description}</p>}</div>
     </div>)}</div>
   </figure>
-  return <figure className={`case-image-slot${hero ? ' detail-hero' : ''}${slot.layout ? ` case-image-slot--${slot.layout}` : ''}`} aria-hidden={panels.every(panel => !panel.image) || undefined}>
-    <div className="case-image-stage">{panels.map(({ label, image }) => <div className="case-image-panel" key={label} style={image ? { aspectRatio: `${image.width} / ${image.height}` } : undefined}>
+  return <figure className={`case-image-slot${hero ? ' detail-hero' : ''}${slot.layout ? ` case-image-slot--${slot.layout}` : ''}${naturalImageRatio ? ' case-image-slot--natural-ratio' : ''}`} aria-hidden={panels.every(panel => !panel.image) || undefined}>
+    <div className="case-image-stage">{panels.map(({ label, image }) => <div className="case-image-panel" key={label} style={image && !naturalImageRatio ? { aspectRatio: `${image.width} / ${image.height}` } : undefined}>
       {image ? <img src={image.src} alt={image.alt} width={image.width} height={image.height} loading={hero ? 'eager' : 'lazy'} decoding="async" />
         : <div className="case-image-placeholder" aria-hidden="true"><span>IMAGE — {label}</span></div>}
     </div>)}</div>
@@ -94,7 +109,8 @@ export function CaseText({ text, prose = false }: { text: string; prose?: boolea
 
 function usesSplitSectionHeader(section: CaseSection, projectSlug: string) {
   return Boolean(section.body && (
-    ['overview', 'product', 'spatial-structure'].includes(section.layout ?? '')
+    ['overview', 'product', 'spatial-data'].includes(section.layout ?? '')
+    || (section.layout === 'spatial-structure' && projectSlug !== 'samsung-bees')
     || (projectSlug === 'samsung-bees' && section.title.trim().toLowerCase() === 'the problem')
   ))
 }
@@ -111,7 +127,7 @@ function CaseAIInsight({ text }: { text: string }) {
 }
 
 /** A design judgment or lesson, distinct from the AI usage surface. */
-function CaseConclusion({ label = '핵심 정리', text, supporting }: { label?: '핵심 정리' | '배운 점' | '다음에 가져갈 기준'; text?: string; supporting?: string }) {
+function CaseConclusion({ label = '핵심 정리', text, supporting }: { label?: '핵심 정리' | '핵심 시사점' | '다음에 가져갈 기준'; text?: string; supporting?: string }) {
   return <aside className="case-conclusion">
     <span className="case-conclusion-label">{label}</span>
     {text && <p className="case-conclusion-primary"><CaseText text={text} /></p>}
@@ -120,8 +136,16 @@ function CaseConclusion({ label = '핵심 정리', text, supporting }: { label?:
 }
 
 function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sentenceBreaks?: boolean }) {
-  const copy = (text: string) => sentenceBreaks ? <CaseText text={text} prose /> : text
+  const copy = (text: string) => sentenceBreaks || text.includes('\n') ? <CaseText text={text} prose={sentenceBreaks && !text.includes('\n')} /> : text
   switch (block.kind) {
+    case 'role-hierarchy': return <div className="case-role-hierarchy">
+      <ol className="case-role-levels" aria-label="역할별 관리 범위">{block.roles.map((role, index) => <li key={role.title}>
+        <span className="case-role-index mono" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+        <h3>{role.title}</h3><p>{role.scope}</p>
+        {index < block.roles.length - 1 && <span className="case-role-connector" aria-hidden="true">→</span>}
+      </li>)}</ol>
+      <ul className="case-role-menu-list" aria-label="공통 ESG 업무 메뉴">{block.workflows.map(workflow => <li key={workflow}>{workflow}</li>)}</ul>
+    </div>
     case 'supporting': return <CaseAIInsight text={block.text} />
     case 'spatial-hierarchy': return <SpatialHierarchy block={block} />
     case 'image-workflow': return <div className="case-image-workflow">
@@ -178,7 +202,10 @@ function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sen
       <h3>{column.title}</h3><ul className="case-list">{column.items.map(item => <li key={item}>{item}</li>)}</ul>
     </div>)}</div>
     case 'rows': return <div className="case-rows">{block.items.map(item => <div className="case-row" key={item.title}>
-      <h3>{item.title}</h3><p>{copy(item.body)}</p>
+      <h3>{item.title}</h3>{item.examples ? <div className="case-row-details">
+        <p>{copy(item.body)}</p>
+        <ul className="case-row-examples">{item.examples.map(example => <li key={example}>{example}</li>)}</ul>
+      </div> : <p>{copy(item.body)}</p>}
     </div>)}</div>
     case 'compact-decisions': return <div className="case-decisions case-decisions--compact">{block.items.map((item, index) => <article className="case-decision" key={item.title}>
       <span className="case-decision-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
@@ -204,22 +231,25 @@ export function CaseStudy({ sections, heroSlot, projectSlug, projectName, senten
   const problemIndex = orderedSections.findIndex(section => ['problem', 'the problem'].includes(section.title.trim().toLowerCase()))
   if (problemIndex > 1) orderedSections.splice(1, 0, orderedSections.splice(problemIndex, 1)[0])
 
-  return <div className="case-study" ref={motionRoot}>{orderedSections.map((section, index) => <section className={`case-section${section.blocks ? ' case-section-editorial' : ''}${section.layout ? ` case-section--${section.layout}` : ''}`} data-tone={section.tone ?? 'base'} data-spacing={section.spacing ?? 'standard'} key={section.title} aria-labelledby={`case-${index}`}>
+  return <div className="case-study" ref={motionRoot}>{orderedSections.map((section, index) => <section className={`case-section${section.blocks || section.layout === 'ai-agent' ? ' case-section-editorial' : ''}${section.layout ? ` case-section--${section.layout}` : ''}${projectSlug === 'edk' && section.title === 'Policy Design' ? ' case-section--policy-design' : ''}`} data-tone={section.tone ?? 'base'} data-spacing={section.spacing ?? 'standard'} key={section.title} aria-labelledby={`case-${index}`}>
     <div className="case-label mono"><span>{String(index + 1).padStart(2, '0')}</span>{section.title}</div>
     <div className={`case-content${usesSplitSectionHeader(section, projectSlug) ? ' case-section-header-split' : ''}`}>
       {section.lead && section.layout !== 'structure' && <ContentBlock block={section.lead} sentenceBreaks={sentenceBreaks} />}
-      <h2 id={`case-${index}`}><CaseText text={section.heading} /></h2>{section.body && <p>{usesSplitSectionHeader(section, projectSlug) ? section.body.split(/<br\s*\/?\s*>|\n|(?<=\.)\s+/i).map((sentence, i) => <Fragment key={i}>{i > 0 && ' '}<span className="case-section-description-line">{sentence}</span></Fragment>) : section.layout === 'trust' ? section.body.split('\n').map((line, lineIndex) => <Fragment key={line}>{lineIndex > 0 && <br />}{line}</Fragment>) : section.body.includes('<br') || sentenceBreaks || ['overview', 'visual-measure', 'trust', 'directing-ai'].includes(section.layout ?? '') ? <CaseText text={section.body} prose={sentenceBreaks && section.layout !== 'visual-measure'} /> : section.body}</p>}
+      <h2 id={`case-${index}`}><CaseText text={section.heading} /></h2>{section.body && <p>{usesSplitSectionHeader(section, projectSlug) ? section.body.split(/<br\s*\/?\s*>|\n|(?<=\.)\s+/i).map((sentence, i) => <Fragment key={i}>{i > 0 && ' '}<span className="case-section-description-line">{sentence}</span></Fragment>) : section.layout === 'trust' ? section.body.split('\n').map((line, lineIndex) => <Fragment key={line}>{lineIndex > 0 && <br />}{line}</Fragment>) : section.body.includes('<br') || (projectSlug === 'edk' && section.layout === 'statement' && section.body.includes('\n')) || sentenceBreaks || ['overview', 'visual-measure', 'trust', 'directing-ai'].includes(section.layout ?? '') ? <CaseText text={section.body} prose={sentenceBreaks && section.layout !== 'visual-measure'} /> : section.body}</p>}
+      {projectSlug === 'edk' && section.title === 'Policy Design' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
+      {projectSlug === 'edk' && section.title === 'Design System' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
       {section.lead && section.layout === 'structure' && <ContentBlock block={section.lead} sentenceBreaks={sentenceBreaks} />}
       {section.reflectionSummary && section.blocks?.map((block, i) => <ContentBlock key={i} block={block} sentenceBreaks={sentenceBreaks} />)}
       {section.reflectionSummary && (section.process || section.closing)
         ? <div className="case-reflection-summary">
-          {section.closing && <CaseConclusion label="배운 점" text={section.closing} />}
+          {section.closing && <CaseConclusion label="핵심 시사점" text={section.closing} />}
           {section.process && <div className="case-reflection-process" style={{ '--case-process-count': section.process.length } as CSSProperties}>{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}
         </div>
         : <>{section.process && <div className="process-line mono">{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}{section.closing && <CaseConclusion text={section.closing} />}</>}
       {section.media && <div className="case-media media-surface" aria-hidden="true" />}
+      {section.layout === 'ai-agent' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
+      {projectSlug === 'samsung-bees' && section.layout === 'spatial-data' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
       {!section.reflectionSummary && section.blocks?.map((block, i) => <Fragment key={i}>
-        {section.layout === 'ai-agent' && block.kind === 'supporting' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
         <ContentBlock block={block} sentenceBreaks={sentenceBreaks} />
       </Fragment>)}
       {section.externalLink && <div className="case-external">
@@ -232,7 +262,7 @@ export function CaseStudy({ sections, heroSlot, projectSlug, projectName, senten
       </div>}
     </div>
     {index === 0 && heroSlot && <CaseImageCarousel key={projectSlug} slot={heroSlot} projectSlug={projectSlug} projectName={projectName} />}
-    {section.layout === 'visual-measure' ? <VisualMeasureDemo /> : section.layout === 'trust' ? <ValidationDemo /> : section.layout !== 'ai-agent' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
+    {section.layout === 'visual-measure' ? <VisualMeasureDemo /> : section.layout === 'trust' ? <ValidationDemo /> : section.layout !== 'ai-agent' && !(projectSlug === 'samsung-bees' && section.layout === 'spatial-data') && !(projectSlug === 'edk' && ['Policy Design', 'Design System'].includes(section.title)) && section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
     {section.supporting && <CaseAIInsight text={section.supporting} />}
   </section>)}</div>
 }
