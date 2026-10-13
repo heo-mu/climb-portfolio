@@ -45,7 +45,7 @@ export const edkCaseStudy: readonly CaseSection[] = [
   {
     layout: 'comparison', title: 'Permissions', tone: 'base',
     heading: '권한 정책을 화면의 기능과 정보 범위에 연결했어요.',
-    body: '관리자의 운영·관리 기능과 기업 사용자의 실무 기능을 구분했어요. UX 기획과 정책 설계에서 정한 책임 범위를 화면 구성의 기준으로 삼았어요.',
+    body: '관리자의 운영·관리 기능과 기업 사용자의 실무 기능을 구분했어요.\nUX 기획과 정책 설계에서 정한 책임 범위를 화면 구성의 기준으로 삼았어요.',
     blocks: [{ kind: 'comparison', columns: [
       { title: '정책에서 구분한 범위', items: ['플랫폼 전체 운영과 개별 기업의 관리를 구분했어요.', '기업 관리자에게는 자기 기업의 사용자와 ESG 데이터 관리 범위를 정했어요.'] },
       { title: '화면에 반영한 범위', items: ['관리 화면은 각 관리자가 맡은 운영 범위에 맞춰 구성했어요.', '기업 사용자 화면은 부여된 권한 안에서 사용하는 실무 기능을 기준으로 구성했어요.'] },
@@ -90,10 +90,10 @@ export const edkCaseStudy: readonly CaseSection[] = [
   {
     layout: 'narrative', title: 'Design System', tone: 'elevated', spacing: 'narrative',
     heading: '여러 ESG 업무를 같은 화면 기준으로 설계했어요.',
-    body: '웹공시·정책·목표·평가·AI 보고서를 하나의 제품으로 사용할 수 있도록, 반복되는 UI 기준을 디자인 시스템으로 정리했어요.',
+    body: '버튼·입력·테이블·모달 등 반복 컴포넌트와 Default·Hover·Active·Disabled·Read-only 상태를 정리하고, Policy Design의 문구·상태·예외 기준을 연결해 운영 가능한 디자인 시스템으로 만들었어요.',
     blocks: [{ kind: 'rows', items: [
-      { title: '함께 쓰는 UI', body: '업무마다 반복되는 구성 요소는 공통 디자인 기준으로 정리했어요.' },
-      { title: '업무마다 다른 정보', body: '같은 UI 기준 안에서도 평가·목표·정책 등 각 업무에 필요한 정보는 구분해 담았어요.' },
+      { title: '역할이 달라도 같은 UI 규칙', body: '관리자와 기업 사용자 화면에서 같은 컴포넌트와 상태 표현 기준을 유지했어요.' },
+      { title: '반복 화면을 같은 기준으로 확장', body: '문구·상태·예외 정책을 컴포넌트에 연결해 화면마다 새로 판단하지 않고 같은 규칙으로 구성할 수 있게 했어요.' },
     ] }],
     imageSlot: { label: 'EDK 디자인 시스템', layout: 'wide', image: {
       src: new URL('../../img/projects/edk/system_01.png', import.meta.url).href,

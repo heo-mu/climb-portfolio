@@ -151,7 +151,7 @@ function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sen
     case 'image-workflow': return <div className="case-image-workflow">
       <ol className="case-image-workflow-steps">{block.steps.map((step, index) => <li key={step.title}>
         <span className="case-image-workflow-index mono" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-        <h3>{step.title}</h3><span className="case-image-workflow-role">{step.responsibility}</span><p>{step.body}</p>
+        <h3>{step.title}</h3><p>{step.body}</p>
       </li>)}</ol>
       <div className="case-image-workflow-grid">{block.images.map(panel => <div className="case-image-workflow-slot" key={panel.label} aria-hidden={!panel.image || undefined}>
         {panel.image && <img src={panel.image.src} alt={panel.image.alt} width={panel.image.width} height={panel.image.height} loading="lazy" decoding="async" />}
@@ -231,13 +231,14 @@ export function CaseStudy({ sections, heroSlot, projectSlug, projectName, senten
   const problemIndex = orderedSections.findIndex(section => ['problem', 'the problem'].includes(section.title.trim().toLowerCase()))
   if (problemIndex > 1) orderedSections.splice(1, 0, orderedSections.splice(problemIndex, 1)[0])
 
-  return <div className="case-study" ref={motionRoot}>{orderedSections.map((section, index) => <section className={`case-section${section.blocks || section.layout === 'ai-agent' ? ' case-section-editorial' : ''}${section.layout ? ` case-section--${section.layout}` : ''}${projectSlug === 'edk' && section.title === 'Policy Design' ? ' case-section--policy-design' : ''}`} data-tone={section.tone ?? 'base'} data-spacing={section.spacing ?? 'standard'} key={section.title} aria-labelledby={`case-${index}`}>
+  return <div className="case-study" ref={motionRoot}>{orderedSections.map((section, index) => <section className={`case-section${section.blocks || section.layout === 'ai-agent' ? ' case-section-editorial' : ''}${section.layout ? ` case-section--${section.layout}` : ''}${projectSlug === 'edk' && section.title === 'Policy Design' ? ' case-section--policy-design' : ''}${projectSlug === 'moel-ax' && section.title === 'Working Conditions' ? ' case-section--working-conditions' : ''}`} data-tone={section.tone ?? 'base'} data-spacing={section.spacing ?? 'standard'} key={section.title} aria-labelledby={`case-${index}`}>
     <div className="case-label mono"><span>{String(index + 1).padStart(2, '0')}</span>{section.title}</div>
     <div className={`case-content${usesSplitSectionHeader(section, projectSlug) ? ' case-section-header-split' : ''}`}>
       {section.lead && section.layout !== 'structure' && <ContentBlock block={section.lead} sentenceBreaks={sentenceBreaks} />}
-      <h2 id={`case-${index}`}><CaseText text={section.heading} /></h2>{section.body && <p>{usesSplitSectionHeader(section, projectSlug) ? section.body.split(/<br\s*\/?\s*>|\n|(?<=\.)\s+/i).map((sentence, i) => <Fragment key={i}>{i > 0 && ' '}<span className="case-section-description-line">{sentence}</span></Fragment>) : section.layout === 'trust' ? section.body.split('\n').map((line, lineIndex) => <Fragment key={line}>{lineIndex > 0 && <br />}{line}</Fragment>) : section.body.includes('<br') || (projectSlug === 'edk' && section.layout === 'statement' && section.body.includes('\n')) || sentenceBreaks || ['overview', 'visual-measure', 'trust', 'directing-ai'].includes(section.layout ?? '') ? <CaseText text={section.body} prose={sentenceBreaks && section.layout !== 'visual-measure'} /> : section.body}</p>}
+      <h2 id={`case-${index}`}><CaseText text={section.heading} /></h2>{section.body && <p>{usesSplitSectionHeader(section, projectSlug) ? section.body.split(/<br\s*\/?\s*>|\n|(?<=\.)\s+/i).map((sentence, i) => <Fragment key={i}>{i > 0 && ' '}<span className="case-section-description-line">{sentence}</span></Fragment>) : section.layout === 'trust' || (projectSlug === 'moel-ax' && section.title === 'AI Workflow') ? section.body.split('\n').map((line, lineIndex) => <Fragment key={line}>{lineIndex > 0 && <br />}{line}</Fragment>) : section.body.includes('<br') || (projectSlug === 'edk' && section.layout === 'statement' && section.body.includes('\n')) || (projectSlug === 'moel-ax' && section.title === 'The Problem' && section.body.includes('\n')) || sentenceBreaks || ['overview', 'visual-measure', 'trust', 'directing-ai'].includes(section.layout ?? '') ? <CaseText text={section.body} prose={sentenceBreaks && section.layout !== 'visual-measure'} /> : section.body}</p>}
       {projectSlug === 'edk' && section.title === 'Policy Design' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
       {projectSlug === 'edk' && section.title === 'Design System' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
+      {projectSlug === 'moel-ax' && section.title === 'Working Conditions' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
       {section.lead && section.layout === 'structure' && <ContentBlock block={section.lead} sentenceBreaks={sentenceBreaks} />}
       {section.reflectionSummary && section.blocks?.map((block, i) => <ContentBlock key={i} block={block} sentenceBreaks={sentenceBreaks} />)}
       {section.reflectionSummary && (section.process || section.closing)
@@ -262,7 +263,7 @@ export function CaseStudy({ sections, heroSlot, projectSlug, projectName, senten
       </div>}
     </div>
     {index === 0 && heroSlot && <CaseImageCarousel key={projectSlug} slot={heroSlot} projectSlug={projectSlug} projectName={projectName} />}
-    {section.layout === 'visual-measure' ? <VisualMeasureDemo /> : section.layout === 'trust' ? <ValidationDemo /> : section.layout !== 'ai-agent' && !(projectSlug === 'samsung-bees' && section.layout === 'spatial-data') && !(projectSlug === 'edk' && ['Policy Design', 'Design System'].includes(section.title)) && section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
+    {section.layout === 'visual-measure' ? <VisualMeasureDemo /> : section.layout === 'trust' ? <ValidationDemo /> : section.layout !== 'ai-agent' && !(projectSlug === 'samsung-bees' && section.layout === 'spatial-data') && !(projectSlug === 'edk' && ['Policy Design', 'Design System'].includes(section.title)) && !(projectSlug === 'moel-ax' && section.title === 'Working Conditions') && section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
     {section.supporting && <CaseAIInsight text={section.supporting} />}
   </section>)}</div>
 }

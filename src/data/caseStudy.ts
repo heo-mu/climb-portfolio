@@ -14,7 +14,7 @@ export type CaseBlock =
   | { kind: 'role-hierarchy'; roles: readonly { title: string; scope: string }[]; workflows: readonly string[] }
   | { kind: 'supporting'; text: string }
   | { kind: 'spatial-hierarchy'; steps: readonly { title: string; detail: string }[]; principles: readonly { title: string; body: string }[] }
-  | { kind: 'image-workflow'; steps: readonly { title: string; responsibility: '직접 판단' | 'AI 활용'; body: string }[]; images: readonly CaseImage[] }
+  | { kind: 'image-workflow'; steps: readonly { title: string; body: string }[]; images: readonly CaseImage[] }
   | { kind: 'insight'; label?: '핵심 정리' | '핵심 시사점' | '다음에 가져갈 기준'; text: string; supporting?: string }
   | { kind: 'production-workflow'; steps: readonly { title: string; body: string }[] }
   | { kind: 'graph-workflow'; title: string; steps: readonly { title: string; body: string }[]; evidence?: { stepIndex: number; label: string; image: NonNullable<CaseImage['image']> }; supporting?: string; insight: string; conclusion: string }
