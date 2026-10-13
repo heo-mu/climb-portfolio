@@ -55,6 +55,7 @@ export const edkCaseStudy: readonly CaseSection[] = [
     layout: 'narrative', title: 'Policy Design', tone: 'focus', spacing: 'narrative',
     heading: '반복되는 화면보다, 먼저 기준을 정했어요.',
     body: '디자인 시스템을 컴포넌트 모음으로 끝내지 않고, 상태·행동·문구·예외 상황까지 같은 기준으로 동작하도록 UX 정책을 함께 설계했어요.',
+    supporting: '정책 초안을 기준으로 AI와 함께 반복되는 규칙을 정리하고, 빠져 있던 상태·예외·인터랙션 기준까지 점검했어요. 필요한 항목을 보완한 뒤 실제 서비스에 맞는지 직접 검토해 최종 정책으로 정리했어요.',
     blocks: [{ kind: 'rows', items: [
       { title: '01. 행동의 기준을 통일했어요', body: '같은 행동이 화면마다 다르게 표현되지 않도록 문구와 액션 기준을 먼저 정했어요.', examples: [
         'Modal 확인·취소 버튼의 명칭과 순서',
