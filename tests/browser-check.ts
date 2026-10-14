@@ -931,6 +931,8 @@ try {
     const selectors = ['.case-problem', '.case-row', '.case-conclusion', '.case-ai-insight', '.case-reflection-process > span', '.case-flows li', '.case-production-workflow > li', '.case-role-menu-list > li', '.case-image-workflow-steps > li']
     for (const slug of ['deurim', 'samsung-bees', 'edk', 'moel-ax', 'groupware']) {
       await page.goto(base + '/project/' + slug)
+      // Compare hover feedback after the web font settles on cold production loads.
+      await page.evaluate(() => document.fonts.ready.then(() => undefined))
       for (const selector of selectors) {
         const unit = page.locator(selector).first()
         if (!await unit.count()) continue
