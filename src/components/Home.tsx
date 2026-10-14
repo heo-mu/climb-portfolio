@@ -1,8 +1,8 @@
 import { profile } from '../data/expedition'
 
-type HomeProps = { onExplore: () => void }
+type HomeProps = { onExplore: () => void; onViewWork: () => void }
 
-export function Home({ onExplore }: HomeProps) {
+export function Home({ onExplore, onViewWork }: HomeProps) {
   return <section className="home-hero" id="base-camp" data-checkpoint={0} aria-labelledby="title-base-camp">
     <div className="home-backdrop" aria-hidden="true" />
     <div className="home-layout">
@@ -22,6 +22,7 @@ export function Home({ onExplore }: HomeProps) {
             <span>Ascend</span>
             <svg viewBox="0 0 80 24" fill="none" aria-hidden="true"><path className="ascend-route" d="M0 12.5H60" /><path className="ascend-arrow" d="M55 7.5L60 12.5L55 17.5" /></svg>
           </button>
+          <button type="button" className="home-view-work" onClick={onViewWork} aria-label="View Work — Selected Work로 바로 이동해요">View Work</button>
         </div>
       </div>
     </div>

@@ -45,6 +45,12 @@ export const deurimCaseStudy: readonly CaseSection[] = [
     body: '기획과 디자인의 판단을 실제 제품까지 직접 연결하고 싶었어요.\nAI를 활용해 UX/UI와 3D 경험을 설계하고, 냉장고 선택부터 설치 판단까지 하나의 서비스로 구현했어요.',
   },
   {
+    layout: 'visual-measure', title: 'Visual Measure', tone: 'elevated', spacing: 'standard',
+    heading: '공간을 조절하면서,\n제품 크기도 바로 비교할 수 있게 했어요.',
+    body: '숫자만으로는 공간 크기를 가늠하기 어려웠어요.\n슬라이더를 자처럼 만들고, 현재 공간과 제품 너비를 같은 축에 보여줬어요.\n파란 선은 공간, 빨간 선은 제품 너비를 보여줘요.',
+    supporting: '공간 크기를 직관적으로 보여주기 위해 여러 표현 방식을 AI로 빠르게 구현해 비교했어요. 직접 조작해보며 이해하기 쉬운 방식을 골랐고, 현재 공간과 제품 너비를 같은 축에서 읽도록 정리했어요.',
+  },
+  {
     layout: 'statement', title: 'The Problem', tone: 'focus', spacing: 'narrative',
     heading: '치수로 상상하던 공간을, 직접 확인할 수 있게 했어요.',
     blocks: [{ kind: 'problems', items: [
@@ -58,12 +64,6 @@ export const deurimCaseStudy: readonly CaseSection[] = [
     lead: { kind: 'flows', items: [{ title: '사용자가 따라가는 네 단계', steps: ['제품 선택', '공간 입력', '3D 확인', '설치 결과'] }] },
     heading: '선택에서 판단까지 연결했어요.',
     body: '제품 정보와 사용자가 입력한 공간을 함께 살펴보며, 설치 조건을 확인하는 흐름으로 정리했어요.',
-  },
-  {
-    layout: 'visual-measure', title: 'Visual Measure', tone: 'elevated', spacing: 'standard',
-    heading: '공간을 조절하면서,\n제품 크기도 바로 비교할 수 있게 했어요.',
-    body: '숫자만으로는 공간 크기를 가늠하기 어려웠어요.\n슬라이더를 자처럼 만들고, 현재 공간과 제품 너비를 같은 축에 보여줬어요.\n파란 선은 공간, 빨간 선은 제품 너비를 보여줘요.',
-    supporting: '공간 크기를 직관적으로 보여주기 위해 여러 표현 방식을 AI로 빠르게 구현해 비교했어요. 직접 조작해보며 이해하기 쉬운 방식을 골랐고, 현재 공간과 제품 너비를 같은 축에서 읽도록 정리했어요.',
   },
   {
     layout: 'trust', title: 'Validation', tone: 'focus', spacing: 'narrative',

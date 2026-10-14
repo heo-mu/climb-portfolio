@@ -44,7 +44,7 @@ export const beesCaseStudy: readonly CaseSection[] = [
     ] }, { kind: 'insight', text: '기능 이름을 익히게 하기보다, 운영자가 이미 알고 있는 실제 공간을 따라 정보를 찾게 하는 것이 먼저라고 봤어요.' }],
   },
   {
-    layout: 'spatial-data', title: 'Spatial Data', tone: 'focus', spacing: 'narrative',
+    layout: 'spatial-data', title: 'Spatial Data', tone: 'elevated', spacing: 'narrative',
     heading: '공간 데이터와 설비 상세를 분리했어요.',
     body: '공간의 상태와 데이터는 공간 화면에서, 설비 상세는 필요할 때 별도 모달에서 확인하게 했어요.',
     blocks: [{ kind: 'rows', items: [

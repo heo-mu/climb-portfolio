@@ -28,7 +28,7 @@ export const inventory = [
   { name: 'Illustrator', group: 'DESIGN', icon: illustratorIcon, use: '아이콘 · 벡터 그래픽' },
   { name: 'ChatGPT', group: 'AI', icon: chatgptIcon, use: '정보 정리 · 대안 탐색' },
   { name: 'Claude', group: 'AI', icon: claudeIcon, use: '요구사항 · 반복 작업 정리' },
-  { name: 'Adobe Firefly', group: 'AI', icon: fireflyIcon, use: '비주얼 시안 탐색' },
+  { name: 'Adobe Firefly', group: 'AI', icon: fireflyIcon, use: '이미지 생성' },
   { name: 'Jira', group: 'COLLABORATION', icon: jiraIcon, use: '이슈 · 수정 내역 관리' },
   { name: 'Notion', group: 'COLLABORATION', icon: notionIcon, use: '프로젝트 · 작업 기록' },
   { name: 'Slack', group: 'COLLABORATION', icon: slackIcon, use: '기획 · 개발 커뮤니케이션' },

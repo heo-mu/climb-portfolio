@@ -258,11 +258,8 @@ function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sen
 export function CaseStudy({ sections, heroSlot, projectSlug, projectName, sentenceBreaks = false }: { sections: readonly CaseSection[]; heroSlot?: ImageSlot; projectSlug: string; projectName: string; sentenceBreaks?: boolean }) {
   const motionRoot = useRef<HTMLDivElement>(null)
   useCaseMotion(motionRoot, projectSlug)
-  const orderedSections = [...sections]
-  const overviewIndex = orderedSections.findIndex(section => section.title.trim().toLowerCase() === 'overview')
-  if (overviewIndex > 0) orderedSections.unshift(orderedSections.splice(overviewIndex, 1)[0])
-  const problemIndex = orderedSections.findIndex(section => ['problem', 'the problem'].includes(section.title.trim().toLowerCase()))
-  if (problemIndex > 1) orderedSections.splice(1, 0, orderedSections.splice(problemIndex, 1)[0])
+  // Each case owns its reading order; keep its signature proof ahead of the problem.
+  const orderedSections = sections
 
   return <div className="case-study" ref={motionRoot}>{orderedSections.map((section, index) => <section className={`case-section${section.blocks || section.layout === 'ai-agent' ? ' case-section-editorial' : ''}${section.layout ? ` case-section--${section.layout}` : ''}${projectSlug === 'edk' && section.title === 'Policy Design' ? ' case-section--policy-design' : ''}${projectSlug === 'moel-ax' && section.title === 'Working Conditions' ? ' case-section--working-conditions' : ''}`} data-tone={section.tone ?? 'base'} data-spacing={section.spacing ?? 'standard'} key={section.title} aria-labelledby={`case-${index}`}>
     <div className="case-label mono"><span>{String(index + 1).padStart(2, '0')}</span>{section.title}</div>

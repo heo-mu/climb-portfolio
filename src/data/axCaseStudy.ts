@@ -21,6 +21,15 @@ export const axCaseStudy: readonly CaseSection[] = [
     body: '산재위험요소 자율점검은 현장 사진에서 위험요소를 찾아 리포트와 관련 사고 사례 영상을 제공해요.\n기초노동질서 자율점검은 근로계약서 등 서류의 노동법 준수 여부를 확인하고 참고 가이드를 안내해요.',
   },
   {
+    layout: 'hierarchy', title: 'Structure', tone: 'elevated', spacing: 'narrative',
+    heading: '사진은 사고 사례로, 서류는 참고 가이드로 이어져요.',
+    body: '위험요소 리포트에는 관련 실제 사고 사례 영상을 추천해, 발견된 위험이 어떤 사고로 이어질 수 있는지 이해하도록 했어요.\n서류는 개인정보 노출을 최소화한 상태에서 최신 노동법 기준으로 자동 판독해요. 진단 결과는 개별 사건의 법률 자문이 아닌 자율점검용 참고 가이드로 안내해요.',
+    blocks: [{ kind: 'flows', items: [
+      { title: '산재위험요소 자율점검', steps: ['현장 사진 업로드', 'AI 위험요소 식별', '위험요소 리포트', '관련 사고 사례 영상'] },
+      { title: '기초노동질서 자율점검', steps: ['근로 관련 서류 업로드', 'AI 자동 판독', '노동법 준수 여부 확인', '참고 가이드'] },
+    ] }],
+  },
+  {
     layout: 'statement', title: 'The Problem', tone: 'focus', spacing: 'narrative',
     heading: '전문 지식이 없어도, 스스로 문제를 확인할 수 있어야 했어요.',
     body: '현장의 위험 요소와 노동법 준수 여부는 전문 지식이 없으면 판단하기 어려워요.\n사진이나 서류를 올리는 것만으로 문제를 찾고, 무엇을 확인해야 하는지 이해할 수 있게 설계했어요.',
@@ -31,16 +40,7 @@ export const axCaseStudy: readonly CaseSection[] = [
     ] }, { kind: 'insight', text: '문제를 찾는 데서 끝내지 않고, 왜 확인해야 하는지와 다음 행동까지 이해하도록 돕는 것이 중요했어요.' }],
   },
   {
-    layout: 'hierarchy', title: 'Structure', tone: 'base', spacing: 'narrative',
-    heading: '사진은 사고 사례로, 서류는 참고 가이드로 이어져요.',
-    body: '위험요소 리포트에는 관련 실제 사고 사례 영상을 추천해, 발견된 위험이 어떤 사고로 이어질 수 있는지 이해하도록 했어요.\n서류는 개인정보 노출을 최소화한 상태에서 최신 노동법 기준으로 자동 판독해요. 진단 결과는 개별 사건의 법률 자문이 아닌 자율점검용 참고 가이드로 안내해요.',
-    blocks: [{ kind: 'flows', items: [
-      { title: '산재위험요소 자율점검', steps: ['현장 사진 업로드', 'AI 위험요소 식별', '위험요소 리포트', '관련 사고 사례 영상'] },
-      { title: '기초노동질서 자율점검', steps: ['근로 관련 서류 업로드', 'AI 자동 판독', '노동법 준수 여부 확인', '참고 가이드'] },
-    ] }],
-  },
-  {
-    layout: 'narrative', title: 'AI Review', tone: 'focus', spacing: 'narrative',
+    layout: 'narrative', title: 'AI Review', tone: 'elevated', spacing: 'narrative',
     heading: 'AI로 다양한 상황을 먼저 펼쳐보고, 놓치는 경우를 점검했어요.',
     body: '입력 조건에 따라 결과가 달라지는 서비스라, AI로 다양한 사용자 상황을 빠르게 확장했어요.\n그 과정에서 필요한 설명과 다음 행동이 빠지지 않았는지 화면 흐름을 점검했어요.',
     blocks: [{ kind: 'production-workflow', label: 'AI를 활용한 UX 상황 확장과 화면 검토 과정', steps: [

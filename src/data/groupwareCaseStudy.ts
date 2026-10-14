@@ -22,14 +22,13 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
     body: '직원은 자신의 근태·신청·공지를 확인하고, 관리자는 구성원·조직·근태를 운영하는 기업용 업무 시스템이에요. 같은 인사 정보를 각자의 업무와 관리 범위에 맞게 볼 수 있도록 구성했어요.',
   },
   {
-    layout: 'statement', title: 'The Problem', tone: 'focus', spacing: 'narrative',
-    heading: '같은 인사 정보라도, 역할에 따라 필요한 화면이 달랐어요.',
-    body: '직원은 자신의 업무를 처리하고, 관리자는 구성원과 조직 전체를 살펴봐야 했어요. 서로 다른 조회·관리 범위를 구분하면서 반복 업무의 사용 방식은 일관되게 맞췄어요.',
-    blocks: [{ kind: 'problems', items: [
-      { title: '사용자와 관리자의 업무가 달랐어요.', body: '직원에게는 자신의 근태와 신청이, 관리자에게는 조직 전체의 현황과 운영이 중요했어요.' },
-      { title: '같은 데이터도 보는 범위가 달랐어요.', body: '개인은 자기 정보를 확인하지만, 관리자는 구성원과 조직 단위로 더 넓은 범위를 관리해야 했어요.' },
-      { title: '반복되는 인사 업무가 많았어요.', body: '근태·신청·조직·회원 관리처럼 반복되는 업무를 일관된 방식으로 사용할 수 있어야 했어요.' },
-    ] }, { kind: 'insight', text: '역할에 맞는 정보 범위를 나누고, 반복되는 업무는 같은 방식으로 사용하게 했어요.' }],
+    layout: 'narrative', title: 'Key Screens', tone: 'elevated', spacing: 'narrative',
+    heading: '개인의 기록과 조직 현황을 각자의 업무에 맞게 보여줘요.',
+    body: '직원 화면에서는 내 근태를 확인하고, 관리자 화면에서는 구성원들의 근태를 함께 살펴봐요. 확인해야 할 정보의 범위에 맞춰 화면을 구성했어요.',
+    imageSlot: { label: '직원의 내 근태와 관리자의 조직 근태 비교', layout: 'role-comparison', panels: [
+      { ...groupwareDetail.heroSlot!.panels![1], roleLabel: 'USER', label: '사용자 화면' },
+      { ...groupwareDetail.heroSlot!.panels![5], roleLabel: 'ADMIN', label: '관리자 화면' },
+    ] },
   },
   {
     layout: 'narrative', title: 'AI Workflow', tone: 'base', spacing: 'narrative',
@@ -47,6 +46,16 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
     ],
   },
   {
+    layout: 'statement', title: 'The Problem', tone: 'focus', spacing: 'narrative',
+    heading: '같은 인사 정보라도, 역할에 따라 필요한 화면이 달랐어요.',
+    body: '직원은 자신의 업무를 처리하고, 관리자는 구성원과 조직 전체를 살펴봐야 했어요. 서로 다른 조회·관리 범위를 구분하면서 반복 업무의 사용 방식은 일관되게 맞췄어요.',
+    blocks: [{ kind: 'problems', items: [
+      { title: '사용자와 관리자의 업무가 달랐어요.', body: '직원에게는 자신의 근태와 신청이, 관리자에게는 조직 전체의 현황과 운영이 중요했어요.' },
+      { title: '같은 데이터도 보는 범위가 달랐어요.', body: '개인은 자기 정보를 확인하지만, 관리자는 구성원과 조직 단위로 더 넓은 범위를 관리해야 했어요.' },
+      { title: '반복되는 인사 업무가 많았어요.', body: '근태·신청·조직·회원 관리처럼 반복되는 업무를 일관된 방식으로 사용할 수 있어야 했어요.' },
+    ] }, { kind: 'insight', text: '역할에 맞는 정보 범위를 나누고, 반복되는 업무는 같은 방식으로 사용하게 했어요.' }],
+  },
+  {
     layout: 'narrative', title: 'Structure', tone: 'elevated', spacing: 'narrative',
     heading: '직원은 내 업무를, 관리자는 조직의 업무를 살펴봐요.',
     body: '같은 인사 데이터를 사용하더라도 직원은 자기 정보 중심으로, 관리자는 구성원과 조직 단위로 조회·관리하도록 나눴어요.',
@@ -56,16 +65,7 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
     ] }],
   },
   {
-    layout: 'narrative', title: 'Key Screens', tone: 'base', spacing: 'narrative',
-    heading: '개인의 기록과 조직 현황을 각자의 업무에 맞게 보여줘요.',
-    body: '직원 화면에서는 내 근태를 확인하고, 관리자 화면에서는 구성원들의 근태를 함께 살펴봐요. 확인해야 할 정보의 범위에 맞춰 화면을 구성했어요.',
-    imageSlot: { label: '직원의 내 근태와 관리자의 조직 근태 비교', layout: 'role-comparison', panels: [
-      { ...groupwareDetail.heroSlot!.panels![1], roleLabel: 'USER', label: '사용자 화면' },
-      { ...groupwareDetail.heroSlot!.panels![5], roleLabel: 'ADMIN', label: '관리자 화면' },
-    ] },
-  },
-  {
-    layout: 'narrative', title: 'States', tone: 'elevated', spacing: 'narrative',
+    layout: 'narrative', title: 'States', tone: 'base', spacing: 'narrative',
     heading: '업무가 어디까지 처리됐는지 바로 읽히게 했어요.',
     body: '신청 목록의 상태와 근태 현황을 이름과 위치로 구분했어요. 반복해서 확인하는 정보는 같은 표현을 유지해, 처리 여부를 빠르게 파악하도록 했어요.',
     blocks: [{ kind: 'rows', items: [

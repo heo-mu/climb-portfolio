@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useLocation, useNavigationType } from 'react-router-dom'
+import { useLocation, type NavigationType } from 'react-router-dom'
 import { Scene } from './Scene'
 import { ScrollController } from './progress'
 import type { ExpeditionFrame } from './progress'
@@ -10,9 +10,9 @@ import { experienceConfig } from '../config/experience'
 import { projectSelection } from './projectSelection'
 import { projects } from '../data/projects'
 
-export function Expedition({ active = true }: { active?: boolean }) {
+export function Expedition({ active = true, navigationType }: { active?: boolean; navigationType: NavigationType }) {
   const location = useLocation()
-  const navigationType = useNavigationType()
+  // The retained <Routes location> reports POP internally; use the real router action.
   const [controller] = useState(() => new ScrollController())
   const [fallback, setFallback] = useState(false)
   const root = useRef<HTMLElement>(null)
@@ -88,10 +88,14 @@ export function Expedition({ active = true }: { active?: boolean }) {
       }
       if (focusProjectsOnArrival.current) {
         if (frame.sections[4].interactive) {
-          focusProjectsOnArrival.current = false
-          // The scene applies visibility later in this same controller dispatch.
-          queueMicrotask(() => { if (!sections[4].inert) projectsHeading?.focus({ preventScroll: true }) })
-        } else if (frame.destination !== 4) focusProjectsOnArrival.current = false
+          // Reduced motion can finish travel before the decoded exhibit becomes visible.
+          queueMicrotask(() => {
+            if (focusProjectsOnArrival.current && !sections[4].inert && getComputedStyle(sections[4]).visibility === 'visible') {
+              projectsHeading?.focus({ preventScroll: true })
+              focusProjectsOnArrival.current = false
+            }
+          })
+        }
       }
     })
     return () => { unsubscribe(); controller.stop() }
@@ -110,11 +114,34 @@ export function Expedition({ active = true }: { active?: boolean }) {
     return () => window.removeEventListener('hashchange', hashChange)
   }, [active, controller, fallback])
 
+  useEffect(() => {
+    if (!active) return
+    // A native smooth trip passes other camps; cancel focus only when the visitor takes over.
+    const cancelFocus = () => { focusProjectsOnArrival.current = false }
+    const events = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
+    events.forEach(event => window.addEventListener(event, cancelFocus, { passive: true, capture: true }))
+    return () => {
+      cancelFocus()
+      events.forEach(event => window.removeEventListener(event, cancelFocus, true))
+    }
+  }, [active])
+
+  const viewWork = (instant = false) => {
+    const target = checkpoints.find(camp => camp.id === 'high-camp')!
+    if (fallback) {
+      document.getElementById(target.id)?.scrollIntoView({ behavior: instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+      document.getElementById('title-high-camp')?.focus({ preventScroll: true })
+    } else {
+      controller.goTo(target.progress, instant)
+      focusProjectsOnArrival.current = true
+    }
+  }
+
   return <main ref={root} className={`expedition ${fallback ? 'reading-mode' : ''}`} style={fallback ? undefined : { height: `${experienceConfig.route.scrollScreens * 100}svh` }}>
-    <a className="skip-link" href="#high-camp" onClick={event => { if (!fallback) { event.preventDefault(); controller.goTo(checkpoints.find(camp => camp.id === 'high-camp')!.progress, true); focusProjectsOnArrival.current = true } }}>프로젝트로 바로 가요</a>
+    <a className="skip-link" href="#high-camp" onClick={event => { event.preventDefault(); viewWork(true) }}>프로젝트로 바로 가요</a>
     {fallback ? <div className="static-landscape" aria-hidden="true" /> : <Scene controller={controller} onFallback={onFallback} active={active} />}
     <HUD controller={controller} fallback={fallback} enabled={active} />
-    <CheckpointSections onExplore={() => { if (fallback) document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); else controller.goTo(checkpoints[1].progress) }} />
+    <CheckpointSections onExplore={() => { if (fallback) document.getElementById('about')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); else controller.goTo(checkpoints[1].progress) }} onViewWork={() => viewWork()} />
     {fallback && <p className="fallback-note">3D 화면을 사용할 수 없어 콘텐츠를 바로 보여드려요.</p>}
   </main>
 }

@@ -22,37 +22,7 @@ export const edkCaseStudy: readonly CaseSection[] = [
     body: '기업의 ESG 데이터를 한곳에서 관리하는 B2B SaaS 플랫폼이에요. 조직과 기간, 담당자에 따라 달라지는 정보를 찾고 입력하고 확인하는 공통 규칙을 정리했어요.',
   },
   {
-    layout: 'statement', title: 'The Problem', tone: 'focus', spacing: 'narrative',
-    heading: '같은 ESG 데이터라도, 역할에 따라 관리 범위가 달랐어요.',
-    body: '플랫폼 관리자부터 기업 사용자까지 서로 다른 역할이 하나의 플랫폼에서 ESG 데이터를 관리해야 했어요.\n역할마다 책임과 권한이 달라, 어떤 기능과 정보를 보여줄지 명확한 기준이 필요했어요.',
-    blocks: [{ kind: 'problems', items: [
-      { title: '역할마다 다른 관리 범위', body: '플랫폼 관리자는 전체를, 기업 관리자는 자기 기업을 관리하고 사용자는 필요한 기능만 사용해요.' },
-      { title: '여러 업무에 쌓이는 ESG 데이터', body: '인권영향평가·공급망평가·목표 등 다양한 ESG 데이터를 한 플랫폼에서 관리해야 했어요.' },
-      { title: '권한에 따라 달라지는 접근', body: '같은 메뉴라도 역할에 따라 조회·관리 범위가 달라, 권한 기준이 명확해야 했어요.' },
-    ] }, { kind: 'insight', text: '기능을 늘리기보다, 역할과 관리 범위를 먼저 명확히 나누는 것이 서비스 구조의 기준이 됐어요.' }],
-  },
-  {
-    layout: 'hierarchy', title: 'Structure', tone: 'elevated', spacing: 'narrative',
-    heading: '역할은 나누고, ESG 업무는 하나의 구조로 연결했어요.',
-    body: '플랫폼 관리자부터 기업 사용자까지 관리 범위를 구분하고, 웹공시·정책·목표·평가·AI 보고서 같은 ESG 업무를 하나의 B2B SaaS 안에서 운영하도록 설계했어요.',
-    blocks: [{ kind: 'role-hierarchy', roles: [
-      { title: '플랫폼 관리자', scope: '전체 플랫폼 / 기업 / 기능 운영' },
-      { title: '기업 관리자', scope: '자기 기업 / 사용자 / ESG 데이터 관리' },
-      { title: '기업 사용자', scope: '부여된 권한 안에서 실무 기능 사용' },
-    ], workflows: ['웹공시', '정책', '목표', '인권영향평가', '공급망평가', 'AI 보고서'] },
-    { kind: 'insight', text: '역할은 달라도, 업무 구조는 같게 가져갔어요.', supporting: '누가 사용하는지에 따라 접근 범위는 달라지지만, 평가·목표·데이터를 확인하고 관리하는 기본 흐름은 일관되게 유지했어요.' }],
-  },
-  {
-    layout: 'comparison', title: 'Permissions', tone: 'base',
-    heading: '권한 정책을 화면의 기능과 정보 범위에 연결했어요.',
-    body: '관리자의 운영·관리 기능과 기업 사용자의 실무 기능을 구분했어요.\nUX 기획과 정책 설계에서 정한 책임 범위를 화면 구성의 기준으로 삼았어요.',
-    blocks: [{ kind: 'comparison', columns: [
-      { title: '정책에서 구분한 범위', items: ['플랫폼 전체 운영과 개별 기업의 관리를 구분했어요.', '기업 관리자에게는 자기 기업의 사용자와 ESG 데이터 관리 범위를 정했어요.'] },
-      { title: '화면에 반영한 범위', items: ['관리 화면은 각 관리자가 맡은 운영 범위에 맞춰 구성했어요.', '기업 사용자 화면은 부여된 권한 안에서 사용하는 실무 기능을 기준으로 구성했어요.'] },
-    ] }],
-  },
-  {
-    layout: 'narrative', title: 'Policy Design', tone: 'focus', spacing: 'narrative',
+    layout: 'narrative', title: 'Policy Design', tone: 'elevated', spacing: 'narrative',
     heading: '반복되는 화면보다, 먼저 기준을 정했어요.',
     body: '디자인 시스템을 컴포넌트 모음으로 끝내지 않고, 상태·행동·문구·예외 상황까지 같은 기준으로 동작하도록 UX 정책을 함께 설계했어요.',
     supporting: '정책 초안을 기준으로 AI와 함께 반복되는 규칙을 정리하고, 빠져 있던 상태·예외·인터랙션 기준까지 점검했어요. 필요한 항목을 보완한 뒤 실제 서비스에 맞는지 직접 검토해 최종 정책으로 정리했어요.',
@@ -86,6 +56,36 @@ export const edkCaseStudy: readonly CaseSection[] = [
       width: 1118,
       height: 420,
     } },
+  },
+  {
+    layout: 'statement', title: 'The Problem', tone: 'focus', spacing: 'narrative',
+    heading: '같은 ESG 데이터라도, 역할에 따라 관리 범위가 달랐어요.',
+    body: '플랫폼 관리자부터 기업 사용자까지 서로 다른 역할이 하나의 플랫폼에서 ESG 데이터를 관리해야 했어요.\n역할마다 책임과 권한이 달라, 어떤 기능과 정보를 보여줄지 명확한 기준이 필요했어요.',
+    blocks: [{ kind: 'problems', items: [
+      { title: '역할마다 다른 관리 범위', body: '플랫폼 관리자는 전체를, 기업 관리자는 자기 기업을 관리하고 사용자는 필요한 기능만 사용해요.' },
+      { title: '여러 업무에 쌓이는 ESG 데이터', body: '인권영향평가·공급망평가·목표 등 다양한 ESG 데이터를 한 플랫폼에서 관리해야 했어요.' },
+      { title: '권한에 따라 달라지는 접근', body: '같은 메뉴라도 역할에 따라 조회·관리 범위가 달라, 권한 기준이 명확해야 했어요.' },
+    ] }, { kind: 'insight', text: '기능을 늘리기보다, 역할과 관리 범위를 먼저 명확히 나누는 것이 서비스 구조의 기준이 됐어요.' }],
+  },
+  {
+    layout: 'hierarchy', title: 'Structure', tone: 'elevated', spacing: 'narrative',
+    heading: '역할은 나누고, ESG 업무는 하나의 구조로 연결했어요.',
+    body: '플랫폼 관리자부터 기업 사용자까지 관리 범위를 구분하고, 웹공시·정책·목표·평가·AI 보고서 같은 ESG 업무를 하나의 B2B SaaS 안에서 운영하도록 설계했어요.',
+    blocks: [{ kind: 'role-hierarchy', roles: [
+      { title: '플랫폼 관리자', scope: '전체 플랫폼 / 기업 / 기능 운영' },
+      { title: '기업 관리자', scope: '자기 기업 / 사용자 / ESG 데이터 관리' },
+      { title: '기업 사용자', scope: '부여된 권한 안에서 실무 기능 사용' },
+    ], workflows: ['웹공시', '정책', '목표', '인권영향평가', '공급망평가', 'AI 보고서'] },
+    { kind: 'insight', text: '역할은 달라도, 업무 구조는 같게 가져갔어요.', supporting: '누가 사용하는지에 따라 접근 범위는 달라지지만, 평가·목표·데이터를 확인하고 관리하는 기본 흐름은 일관되게 유지했어요.' }],
+  },
+  {
+    layout: 'comparison', title: 'Permissions', tone: 'base',
+    heading: '권한 정책을 화면의 기능과 정보 범위에 연결했어요.',
+    body: '관리자의 운영·관리 기능과 기업 사용자의 실무 기능을 구분했어요.\nUX 기획과 정책 설계에서 정한 책임 범위를 화면 구성의 기준으로 삼았어요.',
+    blocks: [{ kind: 'comparison', columns: [
+      { title: '정책에서 구분한 범위', items: ['플랫폼 전체 운영과 개별 기업의 관리를 구분했어요.', '기업 관리자에게는 자기 기업의 사용자와 ESG 데이터 관리 범위를 정했어요.'] },
+      { title: '화면에 반영한 범위', items: ['관리 화면은 각 관리자가 맡은 운영 범위에 맞춰 구성했어요.', '기업 사용자 화면은 부여된 권한 안에서 사용하는 실무 기능을 기준으로 구성했어요.'] },
+    ] }],
   },
   {
     layout: 'narrative', title: 'Design System', tone: 'elevated', spacing: 'narrative',

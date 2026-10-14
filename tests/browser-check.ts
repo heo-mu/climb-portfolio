@@ -34,6 +34,9 @@ const viewports = [[1920, 1080], [1600, 900], [1440, 900], [1366, 768], [1280, 8
 const camps = checkpoints.map((camp, order) => ({ ...camp, order }))
 const errors: string[] = []
 const passed: string[] = []
+const signatureProofs: Record<string, string> = {
+  deurim: 'Visual Measure', 'samsung-bees': 'Structure', edk: 'Policy Design', 'moel-ax': 'Structure', groupware: 'AI Workflow',
+}
 
 let browser: Browser
 try { browser = await chromium.launch({ channel: 'chrome' }) } catch { browser = await chromium.launch() }
@@ -599,6 +602,48 @@ try {
   }
 
   // ──────────────────────────── Keyboard and focus ────────────────────────────
+  await step('Hero shortcut: View Work shares the journey, focus and return path at desktop and mobile sizes', async () => {
+    for (const width of [1920, 1440, 1280, 1200, 430, 390]) {
+      for (const reducedMotion of (width === 1440 || width === 390 ? ['no-preference', 'reduce'] : ['no-preference']) as ('no-preference' | 'reduce')[]) {
+        const { context, page } = await open({ viewport: { width, height: width < 768 ? 844 : 900 }, hasTouch: width < 768, isMobile: width < 768, reducedMotion })
+        await page.goto(base)
+        await ready(page)
+        await page.evaluate(() => document.fonts.ready)
+        const pageIdentity = await page.evaluate(() => performance.timeOrigin)
+        const layout = await page.evaluate(() => {
+          const work = document.querySelector('.home-view-work')!.getBoundingClientRect()
+          const ascend = document.querySelector('.home-explore')!.getBoundingClientRect()
+          const copy = document.querySelector('.home-statement')!.getBoundingClientRect()
+          const overlaps = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
+          return { fits: work.left >= 0 && work.right <= innerWidth && work.bottom <= innerHeight, overlap: overlaps(work, ascend) || overlaps(work, copy), overflow: document.documentElement.scrollWidth > innerWidth }
+        })
+        expect(layout, `${width}px Hero CTA`).toEqual({ fits: true, overlap: false, overflow: false })
+        if (width < 768) await page.locator('.home-view-work').tap()
+        else { await page.locator('.home-view-work').focus(); await page.keyboard.press('Enter') }
+        await expectArrived(page, 4)
+        await expect(page.locator('#title-high-camp'), `${width}px ${reducedMotion} shortcut focus`).toBeFocused()
+        expect(page.url()).toBe(base + '/')
+        expect(await page.evaluate(() => performance.timeOrigin)).toBe(pageIdentity)
+        if (width === 1440 && reducedMotion === 'no-preference') {
+          for (const [index, project] of projects.entries()) {
+            await page.locator('#high-camp [role=tab]').nth(index).click()
+            await expect(page.locator('.project-information[aria-hidden=false] .project-tags li')).toHaveText(project.tags.map(tag => '#' + tag))
+          }
+        }
+        await page.getByRole('link', { name: '프로젝트 보기', exact: true }).click()
+        await expect(page.locator('.detail-title')).toBeVisible()
+        await page.locator('.back-link').click()
+        await ready(page)
+        await expectArrived(page, 4)
+        await page.locator('.journey-home').click()
+        await expectArrived(page, 0)
+        await page.locator('.home-explore').click()
+        await expectArrived(page, 1)
+        await context.close()
+      }
+    }
+  })
+
   await step('keyboard: skip link, focus order, inert camps never receive focus', async () => {
     const { context, page } = await open()
     await page.goto(base)
@@ -872,7 +917,11 @@ try {
         await expect(gallery).toHaveCount(1)
         await expect(page.locator('.detail-wrap .case-image-slot, .detail-wrap .detail-hero')).toHaveCount(0)
         await expect(overview.locator('.case-label')).toContainText('01Overview')
-        await expect(page.locator('.case-section').nth(1).locator('.case-label')).toContainText('02The Problem')
+        const labels = await page.locator('.case-section > .case-label').allTextContents()
+        const opening = project.slug === 'groupware' ? ['Overview', 'Key Screens', 'AI Workflow', 'The Problem'] : ['Overview', signatureProofs[project.slug], 'The Problem']
+        expect(labels.slice(0, opening.length)).toEqual(opening.map((title, index) => `${String(index + 1).padStart(2, '0')}${title}`))
+        expect(new Set(labels.map(label => label.slice(2))).size).toBe(labels.length)
+        expect(labels).toEqual(project.caseStudy!.map((section, index) => `${String(index + 1).padStart(2, '0')}${section.title}`))
         await expect(tabs).toHaveCount(panels.length)
         await gallery.scrollIntoViewIfNeeded()
         const order = await gallery.evaluate(el => {
@@ -1122,10 +1171,6 @@ try {
           await expect(page.locator('.case-principle')).toHaveCount(blocks.filter(block => block.kind === 'quote').length)
           await expect(page.locator('.case-decision')).toHaveCount(blocks.reduce((sum, block) => sum + (block.kind === 'compact-decisions' || block.kind === 'decisions' ? block.items.length : 0), 0))
           const expectedSections = [...sections]
-          const overviewIndex = expectedSections.findIndex(section => section.title.trim().toLowerCase() === 'overview')
-          if (overviewIndex > 0) expectedSections.unshift(expectedSections.splice(overviewIndex, 1)[0])
-          const problemIndex = expectedSections.findIndex(section => ['problem', 'the problem'].includes(section.title.trim().toLowerCase()))
-          if (problemIndex > 1) expectedSections.splice(1, 0, expectedSections.splice(problemIndex, 1)[0])
           const headingText = await page.locator('.case-section h2').evaluateAll(elements => elements.map(el => (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim()))
           expect(headingText).toEqual(expectedSections.map(section => section.heading.replace(/\s+/g, ' ').trim()))
           await page.evaluate(() => document.fonts.ready)
@@ -1186,6 +1231,7 @@ try {
         }
         await expect(page.locator('.case-section')).toHaveCount((project.caseStudy ?? processCaseStudy).length)
         const metadata = project.detail?.metadata ?? [['Role', project.role], ['Period', project.period], ['Type', project.type], ...project.status ? [['Status', project.status]] : []]
+        for (const field of ['role', 'period', 'type'] as const) expect(metadata.find(([label]) => label.toLowerCase() === field)?.[1], `${project.slug} shared ${field}`).toBe(project[field])
         await expect(page.locator('.detail-meta dt')).toHaveText([...metadata.map(([term]) => term), ...project.detail?.liveUrl && project.slug !== 'deurim' ? ['Live'] : []])
         await expect(page.locator('.detail-meta dd')).toHaveText([...metadata.map(([, value]) => value), ...project.detail?.liveUrl && project.slug !== 'deurim' ? [project.detail.liveLabel ?? '서비스 보러가기'] : []])
         const live = page.locator('.detail-live-link')
@@ -1346,6 +1392,9 @@ try {
       return Array.from(document.querySelectorAll('.panel-content')).filter(content => { const c = content.getBoundingClientRect(); return labels.some(l => c.right > l.left && c.left < l.right) }).map(content => content.closest('section')!.id)
     })
     expect(overlaps, 'sections running under the fixed trail').toEqual([])
+    await page.locator('.home-view-work').click()
+    await expect(page.locator('#high-camp')).toBeInViewport()
+    await expect(page.locator('#title-high-camp')).toBeFocused()
     await page.locator('.trail-checkpoint').nth(4).click()
     await expect(page.locator('#high-camp')).toBeInViewport()
     await expect(page.locator('#high-camp .project-screen img[data-active="true"]')).toBeVisible()
