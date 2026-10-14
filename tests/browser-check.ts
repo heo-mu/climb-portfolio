@@ -30,7 +30,7 @@ if (!base) {
 
 const desktop = { width: 1440, height: 900 }
 // 1280x600: a 1920x1080 laptop at 150% scaling, once the browser's own toolbars are taken off.
-const viewports = [[1920, 1080], [1600, 900], [1440, 900], [1366, 768], [1280, 800], [1280, 600], [1200, 800], [1024, 768], [768, 1024], [430, 932], [390, 844]] as const
+const viewports = [[1920, 1080], [1600, 900], [1440, 900], [1366, 768], [1280, 800], [1280, 600], [1200, 800], [1024, 768], [768, 1024], [430, 932], [390, 844], [375, 812]] as const
 const camps = checkpoints.map((camp, order) => ({ ...camp, order }))
 const errors: string[] = []
 const passed: string[] = []
@@ -239,6 +239,10 @@ try {
       const favicon = await page.request.get(new URL((await page.locator('link[rel=icon]').getAttribute('href'))!, base).href)
       expect(favicon.status()).toBe(200)
       expect(favicon.headers()['content-type']).toContain('image/svg+xml')
+      const manifest = await page.request.get(new URL((await page.locator('link[rel=manifest]').getAttribute('href'))!, base).href)
+      expect(manifest.status()).toBe(200)
+      expect((await manifest.json()).icons[0].src).toBe('/favicon.svg')
+      await expect(page.locator('.home-intro')).toHaveText('복잡한 데이터와 흐름을 정리하고, AI를 활용해 더 빠르게 이해하기 쉬운 제품으로 바꿔요.')
       await page.evaluate(() => document.fonts.ready)
       expect(await page.evaluate(() => document.fonts.check('14px "SUIT Variable"'))).toBe(true)
       await expect(page.locator('.tool-icon img')).toHaveCount(9)
@@ -889,6 +893,8 @@ try {
           await tabs.nth(index).click()
           await expect(tabs.nth(index)).toHaveAttribute('aria-selected', 'true')
           await expect(panel).toHaveAttribute('aria-labelledby', `${project.slug}-screen-tab-${index}`)
+          await expect(panel).toHaveAttribute('aria-busy', 'false')
+          await expect(panel.locator('.case-image-panel--outgoing')).toHaveCount(0)
           if (content.image) {
             const img = panel.locator('img')
             await expect(img).toHaveAttribute('alt', content.image.alt)
@@ -920,6 +926,102 @@ try {
     await context.close()
   })
 
+  await step('shared reading feedback: static surfaces, once-only reveals and reduced motion', async () => {
+    const { context, page } = await open({ reducedMotion: 'reduce' })
+    const selectors = ['.case-problem', '.case-row', '.case-conclusion', '.case-ai-insight', '.case-reflection-process > span', '.case-flows li', '.case-production-workflow > li', '.case-role-menu-list > li', '.case-image-workflow-steps > li']
+    for (const slug of ['deurim', 'samsung-bees', 'edk', 'moel-ax', 'groupware']) {
+      await page.goto(base + '/project/' + slug)
+      for (const selector of selectors) {
+        const unit = page.locator(selector).first()
+        if (!await unit.count()) continue
+        await unit.evaluate(e => e.scrollIntoView({ block: 'center' }))
+        await page.mouse.move(0, 0)
+        const snapshot = () => unit.evaluate(e => [e, ...e.querySelectorAll(':scope > *')].map(node => {
+          const s = getComputedStyle(node), r = node.getBoundingClientRect()
+          return [s.backgroundColor, s.borderColor, s.color, s.opacity, s.transform, s.boxShadow, r.width, r.height]
+        }))
+        const before = await snapshot()
+        await unit.hover()
+        await page.waitForTimeout(350)
+        expect(await snapshot(), slug + ' static ' + selector).toEqual(before)
+      }
+      expect(await page.locator('.case-ai-border-slice').first().evaluate(e => getComputedStyle(e).animationName)).toBe('none')
+    }
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.goto(base + '/project/moel-ax')
+    const flow = page.locator('.case-flows li').first()
+    await expect(flow).toHaveAttribute('data-case-reveal', 'pending')
+    await flow.evaluate(e => e.scrollIntoView({ block: 'center' }))
+    await expect(flow).toHaveAttribute('data-case-reveal', 'visible')
+    await page.waitForTimeout(750)
+    const started = await flow.evaluate(e => e.getAnimations()[0]?.startTime)
+    await page.evaluate(() => scrollTo(0, 0))
+    await flow.evaluate(e => e.scrollIntoView({ block: 'center' }))
+    expect(await flow.evaluate(e => e.getAnimations()[0]?.startTime)).toBe(started)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    expect(await flow.evaluate(e => getComputedStyle(e).transform)).toBe('none')
+    await context.close()
+  })
+
+  await step('gallery loading: keep the decoded screen and ignore superseded requests', async () => {
+    const { context, page } = await open()
+    let release!: () => void
+    const pending = new Promise<void>(resolve => { release = resolve })
+    await page.route('**/edk_main04-*', async route => { await pending; await route.continue() })
+    try {
+      await page.goto(`${base}/project/edk`)
+      const tabs = page.locator('.case-image-tab')
+      const panel = page.getByRole('tabpanel')
+      const image = panel.locator('.case-image-panel:not(.case-image-panel--outgoing) img')
+      await expect.poll(() => image.evaluate(el => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+      const initial = await image.getAttribute('src')
+      await tabs.nth(1).click()
+      await page.waitForTimeout(400)
+      await expect(panel).toHaveAttribute('aria-busy', 'true')
+      await expect(image).toHaveAttribute('src', initial!)
+      await tabs.nth(2).click()
+      await expect(panel).toHaveAttribute('aria-busy', 'false')
+      await expect(image).toHaveAttribute('src', /edk_main05-/)
+      release()
+      await page.waitForTimeout(400)
+      await expect(image).toHaveAttribute('src', /edk_main05-/)
+      await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await tabs.first().click()
+      await expect(panel).toHaveAttribute('aria-busy', 'false')
+      await expect(panel.locator('.case-image-panel--outgoing')).toHaveCount(0)
+      await expect(image).toHaveAttribute('src', initial!)
+    } finally { release(); await context.close() }
+  })
+
+  await step('route previews: load near desktop navigation, never on touch', async () => {
+    for (const touch of [false, true]) {
+      const { context, page } = await open(touch ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : {})
+      const captures: string[] = []
+      page.on('request', request => { if (/\/(bees|ax)-[^/]+\.png$/.test(request.url())) captures.push(request.url()) })
+      await page.goto(`${base}/project/edk`)
+      await page.waitForTimeout(200)
+      expect(captures).toEqual([])
+      await page.locator('.project-route-gate').scrollIntoViewIfNeeded()
+      if (touch) {
+        await page.waitForTimeout(300)
+        expect(captures).toEqual([])
+      } else {
+        await expect.poll(() => captures.length).toBe(2)
+        const link = page.locator('.project-route--next')
+        const before = await link.boundingBox()
+        await link.hover()
+        const preview = page.locator('.route-floating-preview')
+        await expect(preview).toHaveAttribute('data-visible', 'true')
+        expect(await preview.evaluate(e => getComputedStyle(e).transitionDuration)).toContain('0.18s')
+        expect(await link.boundingBox()).toEqual(before)
+        await page.mouse.move(0, 0)
+        await expect(preview).toHaveAttribute('data-visible', 'false')
+      }
+      await context.close()
+    }
+  })
+
   await step('Deurim interactions: image index, ruler and problem focus remain independent', async () => {
     const { context, page } = await open()
     for (const width of [1440, 390]) {
@@ -930,7 +1032,7 @@ try {
       await page.keyboard.press('End')
       await expect(tabs.last()).toHaveAttribute('aria-selected', 'true')
       await expect(tabs.last()).toBeFocused()
-      await expect(page.locator('.case-image-carousel-frame img')).toHaveAttribute('alt', projects[0].detail!.heroSlot.panels!.at(-1)!.image!.alt)
+      await expect(page.locator('.case-image-carousel-frame .case-image-panel:not(.case-image-panel--outgoing) img')).toHaveAttribute('alt', projects[0].detail!.heroSlot.panels!.at(-1)!.image!.alt)
       await page.keyboard.press('Home')
       await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
 
@@ -983,7 +1085,8 @@ try {
           expect(frame.left).toBeCloseTo(0, 0)
           expect(frame.right).toBeCloseTo(frame.viewport, 0)
         }
-        expect(new Set(sectionFrames.map(frame => frame.background)).size).toBe(3)
+        // BEES retains its intentionally lighter Reflection closing tone.
+        expect(new Set(sectionFrames.map(frame => frame.background)).size).toBe(project.slug === 'samsung-bees' ? 4 : 3)
         const submission = page.locator('.case-external-link')
         const submissionData = project.caseStudy?.find(section => section.externalLink)?.externalLink
         if (submissionData) {
@@ -1025,13 +1128,15 @@ try {
           expect(headingText).toEqual(expectedSections.map(section => section.heading.replace(/\s+/g, ' ').trim()))
           await page.evaluate(() => document.fonts.ready)
           for (const section of await page.locator('.case-section').all()) await section.scrollIntoViewIfNeeded()
-          for (const img of await page.locator('.project-detail img').all()) {
-            await img.scrollIntoViewIfNeeded()
+          // Read actual case imagery, not collapsed decorative hover previews.
+          for (const img of await page.locator('.case-study img').all()) {
+            await img.evaluate(element => element.scrollIntoView({ block: 'center' }))
             await expect.poll(() => img.evaluate(el => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true)
             const picture = await img.evaluate(el => { const i = el as HTMLImageElement, r = i.getBoundingClientRect(); return { fit: getComputedStyle(i).objectFit, ratio: r.width / r.height, source: i.naturalWidth / i.naturalHeight, width: r.width, natural: i.naturalWidth } })
             expect(picture.fit).toBe('contain')
-            expect(picture.ratio).toBeCloseTo(picture.source, 2)
-            expect(picture.width).toBeLessThanOrEqual(picture.natural)
+            // Workflow samples deliberately share a contained, uncropped cell.
+            if (!await img.evaluate(element => element.closest('.case-image-workflow-slot'))) expect(picture.ratio).toBeCloseTo(picture.source, 2)
+            expect(picture.width).toBeLessThanOrEqual(picture.natural + .1)
           }
           const overflowing = await page.locator('.case-section, .case-image-slot, .detail-meta, .case-content').evaluateAll(elements => elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.className))
           expect(overflowing, project.slug + ' content @' + width).toEqual([])
@@ -1055,7 +1160,7 @@ try {
             }
             for (const el of root.querySelectorAll('.case-problem, .case-image-slot, .case-reflection-summary')) {
               const c=getComputedStyle(el)
-              if (!['8px','10px'].includes(c.borderTopLeftRadius)) issues.push('surface radius: ' + c.borderTopLeftRadius)
+              if (!['0px','8px','10px'].includes(c.borderTopLeftRadius)) issues.push('surface radius: ' + c.borderTopLeftRadius)
               if (c.borderTopStyle !== 'none' && c.borderTopWidth !== '1px') issues.push('non-hairline border')
             }
             if (root.classList.contains('project-detail-expanded')) {

@@ -12,6 +12,9 @@ const steps = [
   '.case-spatial-path > li', '.case-graph-workflow-steps > li',
   '.case-production-workflow > li', '.case-image-workflow-steps > li',
   '.case-ai-pair', '.case-flows ol > li',
+  '.case-role-levels > li', '.case-prompt-workflow > li',
+  '.case-reflection-process > span', '.case-reflection-process > i',
+  '.process-line > span', '.process-line > i',
 ].join(',')
 
 export function useCaseMotion(root: RefObject<HTMLDivElement | null>, projectSlug: string) {
@@ -37,6 +40,10 @@ export function useCaseMotion(root: RefObject<HTMLDivElement | null>, projectSlu
       if (el.matches(steps)) {
         const index = Array.from(el.parentElement!.children).indexOf(el)
         el.style.setProperty('--case-motion-delay', `${Math.min(index, 4) * 50}ms`)
+      } else if (el.matches('.case-content > h2, .case-content > h2 + p')) {
+        el.style.setProperty('--case-motion-delay', '40ms')
+      } else if (!el.matches('.case-label, .case-conclusion')) {
+        el.style.setProperty('--case-motion-delay', '80ms')
       }
       el.dataset.caseReveal = 'pending'
       observer.observe(el)

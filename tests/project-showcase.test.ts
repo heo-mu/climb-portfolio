@@ -32,6 +32,74 @@ const forward = (p: THREE.Vector3) => (p.x - showcaseSite.origin.x) * showcaseSi
 const screenCorners = (screen: THREE.Object3D) => [[-.5, -1], [.5, -1], [-.5, 1], [.5, 1]].map(([x, y]) => new THREE.Vector3(x, y * SCREEN_HEIGHT / 2, 0).applyMatrix4(screen.matrixWorld))
 
 describe('Projects exhibit', () => {
+  it('hovers only the screen, restores its rest pose and suppresses motion for touch and reduced motion', async () => {
+    const link = Object.assign(new EventTarget(), { style: {} })
+    const media = Object.assign(new EventTarget(), { matches: true })
+    const view = Object.assign(new EventTarget(), { matchMedia: () => media })
+    const root = {
+      ownerDocument: { defaultView: view }, dataset: {},
+      querySelector: (selector: string) => selector === '.showcase-link' ? link : null,
+      querySelectorAll: () => [],
+    } as unknown as HTMLElement
+    const decode = vi.spyOn(captures, 'loadProjectCapture').mockResolvedValue({ naturalWidth: 1920, naturalHeight: 1080 } as HTMLImageElement)
+    vi.stubGlobal('window', { requestIdleCallback: (callback: () => void) => callback() })
+    const exhibit = new ProjectShowcase(null, root), scene = new THREE.Group()
+    try {
+      exhibit.build(scene, surface, () => new THREE.MeshBasicMaterial({ transparent: true }))
+      const camera = campCamera(1440, 900)
+      exhibit.layout(camera, 1440, 900)
+      await exhibit.prepare(0)
+      const { group, screen } = exhibit.structures.items[0], panel = screen.parent!
+      const raycast = vi.spyOn(screen, 'raycast')
+      const rest = group.matrixWorld.toArray()
+      let time = 0
+      const tick = (reducedMotion = false, interactive = true) => {
+        time += .04
+        exhibit.update({ time, journeyProgress: .8, destination: 4, reducedMotion, returningHome: false, sections: Array.from({ length: 5 }, () => ({ interactive })) } as unknown as ExpeditionFrame, camera)
+        scene.updateMatrixWorld(true)
+        expect(group.matrixWorld.toArray()).toEqual(rest)
+      }
+      tick()
+      const center = screen.getWorldPosition(new THREE.Vector3()).project(camera)
+      const pointer = (type: string, pointerType = 'mouse', x = (center.x + 1) * 720, y = (1 - center.y) * 450) => {
+        link.dispatchEvent(Object.assign(new Event(type), { pointerType, clientX: x, clientY: y }))
+      }
+      for (let cycle = 0; cycle < 2; cycle++) {
+        pointer('pointerenter')
+        for (let i = 0; i < 20; i++) tick()
+        expect(panel.scale.x).toBe(1.015)
+        expect(screen.material.uniforms.hoverAmount.value).toBe(1)
+        tick() // Commit the final settled hit, then retain it while nothing moves.
+        raycast.mockClear()
+        for (let i = 0; i < 30; i++) tick()
+        expect(raycast, 'a stationary pointer must not raycast every frame').not.toHaveBeenCalled()
+        pointer('pointermove', 'mouse', 0, 0)
+        tick()
+        expect(raycast).toHaveBeenCalledTimes(1)
+        expect(screen.material.uniforms.hoverAmount.value).toBeLessThan(1)
+        pointer('pointerleave')
+        for (let i = 0; i < 20; i++) tick()
+        expect(panel.scale.x).toBe(1)
+        expect(screen.material.uniforms.hoverAmount.value).toBe(0)
+      }
+      pointer('pointerenter', 'touch'); tick()
+      expect(screen.material.uniforms.hoverAmount.value).toBe(0)
+      pointer('pointerenter', 'mouse', 0, 0); tick()
+      expect(screen.material.uniforms.hoverAmount.value).toBe(0)
+      pointer('pointerenter'); tick(true)
+      expect(panel.scale.x).toBe(1)
+      expect(screen.material.uniforms.hoverAmount.value).toBe(1)
+      tick(false, false)
+      expect(panel.scale.x).toBe(1)
+      expect(screen.material.uniforms.hoverAmount.value).toBe(0)
+    } finally {
+      exhibit.dispose()
+      scene.traverse(object => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => material.dispose()) } })
+      decode.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('holds the loaded capture, crossfades only the screen and settles rapid changes on the final selection', async () => {
     const pending = new Map<string, () => void>()
     vi.stubGlobal('Image', class {

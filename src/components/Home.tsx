@@ -15,7 +15,7 @@ export function Home({ onExplore }: HomeProps) {
             <span className="hero-line hero-line-first"><span><span className="hero-reveal">Complexity,</span></span></span>
             <span className="hero-line hero-line-second"><span><span className="hero-reveal">made clear<span className="hero-period">.</span></span></span></span>
           </h1>
-          <div className="home-copy-shell"><p className="home-intro">복잡한 데이터와 흐름을 정리해 이해하기 쉬운 제품으로 바꿔요.</p></div>
+          <div className="home-copy-shell"><p className="home-intro">복잡한 데이터와 흐름을 정리하고, AI를 활용해 더 빠르게 이해하기 쉬운 제품으로 바꿔요.</p></div>
         </div>
         <div className="home-action-shell">
           <button type="button" className="home-explore" onClick={onExplore} aria-label="Ascend — About으로 이동해요">

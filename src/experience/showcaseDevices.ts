@@ -23,13 +23,13 @@ export function buildDisplay(environment: THREE.Texture | null, placeholder: THR
     uniforms: {
       fromMap: { value: placeholder }, toMap: { value: placeholder },
       fromFit: { value: new THREE.Vector2(1, 1) }, toFit: { value: new THREE.Vector2(1, 1) },
-      mixAmount: { value: 1 }, presence: { value: 1 },
+      mixAmount: { value: 1 }, presence: { value: 1 }, hoverAmount: { value: 0 },
     },
     vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `
       uniform sampler2D fromMap, toMap;
       uniform vec2 fromFit, toFit;
-      uniform float mixAmount, presence;
+      uniform float mixAmount, presence, hoverAmount;
       varying vec2 vUv;
       vec4 capture(sampler2D image, vec2 fit) {
         vec2 uv = (vUv - .5) / fit + .5;
@@ -39,6 +39,7 @@ export function buildDisplay(environment: THREE.Texture | null, placeholder: THR
       }
       void main() {
         gl_FragColor = mix(capture(fromMap, fromFit), capture(toMap, toFit), mixAmount);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * 1.015 + vec3(.001), hoverAmount);
         gl_FragColor.a *= presence;
         #include <colorspace_fragment>
       }`,

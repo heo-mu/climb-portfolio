@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import type { CaseBlock, CaseSection, ImageSlot } from '../data/caseStudy'
 import { SpatialHierarchy } from './SpatialHierarchy'
 import { ArrowUpRight } from './ArrowUpRight'
@@ -13,6 +13,12 @@ import './CaseMotion.css'
 
 export function CaseImageSlot({ slot, hero = false, naturalImageRatio = false }: { slot: ImageSlot; hero?: boolean; naturalImageRatio?: boolean }) {
   const panels = slot.panels ?? [slot]
+  if (slot.layout === 'role-comparison') return <div className="case-role-comparison" role="group" aria-label={slot.label}>
+    {panels.map(({ label, roleLabel, image }) => image && <div className="case-role-comparison-item" key={label}>
+      <header>{roleLabel && <span className="mono">{roleLabel}</span>}<h3>{label}</h3></header>
+      <img src={image.src} alt={image.alt} width={image.width} height={image.height} loading="lazy" decoding="async" />
+    </div>)}
+  </div>
   if (slot.layout === 'agent-sequence') return <div className="case-agent-visuals" role="group" aria-label={slot.label}>
     {[panels.slice(0, 2), panels.slice(2)].map((group, index) => {
       const intro = slot.introductions?.[index]
@@ -45,18 +51,38 @@ export function CaseImageSlot({ slot, hero = false, naturalImageRatio = false }:
 function CaseImageCarousel({ slot, projectSlug, projectName }: { slot: ImageSlot; projectSlug: string; projectName: string }) {
   const panels = slot.panels ?? [slot]
   const [activeIndex, setActiveIndex] = useState(0)
+  const [displayedIndex, setDisplayedIndex] = useState(0)
+  const displayedRef = useRef(0)
+  const selectionVersion = useRef(0)
   const [outgoingIndex, setOutgoingIndex] = useState<number | null>(null)
   const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward')
   const [isTransitioning, setIsTransitioning] = useState(false)
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const activePanel = panels[activeIndex]
-  const selectPanel = (nextIndex: number) => {
+  const activePanel = panels[displayedIndex]
+  useEffect(() => () => { selectionVersion.current++ }, [])
+  const selectPanel = async (nextIndex: number) => {
     if (nextIndex === activeIndex) return
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    setTransitionDirection(nextIndex > activeIndex ? 'forward' : 'backward')
-    setOutgoingIndex(reducedMotion ? null : activeIndex)
-    setIsTransitioning(!reducedMotion)
+    const version = ++selectionVersion.current
     setActiveIndex(nextIndex)
+    const source = panels[nextIndex].image
+    if (source) {
+      // Keep the last decoded screen visible until its replacement can paint.
+      const image = new Image()
+      image.src = source.src
+      try { await image.decode() } catch {
+        if (version === selectionVersion.current) setActiveIndex(displayedRef.current)
+        return
+      }
+    }
+    if (version !== selectionVersion.current) return
+    const previousIndex = displayedRef.current
+    if (nextIndex === previousIndex) return
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    setTransitionDirection(nextIndex > previousIndex ? 'forward' : 'backward')
+    setOutgoingIndex(reducedMotion ? null : previousIndex)
+    setIsTransitioning(!reducedMotion)
+    displayedRef.current = nextIndex
+    setDisplayedIndex(nextIndex)
   }
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     let nextIndex = activeIndex
@@ -85,13 +111,13 @@ function CaseImageCarousel({ slot, projectSlug, projectName }: { slot: ImageSlot
         onKeyDown={onTabKeyDown}
       ><span className="case-image-tab-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><span>{panel.label}</span></button>)}
     </div>
-    <figure className="case-image-slot case-image-slot--wide case-image-carousel-frame" role="tabpanel" id={`${projectSlug}-screen-panel`} aria-labelledby={`${projectSlug}-screen-tab-${activeIndex}`}>
+    <figure className="case-image-slot case-image-slot--wide case-image-carousel-frame" role="tabpanel" id={`${projectSlug}-screen-panel`} aria-labelledby={`${projectSlug}-screen-tab-${activeIndex}`} aria-busy={activeIndex !== displayedIndex}>
       <div className="case-image-stage case-image-stage--crossfade">
         {outgoingIndex !== null && <div className={`case-image-panel case-image-panel--outgoing case-image-panel--${transitionDirection}`} aria-hidden="true" style={panels[outgoingIndex].image ? { aspectRatio: `${panels[outgoingIndex].image.width} / ${panels[outgoingIndex].image.height}` } : undefined}>
           {panels[outgoingIndex].image ? <img src={panels[outgoingIndex].image.src} alt="" width={panels[outgoingIndex].image.width} height={panels[outgoingIndex].image.height} loading="eager" decoding="async" />
             : <div className="case-image-placeholder"><span>IMAGE — {panels[outgoingIndex].description ?? panels[outgoingIndex].label}</span></div>}
         </div>}
-        <div key={activeIndex} className={`case-image-panel${isTransitioning ? ` case-image-panel--incoming case-image-panel--${transitionDirection}` : ''}`} onAnimationEnd={() => { setOutgoingIndex(null); setIsTransitioning(false) }} style={activePanel.image ? { aspectRatio: `${activePanel.image.width} / ${activePanel.image.height}` } : undefined}>
+        <div key={displayedIndex} className={`case-image-panel${isTransitioning ? ` case-image-panel--incoming case-image-panel--${transitionDirection}` : ''}`} onAnimationEnd={() => { setOutgoingIndex(null); setIsTransitioning(false) }} style={activePanel.image ? { aspectRatio: `${activePanel.image.width} / ${activePanel.image.height}` } : undefined}>
           {activePanel.image ? <img src={activePanel.image.src} alt={activePanel.image.alt} width={activePanel.image.width} height={activePanel.image.height} loading="eager" decoding="async" />
             : <div className="case-image-placeholder"><span>IMAGE — {activePanel.description ?? activePanel.label}</span></div>}
         </div>
@@ -127,9 +153,8 @@ function CaseAIInsight({ text }: { text: string }) {
 }
 
 /** A design judgment or lesson, distinct from the AI usage surface. */
-function CaseConclusion({ label = '정리하며', text, supporting }: { label?: '정리하며' | '이 과정에서' | '이번 작업에서'; text?: string; supporting?: string }) {
+function CaseConclusion({ text, supporting }: { text?: string; supporting?: string }) {
   return <aside className="case-conclusion">
-    <span className="case-conclusion-label">{label}</span>
     {text && <p className="case-conclusion-primary"><CaseText text={text} /></p>}
     {supporting && <p className="case-conclusion-supporting"><CaseText text={supporting} /></p>}
   </aside>
@@ -157,7 +182,7 @@ function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sen
         {panel.image && <img src={panel.image.src} alt={panel.image.alt} width={panel.image.width} height={panel.image.height} loading="lazy" decoding="async" />}
       </div>)}</div>
     </div>
-    case 'insight': return <CaseConclusion label={block.label} text={block.text} supporting={block.supporting} />
+    case 'insight': return <CaseConclusion text={block.text} supporting={block.supporting} />
     case 'production-workflow': return <>
       <ol className="case-production-workflow" aria-label={block.label ?? '요구사항부터 실제 시안까지의 제작 과정'}>{block.steps.map((step, index) => <li key={step.title}><span className="case-production-index mono" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}</ol>
       {block.example && <aside className="case-production-example">
@@ -243,15 +268,14 @@ export function CaseStudy({ sections, heroSlot, projectSlug, projectName, senten
     <div className="case-label mono"><span>{String(index + 1).padStart(2, '0')}</span>{section.title}</div>
     <div className={`case-content${usesSplitSectionHeader(section, projectSlug) ? ' case-section-header-split' : ''}`}>
       {section.lead && section.layout !== 'structure' && <ContentBlock block={section.lead} sentenceBreaks={sentenceBreaks} />}
-      {section.draftNote && <span className="case-draft-note">{section.draftNote}</span>}
-      <h2 id={`case-${index}`}><CaseText text={section.heading} /></h2>{section.body && <p>{usesSplitSectionHeader(section, projectSlug) ? section.body.split(/<br\s*\/?\s*>|\n|(?<=\.)\s+/i).map((sentence, i) => <Fragment key={i}>{i > 0 && ' '}<span className="case-section-description-line">{sentence}</span></Fragment>) : section.layout === 'trust' || (projectSlug === 'moel-ax' && ['AI Workflow', 'AI Scenario Review', 'Working Conditions'].includes(section.title)) ? section.body.split('\n').map((line, lineIndex) => <Fragment key={line}>{lineIndex > 0 && <br />}{line}</Fragment>) : section.body.includes('<br') || (projectSlug === 'edk' && section.layout === 'statement' && section.body.includes('\n')) || (projectSlug === 'moel-ax' && section.title === 'The Problem' && section.body.includes('\n')) || sentenceBreaks || ['overview', 'visual-measure', 'trust', 'directing-ai'].includes(section.layout ?? '') ? <CaseText text={section.body} prose={sentenceBreaks && section.layout !== 'visual-measure'} /> : section.body}</p>}
+      <h2 id={`case-${index}`}><CaseText text={section.heading} /></h2>{section.body && <p>{usesSplitSectionHeader(section, projectSlug) && !(projectSlug === 'moel-ax' && section.title === 'Overview') ? section.body.split(/<br\s*\/?\s*>|\n|(?<=\.)\s+/i).map((sentence, i) => <Fragment key={i}>{i > 0 && ' '}<span className="case-section-description-line">{sentence}</span></Fragment>) : section.layout === 'trust' || (projectSlug === 'moel-ax' && ['Overview', 'AI Workflow', 'AI Review', 'Working Conditions'].includes(section.title)) ? section.body.split('\n').map((line, lineIndex) => <Fragment key={line}>{lineIndex > 0 && <br />}{line}</Fragment>) : section.body.includes('<br') || section.body.includes('\n') || sentenceBreaks || ['overview', 'visual-measure', 'trust', 'directing-ai'].includes(section.layout ?? '') ? <CaseText text={section.body} prose={sentenceBreaks && section.layout !== 'visual-measure'} /> : section.body}</p>}
       {projectSlug === 'edk' && section.title === 'Policy Design' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
       {projectSlug === 'edk' && section.title === 'Design System' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
       {section.lead && section.layout === 'structure' && <ContentBlock block={section.lead} sentenceBreaks={sentenceBreaks} />}
       {section.reflectionSummary && section.blocks?.map((block, i) => <ContentBlock key={i} block={block} sentenceBreaks={sentenceBreaks} />)}
       {section.reflectionSummary && (section.process || section.closing)
         ? <div className="case-reflection-summary">
-          {section.closing && <CaseConclusion label="정리하며" text={section.closing} />}
+          {section.closing && <CaseConclusion text={section.closing} />}
           {section.process && <div className="case-reflection-process" style={{ '--case-process-count': section.process.length } as CSSProperties}>{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}
         </div>
         : <>{section.process && <div className="process-line mono">{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}{section.closing && <CaseConclusion text={section.closing} />}</>}

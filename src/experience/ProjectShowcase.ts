@@ -96,9 +96,29 @@ export class ProjectShowcase {
   private corner = new THREE.Vector3()
   private sight = new THREE.Vector3()
   private revealPoints: THREE.Vector3[] = []
+  private finePointer: MediaQueryList | null = null
+  private pointerWindow: Window | null = null
+  private pointer = new THREE.Vector2()
+  private pointerInside = false
+  private pointerDirty = true
+  private pointerHit = false
+  private hitRoute = -1
+  private hoverAmount = 0
+  private hitCamera: THREE.PerspectiveCamera | null = null
+  private raycaster = new THREE.Raycaster()
+  private hits: THREE.Intersection[] = []
 
   constructor(private renderer: THREE.WebGLRenderer | null = null, private root: HTMLElement | null = null) {
     this.link = root?.querySelector<HTMLAnchorElement>('.showcase-link') ?? null
+    this.pointerWindow = root?.ownerDocument.defaultView ?? null
+    this.finePointer = this.pointerWindow?.matchMedia('(hover: hover) and (pointer: fine)') ?? null
+    this.link?.addEventListener('pointerenter', this.trackPointer)
+    this.link?.addEventListener('pointermove', this.trackPointer)
+    this.link?.addEventListener('pointerleave', this.clearPointer)
+    this.link?.addEventListener('pointercancel', this.clearPointer)
+    this.link?.addEventListener('click', this.checkClick)
+    this.pointerWindow?.addEventListener('blur', this.clearPointer)
+    this.finePointer?.addEventListener('change', this.clearPointer)
     this.group.name = 'project-showcase'
     this.placeholder.colorSpace = THREE.SRGBColorSpace
     this.placeholder.needsUpdate = true
@@ -145,6 +165,11 @@ export class ProjectShowcase {
     this.width = width; this.height = height
     const slot = this.exhibit
     if (!this.surface || !slot) return
+    // Survey only the rest pose; resize must never bake hover scale into placement.
+    this.pointerInside = false
+    this.hoverAmount = 0
+    slot.panel.scale.setScalar(1)
+    slot.screen.material.uniforms.hoverAmount.value = 0
     // Measure the destination layout, not the previous viewport's 2D grid.
     if (this.root) this.root.dataset.showcase = width > 1024 && camera.aspect >= 1.2 ? '3d' : '2d'
     const view = this.view, target = new THREE.Vector3()
@@ -309,6 +334,7 @@ export class ProjectShowcase {
     if (!slot) return false
     const delta = this.lastTime < 0 ? 0 : Math.min(.1, Math.max(0, frame.time - this.lastTime))
     this.lastTime = frame.time
+    this.hitCamera = camera
     // Captures load on the way up (or as soon as Projects is the destination), never at Home.
     if (this.enabled && !this.loading && (frame.journeyProgress > .38 || frame.destination >= PROJECTS)) void this.loadCaptures()
     let moving = false
@@ -338,7 +364,9 @@ export class ProjectShowcase {
       screen.mixAmount.value = smootherstep(this.transition)
       moving = true
     }
-    this.placeLink(frame, camera)
+    const hoverChanged = this.updateHover(frame, delta)
+    moving ||= hoverChanged
+    this.placeLink(frame, camera, hoverChanged)
     this.report()
     const dirty = this.dirty
     this.dirty = false
@@ -423,31 +451,89 @@ export class ProjectShowcase {
   }
 
   /** A pointer target over the visible display, so the exhibit itself opens the project. */
-  private placeLink(frame: ExpeditionFrame, camera: THREE.PerspectiveCamera) {
+  private interactive(frame: ExpeditionFrame) {
+    return this.enabled && !!frame.sections[PROJECTS]?.interactive && !frame.returningHome && this.displayed === this.selected && this.transition === 1 && this.nearness === 1
+  }
+
+  private trackPointer = (event: PointerEvent) => {
+    this.pointerInside = event.pointerType === 'mouse' && !!this.finePointer?.matches
+    this.pointer.set(event.clientX / this.width * 2 - 1, 1 - event.clientY / this.height * 2)
+    this.pointerDirty = true
+  }
+
+  private clearPointer = () => { this.pointerInside = false; this.pointerHit = false; this.pointerDirty = true }
+
+  private hitScreen(pointer: THREE.Vector2) {
+    const slot = this.exhibit
+    if (!slot || !slot.group.visible || !this.hitCamera) return false
+    slot.screen.updateWorldMatrix(true, false)
+    this.raycaster.setFromCamera(pointer, this.hitCamera)
+    this.hits.length = 0
+    this.raycaster.intersectObject(slot.screen, false, this.hits)
+    return this.hits.length > 0
+  }
+
+  private checkClick = (event: MouseEvent) => {
+    // Preserve the native link and touch navigation; reject only points outside the actual mesh.
+    if (!event.detail || !this.hitCamera) return
+    this.pointer.set(event.clientX / this.width * 2 - 1, 1 - event.clientY / this.height * 2)
+    if (!this.hitScreen(this.pointer)) { event.preventDefault(); event.stopPropagation() }
+  }
+
+  private updateHover(frame: ExpeditionFrame, delta: number) {
+    const slot = this.exhibit!
+    const interactive = this.interactive(frame)
+    if (!interactive) this.clearPointer()
+    const tracking = interactive && this.pointerInside && this.finePointer?.matches
+    // Camera travel and panel settling invalidate the hit; a parked pointer does not.
+    if (tracking && (this.pointerDirty || this.dirty || this.hitRoute !== frame.journeyProgress)) {
+      this.pointerHit = this.hitScreen(this.pointer)
+      this.pointerDirty = false
+      this.hitRoute = frame.journeyProgress
+    }
+    const target = tracking && this.pointerHit ? 1 : 0
+    let next = frame.reducedMotion || !interactive ? target : THREE.MathUtils.lerp(this.hoverAmount, target, 1 - Math.exp(-16 * delta))
+    if (Math.abs(next - target) < .001) next = target
+    const scale = 1 + (frame.reducedMotion ? 0 : next * .015)
+    const changed = next !== this.hoverAmount || slot.panel.scale.x !== scale
+    if (!changed) return false
+    this.hoverAmount = next
+    // Always derive from rest; keep the surveyed footing, shadows and camera fixed.
+    slot.panel.scale.setScalar(scale)
+    slot.screen.material.uniforms.hoverAmount.value = next
+    this.pointerDirty = true
+    return true
+  }
+
+  private placeLink(frame: ExpeditionFrame, camera: THREE.PerspectiveCamera, force = false) {
     const link = this.link
     if (!link) return
     const slot = this.exhibit
     if (!slot) return
-    if (!this.enabled || !frame.sections[PROJECTS]?.interactive || frame.returningHome || this.displayed !== this.selected || this.transition < 1 || this.nearness < 1) {
+    if (!this.interactive(frame)) {
       if (this.linkState !== 'hidden') { link.style.visibility = 'hidden'; this.linkState = 'hidden' }
       return
     }
-    if (!this.dirty && this.linkState !== 'hidden' && this.linkRoute === frame.journeyProgress) return
+    if (!force && !this.dirty && this.linkState !== 'hidden' && this.linkRoute === frame.journeyProgress) return
     this.linkRoute = frame.journeyProgress
     slot.screen.updateWorldMatrix(true, false)
     let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity
+    const projected: [number, number][] = []
     for (const [x, y] of screenHitCorners) {
       const p = this.corner.set(x, y * SCREEN_HEIGHT / 2, 0).applyMatrix4(slot.screen.matrixWorld).project(camera)
       const px = (p.x + 1) / 2 * this.width, py = (1 - p.y) / 2 * this.height
+      projected.push([px, py])
       left = Math.min(left, px); right = Math.max(right, px); top = Math.min(top, py); bottom = Math.max(bottom, py)
     }
     const x = Math.round(left), y = Math.round(top), w = Math.round(right - left), h = Math.round(bottom - top)
-    const state = `${x},${y},${w},${h}`
+    const polygon = [2, 3, 1, 0].map(i => `${(projected[i][0] - x).toFixed(2)}px ${(projected[i][1] - y).toFixed(2)}px`).join(', ')
+    const state = `${x},${y},${w},${h}|${polygon}`
     if (state === this.linkState) return
     this.linkState = state
     link.style.visibility = 'visible'
     link.style.transform = `translate(${x}px, ${y}px)`
     link.style.width = `${w}px`; link.style.height = `${h}px`
+    link.style.clipPath = `polygon(${polygon})`
   }
 
   /**
@@ -519,6 +605,13 @@ export class ProjectShowcase {
 
   dispose() {
     this.disposed = true
+    this.link?.removeEventListener('pointerenter', this.trackPointer)
+    this.link?.removeEventListener('pointermove', this.trackPointer)
+    this.link?.removeEventListener('pointerleave', this.clearPointer)
+    this.link?.removeEventListener('pointercancel', this.clearPointer)
+    this.link?.removeEventListener('click', this.checkClick)
+    this.pointerWindow?.removeEventListener('blur', this.clearPointer)
+    this.finePointer?.removeEventListener('change', this.clearPointer)
     this.decoder.dispose()
     this.textures.forEach(texture => texture?.dispose())
     this.bitmaps.forEach(bitmap => bitmap.close())

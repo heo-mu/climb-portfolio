@@ -1,0 +1,9 @@
+{
+  "name": "Heo Chang Mu - Portfolio",
+  "short_name": "Ascent",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#171c20",
+  "theme_color": "#171c20",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

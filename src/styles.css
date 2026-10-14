@@ -149,15 +149,11 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 .tool-group-label { margin: 0 0 12px; font-size: 10px; line-height: 16px; font-weight: 500; letter-spacing: .08em; color: #9eb2bd; }
 .inventory-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
 .inventory-list li { position: relative; display: flex; align-items: center; gap: 16px; min-height: 76px; padding-block: 14px; border-bottom: 1px solid var(--rule); }
-.inventory-list li::after { content: ''; position: absolute; right: 0; top: 15px; width: 3px; height: 3px; border-radius: 50%; background: var(--color-accent); opacity: 0; transition: opacity .2s; }
-.inventory-list li:hover::after { opacity: 1; }
-.tool-icon { width: 36px; height: 36px; flex: none; display: grid; place-items: center; background: rgb(255 255 255 / 16%); border: 1px solid rgb(255 255 255 / 10%); backdrop-filter: blur(5px); border-radius: 3px; transition: background-color .2s, border-color .2s; }
-.inventory-list li:hover .tool-icon { background: rgb(255 255 255 / 19%); border-color: rgb(255 255 255 / 14%); }
+.tool-icon { width: 36px; height: 36px; flex: none; display: grid; place-items: center; background: rgb(255 255 255 / 16%); border: 1px solid rgb(255 255 255 / 10%); backdrop-filter: blur(5px); border-radius: 3px; }
 .tool-icon img { display: block; width: 32px; height: 32px; object-fit: contain; }
 .tool-copy { min-width: 0; }
-.tool-name { font-size: 15px; line-height: 20px; font-weight: 550; color: #dce5e5; transition: color .2s; }
+.tool-name { font-size: 15px; line-height: 20px; font-weight: 550; color: #dce5e5; }
 .tool-use { margin-top: 4px; font-size: 11px; line-height: 16px; color: #a9bcc6; word-break: keep-all; }
-.inventory-list li:hover .tool-name { color: #fff; }
 @supports (width: round(nearest, 50%, 1px)) {
   .inventory { grid-template-columns: repeat(2, round(down, calc((100% - 56px) / 3), 1px)) 1fr; }
 }
@@ -479,7 +475,7 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 }
 .home-identity p { font-size: 20px; font-weight: 500; letter-spacing: -.025em; line-height: 1.2; }
 .home-identity > span { display: block; margin-top: 7px; font-size: 13px; color: #a3aaa6; }
-.home-intro { max-width: 100%; font-size: 17px; font-weight: 400; line-height: 1.8; color: #d4d9d4; white-space: nowrap; }
+.home-intro { max-width: 100%; font-size: 17px; font-weight: 400; line-height: 1.8; color: #d4d9d4; word-break: keep-all; overflow-wrap: anywhere; }
 .home-intro { line-height: round(nearest, 1.8em, 1px); }
 
 .home-explore { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 48px; color: #f0f1eb; font-size: 11px; font-weight: 550; letter-spacing: .08em; transition: color .2s; }

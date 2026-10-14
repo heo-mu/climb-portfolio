@@ -1,7 +1,7 @@
 /* Shared reading feedback. Existing demos, gallery and navigation own their motion. */
-.project-detail {
+:root {
   --case-motion-fast: 180ms;
-  --case-motion-normal: 320ms;
+  --case-motion-normal: 300ms;
   --case-motion-reveal: 480ms;
   --case-motion-ease: cubic-bezier(.16, 1, .3, 1);
 }
@@ -26,18 +26,6 @@
   .case-study [data-case-immediate="true"] > *,
   .case-study [data-case-immediate="true"]::before { animation: none !important; opacity: 1; transform: none; }
 }
-@media (hover: hover) and (pointer: fine) {
-  .project-detail-editorial .case-problem,
-  .project-detail-editorial .case-ai-insight { transition: background-color var(--case-motion-fast) var(--case-motion-ease), border-color var(--case-motion-fast) var(--case-motion-ease); }
-  .project-detail-editorial :is(.case-problem-index, .case-ai-insight-label, .case-ai-insight-body) { transition: color var(--case-motion-fast) var(--case-motion-ease); }
-  .project-detail-editorial .case-problem:hover { background: var(--case-surface-hover); border-color: rgb(199 210 207 / 25%); }
-  .project-detail-editorial .case-problem:hover .case-problem-index { color: rgb(199 210 207 / 55%); }
-  .project-detail-editorial .case-ai-insight:is(:hover, :focus-within) { background: var(--case-surface-hover); }
-  .project-detail-editorial .case-ai-insight:is(:hover, :focus-within) > .case-ai-insight-label { color: #bac6c4; }
-  .project-detail-editorial .case-ai-insight:is(:hover, :focus-within) > .case-ai-insight-body { color: #edf0ee; }
-}
 @media (prefers-reduced-motion: reduce) {
   .case-study [data-case-reveal], .case-study [data-case-reveal] > *, .case-study [data-case-reveal]::before { animation: none !important; opacity: 1; transform: none; }
-  .project-detail-editorial :is(.case-problem, .case-problem-index, .case-ai-insight, .case-ai-insight-label, .case-ai-insight-body),
-  .project-detail-editorial .case-ai-insight-label::before { transition: none; }
 }

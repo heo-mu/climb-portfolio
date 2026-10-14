@@ -14,6 +14,19 @@ export function useRoutePreview(previous: Project, next: Project) {
   useEffect(() => {
     const query = matchMedia('(hover: hover) and (pointer: fine) and (min-width: 901px)')
     const current = motion.current
+    const images = Array.from(element.current?.querySelectorAll<HTMLImageElement>('img') ?? [])
+    images.forEach(image => image.removeAttribute('src'))
+    let nearNavigation = false
+    const prepare = () => {
+      if (!query.matches || !nearNavigation) return
+      images.forEach(image => { if (!image.hasAttribute('src')) image.src = image.dataset.src! })
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      nearNavigation = entry.isIntersecting
+      prepare()
+    }, { rootMargin: '600px' })
+    const navigation = document.querySelector('.project-route-gate')
+    if (navigation) observer.observe(navigation)
     const dismiss = () => {
       current.active = false
       cancelAnimationFrame(current.frame)
@@ -24,12 +37,15 @@ export function useRoutePreview(previous: Project, next: Project) {
     window.addEventListener('resize', dismiss)
     window.addEventListener('blur', dismiss)
     query.addEventListener('change', dismiss)
+    query.addEventListener('change', prepare)
     return () => {
       dismiss()
+      observer.disconnect()
       window.removeEventListener('scroll', dismiss, true)
       window.removeEventListener('resize', dismiss)
       window.removeEventListener('blur', dismiss)
       query.removeEventListener('change', dismiss)
+      query.removeEventListener('change', prepare)
     }
   }, [previous.slug, next.slug])
 
@@ -71,13 +87,21 @@ export function useRoutePreview(previous: Project, next: Project) {
     element.current.dataset.direction = direction
     element.current.style.width = `${m.width}px`
     target(event, true)
-    element.current.dataset.visible = 'true'
+    const image = element.current.querySelector<HTMLImageElement>(`img[data-direction="${direction}"]`)!
+    if (!image.hasAttribute('src')) image.src = image.dataset.src!
+    const source = image.src
+    const reveal = () => {
+      if (m.active && image.src === source && element.current?.dataset.direction === direction) element.current.dataset.visible = 'true'
+    }
+    element.current.dataset.visible = 'false'
+    if (image.complete && image.naturalWidth) reveal()
+    else void image.decode().then(reveal, () => {})
   }
   return {
     enter, move: target, hide,
     preview: createPortal(<div ref={element} className="route-floating-preview" data-visible="false" aria-hidden="true">
       <div className="route-floating-surface">{([{ direction: 'previous', project: previous }, { direction: 'next', project: next }] as const).map(({ direction, project }) =>
-        <img key={direction} data-direction={direction} src={project.screen.desktop} width={project.screen.width} height={project.screen.height} alt="" decoding="async" />,
+        <img key={direction} data-direction={direction} data-src={project.screen.desktop} width={project.screen.width} height={project.screen.height} alt="" decoding="async" />,
       )}</div>
     </div>, document.body),
   }

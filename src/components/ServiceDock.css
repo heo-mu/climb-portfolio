@@ -1,16 +1,15 @@
-.project-detail-deurim .service-dock { position: fixed; z-index: 20; top: 42vh; right: 16px; box-sizing: border-box; display: flex; flex-direction: column; width: 170px; padding: 14px 16px; border: 1px solid rgb(180 196 193 / 18%); border-radius: var(--case-radius-small); background: #202b31; color: #dbe3e0; text-decoration: none; opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(6px); transition: opacity 220ms ease, transform 220ms ease, width 220ms ease, border-color 220ms ease, color 220ms ease; }
+.project-detail-deurim .service-dock { position: fixed; z-index: 20; top: 42vh; right: 16px; box-sizing: border-box; display: flex; flex-direction: column; width: 170px; padding: 14px 16px; border: 1px solid rgb(180 196 193 / 18%); border-radius: var(--case-radius-small); background: #202b31; color: #dbe3e0; text-decoration: none; opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(6px); transition: opacity var(--case-motion-normal) var(--case-motion-ease), transform var(--case-motion-normal) var(--case-motion-ease), border-color var(--case-motion-normal) var(--case-motion-ease), color var(--case-motion-normal) var(--case-motion-ease); }
 .project-detail-deurim .service-dock[data-visible='true'] { opacity: 1; visibility: visible; pointer-events: auto; transform: none; }
 .project-detail-deurim .service-dock-action { display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 13px; font-weight: 500; line-height: 20px; }
-.project-detail-deurim .service-dock-arrow { width: 16px; height: 16px; flex: none; color: #D5FF40; transition: transform 220ms ease; }
-.project-detail-deurim .service-dock-preview { display: grid; grid-template-rows: 0fr; margin-bottom: 0; opacity: 0; transform: translateY(4px); transition: grid-template-rows 220ms ease, margin-bottom 220ms ease, opacity 220ms ease, transform 220ms ease; }
+.project-detail-deurim .service-dock-arrow { width: 16px; height: 16px; flex: none; color: #D5FF40; transition: transform var(--case-motion-normal) var(--case-motion-ease); }
+.project-detail-deurim .service-dock-preview { position: absolute; bottom: calc(100% + 8px); right: 0; width: 216px; padding: 12px; border: 1px solid rgb(180 196 193 / 18%); border-radius: var(--case-radius-small); background: #202b31; opacity: 0; pointer-events: none; transform: translateY(4px); transition: opacity var(--case-motion-normal) var(--case-motion-ease), transform var(--case-motion-normal) var(--case-motion-ease); }
 .project-detail-deurim .service-dock-preview img { display: block; width: 100%; height: auto; min-height: 0; max-height: 100%; object-fit: contain; overflow: hidden; border-radius: 4px; }
-.project-detail-deurim .service-dock-support { max-height: 0; overflow: hidden; opacity: 0; font-size: 11px; font-weight: 400; line-height: 18px; color: #9dadae; transition: max-height 220ms ease, opacity 220ms ease, margin-top 220ms ease; }
-.project-detail-deurim .service-dock:is(:hover, :focus-visible) { width: 216px; color: #fff; border-color: rgb(180 196 193 / 35%); }
-.project-detail-deurim .service-dock:is(:hover, :focus-visible) .service-dock-preview { grid-template-rows: 1fr; margin-bottom: 12px; opacity: 1; transform: none; }
-.project-detail-deurim .service-dock:is(:hover, :focus-visible) .service-dock-support { max-height: 18px; margin-top: 4px; opacity: 1; }
+.project-detail-deurim .service-dock-support { margin-top: 4px; font-size: 11px; font-weight: 400; line-height: 18px; color: #9dadae; }
+.project-detail-deurim .service-dock:is(:hover, :focus-visible) { color: #fff; border-color: rgb(180 196 193 / 35%); }
+.project-detail-deurim .service-dock:is(:hover, :focus-visible) .service-dock-preview { opacity: 1; transform: none; }
 .project-detail-deurim .service-dock:is(:hover, :focus-visible) .service-dock-arrow { transform: translate(3px, -3px); }
 .project-detail-deurim .service-dock:focus-visible { outline: 1px solid #D5FF40; outline-offset: 3px; }
-/* The 1120px reading column leaves room for the expanded dock at 1600px.
+/* The 1120px reading column leaves room for the preview at 1600px.
    Below that, use the compact exit instead of covering the case study. */
 @media (max-width: 1599px), (hover: none) {
   .project-detail-deurim .service-dock, .project-detail-deurim .service-dock:is(:hover, :focus-visible) { top: auto; bottom: max(8px, env(safe-area-inset-bottom)); right: var(--gutter); width: auto; min-height: 44px; padding: 11px 14px; }
