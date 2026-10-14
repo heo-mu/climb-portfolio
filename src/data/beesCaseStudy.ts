@@ -41,7 +41,7 @@ export const beesCaseStudy: readonly CaseSection[] = [
     blocks: [{ kind: 'problems', items: [
       { title: '공간과 분리된 데이터', body: '데이터가 기능 단위로 나뉘어 있어, 어느 공간의 값인지 함께 읽기 어려웠어요.' },
       { title: '확인과 대응의 단절', body: '상태를 확인하는 화면과 조치하는 화면이 나뉘면 확인한 맥락이 이어지지 않아요.' },
-    ] }, { kind: 'insight', label: '핵심 정리', text: '기능 이름을 익히게 하기보다, 운영자가 이미 알고 있는 실제 공간을 따라 정보를 찾게 하는 것이 먼저라고 봤어요.' }],
+    ] }, { kind: 'insight', label: '정리하며', text: '기능 이름을 익히게 하기보다, 운영자가 이미 알고 있는 실제 공간을 따라 정보를 찾게 하는 것이 먼저라고 봤어요.' }],
   },
   {
     layout: 'spatial-data', title: 'Spatial Data', tone: 'focus', spacing: 'narrative',
@@ -64,7 +64,7 @@ export const beesCaseStudy: readonly CaseSection[] = [
       { title: '건물 · 층을 볼 때', items: ['건물에서는 전체 에너지 흐름과 이상 징후를 봐요.', '층에서는 해당 공간의 상태와 변화를 확인해요.', '상세 확인이 필요한 설비로 이동해요.'] },
       { title: '설비를 볼 때', items: ['선택한 설비와 데이터 범위를 확인해요.', '현재 수치와 변화 추이를 함께 읽어요.', '상위 공간으로 돌아갈 맥락을 남겨요.'] },
     ] }, {
-      kind: 'insight', label: '핵심 정리',
+      kind: 'insight', label: '정리하며',
       text: '정보의 위치와 상태 표현, 차트·패널의 위계는 같은 규칙으로 맞췄어요.',
       supporting: '선택한 공간과 데이터를 연결하는 방식도 유지해, 새로운 공간에서도 익숙한 순서로 정보를 읽고 다음 행동을 찾도록 했어요.',
     }],
@@ -101,7 +101,7 @@ export const beesCaseStudy: readonly CaseSection[] = [
     ] },
   },
   {
-    layout: 'reflection', title: '핵심 시사점', tone: 'base', spacing: 'narrative', reflectionSummary: true,
+    layout: 'reflection', title: 'Reflection', tone: 'base', spacing: 'narrative', reflectionSummary: true,
     heading: '공간을 따라가며 필요한 정보의 범위를 정했어요.',
     blocks: [{ kind: 'rows', items: [
       { title: '01', body: '낯선 환경일수록 기준이 먼저 필요했어요.\n공간을 따라 이동한다는 기준으로 복잡한 구조를 단순하게 정리할 수 있었어요.' },

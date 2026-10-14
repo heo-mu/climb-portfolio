@@ -258,12 +258,69 @@
   .project-detail-moel-ax .case-image-workflow-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* AX Working Conditions: place the complete source image below its copy. */
-.project-detail-moel-ax .case-section--working-conditions { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; height: auto; min-height: 0; align-items: start; }
-.project-detail-moel-ax .case-section--working-conditions .case-content > .case-image-slot { position: static; display: block; box-sizing: border-box; width: 100%; max-width: 680px; height: auto; min-height: 0; margin: 24px auto 0; padding: 0; overflow: visible; border: 0; border-radius: 0; background: none; }
+/* AX scenario-review draft: text-led UX review, distinct from image production. */
+.case-draft-note { display: block; margin-bottom: 16px; color: #a5b4b3; font-size: 12px; line-height: 20px; }
+.project-detail-moel-ax .case-content:has(> .case-production-workflow) > p { max-width: none; }
+.project-detail-moel-ax .case-production-workflow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin: 40px 0 0; padding: 0; list-style: none; }
+.project-detail-moel-ax .case-production-workflow > li { position: relative; min-width: 0; padding: 20px 0 0; border-top: 1px solid var(--rule); }
+.project-detail-moel-ax .case-production-workflow > li:not(:last-child)::after { content: '→'; position: absolute; top: -12px; right: -24px; color: #7d8b86; font-size: 14px; line-height: 24px; }
+.project-detail-moel-ax .case-production-index { display: block; margin-bottom: 12px; color: #aab783; font-size: 11px; line-height: 20px; }
+.project-detail-moel-ax .case-production-workflow h3 { margin: 0 0 10px; color: #edf0ee; font-size: 20px; font-weight: 500; line-height: 30px; }
+.project-detail-moel-ax .case-production-workflow p { margin: 0; max-width: none; color: #a5b4b3; font-size: 15px; line-height: 1.8; word-break: keep-all; }
+.project-detail-moel-ax .case-production-example { margin-top: 40px; padding: 28px 32px 30px; border: 1px solid rgb(180 196 193 / 7%); border-radius: 8px; background: rgb(217 233 240 / 1%); }
+.project-detail-moel-ax .case-production-example-label { display: block; margin-bottom: 14px; color: #9da98c; font-size: 11px; line-height: 18px; letter-spacing: .06em; }
+.project-detail-moel-ax .case-production-example h3 { margin: 0; color: #dce1de; font-size: 22px; font-weight: 500; line-height: 1.5; letter-spacing: -.02em; word-break: keep-all; overflow-wrap: anywhere; }
+.project-detail-moel-ax .case-production-example p { max-width: none; margin: 0; color: #a5b4b3; font-size: 14px; line-height: 1.8; word-break: keep-all; overflow-wrap: anywhere; }
+.project-detail-moel-ax .case-production-example-sequence { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; margin: 28px 0 20px; padding: 0; list-style: none; }
+.project-detail-moel-ax .case-production-example-sequence > li { position: relative; min-width: 0; padding: 0 0 12px; border-bottom: 1px solid rgb(180 196 193 / 7%); color: #aeb9b4; font-size: 16px; font-weight: 500; line-height: 26px; word-break: keep-all; }
+.project-detail-moel-ax .case-production-example-sequence > li:not(:last-child)::after { content: '→'; position: absolute; top: 0; right: -27px; color: #68766f; font-size: 14px; font-weight: 400; }
+@media (max-width: 767px) {
+  .project-detail-moel-ax .case-production-workflow { grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 28px; }
+  .project-detail-moel-ax .case-production-workflow > li { padding: 0 0 0 20px; border-top: 0; border-left: 1px solid var(--rule); }
+  .project-detail-moel-ax .case-production-workflow > li:not(:last-child)::after { content: '↓'; top: auto; right: auto; bottom: -26px; left: 18px; }
+  .project-detail-moel-ax .case-production-index { margin-bottom: 6px; }
+  .project-detail-moel-ax .case-production-workflow h3 { font-size: 18px; line-height: 28px; }
+  .project-detail-moel-ax .case-production-example { margin-top: 32px; padding: 22px 20px 24px; }
+  .project-detail-moel-ax .case-production-example h3 { font-size: 20px; }
+  .project-detail-moel-ax .case-production-example-sequence { grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
+  .project-detail-moel-ax .case-production-example-sequence > li { padding-bottom: 0; border-bottom: 0; font-size: 15px; line-height: 24px; }
+  .project-detail-moel-ax .case-production-example-sequence > li:not(:last-child)::after { content: '↓'; top: auto; right: auto; bottom: -24px; left: 0; }
+}
+
+/* AX Structure: two parallel lanes with clear steps and restrained connectors. */
+.project-detail-moel-ax .case-section--hierarchy .case-flows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px; margin-top: 40px; }
+.project-detail-moel-ax .case-section--hierarchy .case-flows > div { min-width: 0; padding: 0; border: 0; }
+.project-detail-moel-ax .case-section--hierarchy .case-flows h3 { margin: 0 0 22px; color: #edf0ee; font-size: 22px; font-weight: 550; line-height: 1.5; }
+.project-detail-moel-ax .case-section--hierarchy .case-flows ol { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; margin: 0; }
+.project-detail-moel-ax .case-section--hierarchy .case-flows li { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 68px; padding: 10px 8px; border: 1px solid rgb(180 196 193 / 15%); border-radius: 5px; background: rgb(217 233 240 / 3%); color: #bcc8c5; font-size: 14px; line-height: 1.55; text-align: center; word-break: keep-all; }
+.project-detail-moel-ax .case-section--hierarchy .case-flows li::before { content: none; }
+.project-detail-moel-ax .case-section--hierarchy .case-flows li:not(:last-child)::after { content: '→'; position: absolute; top: 50%; right: -19px; margin: 0; color: #7d8b86; font-size: 13px; line-height: 20px; transform: translateY(-50%); }
+@media (max-width: 767px) {
+  .project-detail-moel-ax .case-section--hierarchy .case-flows { grid-template-columns: minmax(0, 1fr); gap: 32px; margin-top: 28px; }
+  .project-detail-moel-ax .case-section--hierarchy .case-flows > div + div { padding-top: 28px; border-top: 1px solid var(--rule); }
+  .project-detail-moel-ax .case-section--hierarchy .case-flows h3 { margin-bottom: 18px; font-size: 20px; }
+  .project-detail-moel-ax .case-section--hierarchy .case-flows ol { grid-template-columns: minmax(0, 1fr); gap: 18px; margin-left: 0; }
+  .project-detail-moel-ax .case-section--hierarchy .case-flows li { justify-content: flex-start; min-height: 48px; padding: 10px 14px; text-align: left; }
+  .project-detail-moel-ax .case-section--hierarchy .case-flows li::before { content: none; }
+  .project-detail-moel-ax .case-section--hierarchy .case-flows li:not(:last-child)::after { content: '↓'; top: auto; right: auto; bottom: -20px; left: 50%; line-height: 18px; transform: translateX(-50%); }
+}
+
+/* AX Working Conditions: independent text and image columns keep copy in normal flow. */
+.project-detail-moel-ax .case-section--working-conditions { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); column-gap: 24px; height: auto; min-height: 0; align-items: start; }
+.project-detail-moel-ax .case-section--working-conditions > .case-label { grid-column: 1 / -1; }
+.project-detail-moel-ax .case-section--working-conditions .case-content { display: block; grid-column: 1; min-width: 0; }
+.project-detail-moel-ax .case-section--working-conditions .case-content > p { margin-top: 20px; }
+.project-detail-moel-ax .case-section--working-conditions .case-rows { margin-top: 28px; counter-reset: condition-point; }
+.project-detail-moel-ax .case-section--working-conditions .case-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 6px 12px; padding: 16px 0; border: 0; background: none; }
+.project-detail-moel-ax .case-section--working-conditions .case-row + .case-row { border-top: 1px solid var(--rule); }
+.project-detail-moel-ax .case-section--working-conditions .case-row::before { counter-increment: condition-point; content: counter(condition-point, decimal-leading-zero); grid-column: 1; grid-row: 1 / span 2; color: #9ba879; font-size: 11px; line-height: 26px; font-variant-numeric: tabular-nums; }
+.project-detail-moel-ax .case-section--working-conditions .case-row h3 { grid-column: 2; margin: 0; color: #dce5e1; font-size: 16px; font-weight: 500; line-height: 26px; }
+.project-detail-moel-ax .case-section--working-conditions .case-row p { grid-column: 2; margin: 0; max-width: none; color: #a5b4b3; font-size: 14px; line-height: 1.7; }
+.project-detail-moel-ax .case-section--working-conditions > .case-image-slot { position: static; display: block; grid-column: 2; box-sizing: border-box; width: 450px; max-width: 100%; height: auto; min-height: 0; margin: 0 0 0 auto; padding: 0; overflow: visible; border: 0; border-radius: 0; background: none; }
 .project-detail-moel-ax .case-section--working-conditions .case-image-stage { display: block; width: 100%; height: auto; overflow: visible; }
 .project-detail-moel-ax .case-section--working-conditions .case-image-slot--natural-ratio .case-image-panel { width: 100%; height: auto; min-height: 0; aspect-ratio: auto; overflow: visible; }
 .project-detail-moel-ax .case-section--working-conditions .case-image-panel > img { display: block; width: 100%; max-width: 100%; height: auto; object-fit: contain; border-radius: var(--case-radius-default); }
-@media (max-width: 767px) {
-  .project-detail-moel-ax .case-section--working-conditions .case-content > .case-image-slot { width: 100%; max-width: 100%; }
+@media (max-width: 900px) {
+  .project-detail-moel-ax .case-section--working-conditions { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .project-detail-moel-ax .case-section--working-conditions > .case-image-slot { grid-column: 1; width: 100%; }
 }

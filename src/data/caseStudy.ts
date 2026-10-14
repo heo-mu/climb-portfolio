@@ -15,8 +15,8 @@ export type CaseBlock =
   | { kind: 'supporting'; text: string }
   | { kind: 'spatial-hierarchy'; steps: readonly { title: string; detail: string }[]; principles: readonly { title: string; body: string }[] }
   | { kind: 'image-workflow'; steps: readonly { title: string; body: string }[]; images: readonly CaseImage[] }
-  | { kind: 'insight'; label?: '핵심 정리' | '핵심 시사점' | '다음에 가져갈 기준'; text: string; supporting?: string }
-  | { kind: 'production-workflow'; steps: readonly { title: string; body: string }[] }
+  | { kind: 'insight'; label?: '정리하며' | '이 과정에서' | '이번 작업에서'; text: string; supporting?: string }
+  | { kind: 'production-workflow'; label?: string; steps: readonly { title: string; body: string }[]; example?: { label: string; title: string; body: string; sequence: readonly string[] } }
   | { kind: 'graph-workflow'; title: string; steps: readonly { title: string; body: string }[]; evidence?: { stepIndex: number; label: string; image: NonNullable<CaseImage['image']> }; supporting?: string; insight: string; conclusion: string }
   | { kind: 'execution-judgment'; items: readonly { title: string; judgmentTitle: string; execution: string; judgment: string }[] }
   | { kind: 'problems'; items: readonly { title: string; body: string }[] }
@@ -36,6 +36,7 @@ export type CaseSection = {
   layout?: 'overview' | 'statement' | 'structure' | 'visual-measure' | 'trust' | 'workflow' | 'directing-ai' | 'comparison' | 'decisions' | 'product' | 'reflection' | 'split' | 'narrative' | 'hierarchy' | 'spatial-structure' | 'spatial-data' | 'ai-agent'
   title: string
   heading: string
+  draftNote?: string
   body?: string
   supporting?: string
   closing?: string

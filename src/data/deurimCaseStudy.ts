@@ -125,7 +125,7 @@ export const deurimCaseStudy: readonly CaseSection[] = [
     } },
   },
   {
-    layout: 'reflection', title: '핵심 시사점', tone: 'base', spacing: 'narrative',
+    layout: 'reflection', title: 'Reflection', tone: 'base', spacing: 'narrative',
     reflectionSummary: true,
     heading: 'AI는 제 판단을 대신하지 않았어요.\n제 판단을 제품으로 옮겼어요.',
     body: '혼자 제품을 만들며, 직접 판단해야 할 일도 더 선명해졌어요.',

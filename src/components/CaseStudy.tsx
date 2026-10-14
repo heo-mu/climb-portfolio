@@ -127,7 +127,7 @@ function CaseAIInsight({ text }: { text: string }) {
 }
 
 /** A design judgment or lesson, distinct from the AI usage surface. */
-function CaseConclusion({ label = '핵심 정리', text, supporting }: { label?: '핵심 정리' | '핵심 시사점' | '다음에 가져갈 기준'; text?: string; supporting?: string }) {
+function CaseConclusion({ label = '정리하며', text, supporting }: { label?: '정리하며' | '이 과정에서' | '이번 작업에서'; text?: string; supporting?: string }) {
   return <aside className="case-conclusion">
     <span className="case-conclusion-label">{label}</span>
     {text && <p className="case-conclusion-primary"><CaseText text={text} /></p>}
@@ -158,7 +158,15 @@ function ContentBlock({ block, sentenceBreaks = false }: { block: CaseBlock; sen
       </div>)}</div>
     </div>
     case 'insight': return <CaseConclusion label={block.label} text={block.text} supporting={block.supporting} />
-    case 'production-workflow': return <ol className="case-production-workflow" aria-label="요구사항부터 실제 시안까지의 제작 과정">{block.steps.map((step, index) => <li key={step.title}><span className="case-production-index mono" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}</ol>
+    case 'production-workflow': return <>
+      <ol className="case-production-workflow" aria-label={block.label ?? '요구사항부터 실제 시안까지의 제작 과정'}>{block.steps.map((step, index) => <li key={step.title}><span className="case-production-index mono" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}</ol>
+      {block.example && <aside className="case-production-example">
+        <span className="case-production-example-label mono">{block.example.label}</span>
+        <h3>{block.example.title}</h3>
+        <ol className="case-production-example-sequence" aria-label="시나리오 검토 흐름">{block.example.sequence.map(step => <li key={step}>{step}</li>)}</ol>
+        <p>{block.example.body}</p>
+      </aside>}
+    </>
     case 'execution-judgment': return <div className="case-ai-pairs">
       <div className="case-ai-pair-header"><span>AI가 맡은 일</span><span>내가 판단한 일</span></div>
       {block.items.map(item => <article className="case-ai-pair" key={item.title}>
@@ -235,15 +243,15 @@ export function CaseStudy({ sections, heroSlot, projectSlug, projectName, senten
     <div className="case-label mono"><span>{String(index + 1).padStart(2, '0')}</span>{section.title}</div>
     <div className={`case-content${usesSplitSectionHeader(section, projectSlug) ? ' case-section-header-split' : ''}`}>
       {section.lead && section.layout !== 'structure' && <ContentBlock block={section.lead} sentenceBreaks={sentenceBreaks} />}
-      <h2 id={`case-${index}`}><CaseText text={section.heading} /></h2>{section.body && <p>{usesSplitSectionHeader(section, projectSlug) ? section.body.split(/<br\s*\/?\s*>|\n|(?<=\.)\s+/i).map((sentence, i) => <Fragment key={i}>{i > 0 && ' '}<span className="case-section-description-line">{sentence}</span></Fragment>) : section.layout === 'trust' || (projectSlug === 'moel-ax' && section.title === 'AI Workflow') ? section.body.split('\n').map((line, lineIndex) => <Fragment key={line}>{lineIndex > 0 && <br />}{line}</Fragment>) : section.body.includes('<br') || (projectSlug === 'edk' && section.layout === 'statement' && section.body.includes('\n')) || (projectSlug === 'moel-ax' && section.title === 'The Problem' && section.body.includes('\n')) || sentenceBreaks || ['overview', 'visual-measure', 'trust', 'directing-ai'].includes(section.layout ?? '') ? <CaseText text={section.body} prose={sentenceBreaks && section.layout !== 'visual-measure'} /> : section.body}</p>}
+      {section.draftNote && <span className="case-draft-note">{section.draftNote}</span>}
+      <h2 id={`case-${index}`}><CaseText text={section.heading} /></h2>{section.body && <p>{usesSplitSectionHeader(section, projectSlug) ? section.body.split(/<br\s*\/?\s*>|\n|(?<=\.)\s+/i).map((sentence, i) => <Fragment key={i}>{i > 0 && ' '}<span className="case-section-description-line">{sentence}</span></Fragment>) : section.layout === 'trust' || (projectSlug === 'moel-ax' && ['AI Workflow', 'AI Scenario Review', 'Working Conditions'].includes(section.title)) ? section.body.split('\n').map((line, lineIndex) => <Fragment key={line}>{lineIndex > 0 && <br />}{line}</Fragment>) : section.body.includes('<br') || (projectSlug === 'edk' && section.layout === 'statement' && section.body.includes('\n')) || (projectSlug === 'moel-ax' && section.title === 'The Problem' && section.body.includes('\n')) || sentenceBreaks || ['overview', 'visual-measure', 'trust', 'directing-ai'].includes(section.layout ?? '') ? <CaseText text={section.body} prose={sentenceBreaks && section.layout !== 'visual-measure'} /> : section.body}</p>}
       {projectSlug === 'edk' && section.title === 'Policy Design' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
       {projectSlug === 'edk' && section.title === 'Design System' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
-      {projectSlug === 'moel-ax' && section.title === 'Working Conditions' && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio />}
       {section.lead && section.layout === 'structure' && <ContentBlock block={section.lead} sentenceBreaks={sentenceBreaks} />}
       {section.reflectionSummary && section.blocks?.map((block, i) => <ContentBlock key={i} block={block} sentenceBreaks={sentenceBreaks} />)}
       {section.reflectionSummary && (section.process || section.closing)
         ? <div className="case-reflection-summary">
-          {section.closing && <CaseConclusion label="핵심 시사점" text={section.closing} />}
+          {section.closing && <CaseConclusion label="정리하며" text={section.closing} />}
           {section.process && <div className="case-reflection-process" style={{ '--case-process-count': section.process.length } as CSSProperties}>{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}
         </div>
         : <>{section.process && <div className="process-line mono">{section.process.map((step, i) => <Fragment key={step}>{i > 0 && <i aria-hidden="true">→</i>}<span>{step}</span></Fragment>)}</div>}{section.closing && <CaseConclusion text={section.closing} />}</>}
@@ -263,7 +271,7 @@ export function CaseStudy({ sections, heroSlot, projectSlug, projectName, senten
       </div>}
     </div>
     {index === 0 && heroSlot && <CaseImageCarousel key={projectSlug} slot={heroSlot} projectSlug={projectSlug} projectName={projectName} />}
-    {section.layout === 'visual-measure' ? <VisualMeasureDemo /> : section.layout === 'trust' ? <ValidationDemo /> : section.layout !== 'ai-agent' && !(projectSlug === 'samsung-bees' && section.layout === 'spatial-data') && !(projectSlug === 'edk' && ['Policy Design', 'Design System'].includes(section.title)) && !(projectSlug === 'moel-ax' && section.title === 'Working Conditions') && section.imageSlot && <CaseImageSlot slot={section.imageSlot} />}
+    {section.layout === 'visual-measure' ? <VisualMeasureDemo /> : section.layout === 'trust' ? <ValidationDemo /> : section.layout !== 'ai-agent' && !(projectSlug === 'samsung-bees' && section.layout === 'spatial-data') && !(projectSlug === 'edk' && ['Policy Design', 'Design System'].includes(section.title)) && section.imageSlot && <CaseImageSlot slot={section.imageSlot} naturalImageRatio={projectSlug === 'moel-ax' && section.title === 'Working Conditions'} />}
     {section.supporting && <CaseAIInsight text={section.supporting} />}
   </section>)}</div>
 }

@@ -31,7 +31,7 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
         { title: '관리자', body: '조직과 구성원, 권한을 관리하는 범위를 구분하고, 운영에 필요한 정보와 처리할 일을 정리했어요.' },
         { title: '공통 상태', body: '대기·승인·반려·완료의 의미와 다음 행동을 맞춰, 어느 화면에서든 같은 기준으로 상태를 읽게 했어요.' },
       ] },
-      { kind: 'insight', label: '핵심 정리', text: '화면이 달라져도, 조작하는 방식은 익숙하게 이어지도록 했어요.', supporting: '모달의 열기·닫기, 드롭다운 선택, 토스트 안내, 탭 전환, 상태 표시와 페이지 이동 규칙을 디자인 시스템에 연결했어요. 반복되는 동작을 함께 정리해, 화면마다 사용 방식이 달라지지 않도록 했어요.' },
+      { kind: 'insight', label: '정리하며', text: '화면이 달라져도, 조작하는 방식은 익숙하게 이어지도록 했어요.', supporting: '모달의 열기·닫기, 드롭다운 선택, 토스트 안내, 탭 전환, 상태 표시와 페이지 이동 규칙을 디자인 시스템에 연결했어요. 반복되는 동작을 함께 정리해, 화면마다 사용 방식이 달라지지 않도록 했어요.' },
     ],
   },
   {
@@ -116,7 +116,7 @@ export const groupwareCaseStudy: readonly CaseSection[] = [
     ],
   },
   {
-    layout: 'reflection', title: '핵심 시사점', tone: 'base', spacing: 'narrative', reflectionSummary: true,
+    layout: 'reflection', title: 'Reflection', tone: 'base', spacing: 'narrative', reflectionSummary: true,
     heading: '업무 제품에서는, 예측할 수 있는 경험이 중요해요.',
     blocks: [{ kind: 'rows', items: [
       { title: '01', body: '역할과 상태의 차이를 이해해야 사용자가 할 일을 분명하게 보여줄 수 있었어요.' },

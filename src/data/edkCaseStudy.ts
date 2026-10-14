@@ -103,7 +103,7 @@ export const edkCaseStudy: readonly CaseSection[] = [
     } },
   },
   {
-    layout: 'reflection', title: '핵심 시사점', tone: 'base', spacing: 'narrative', reflectionSummary: true,
+    layout: 'reflection', title: 'Reflection', tone: 'base', spacing: 'narrative', reflectionSummary: true,
     heading: '화면을 늘리기 전에, 제품의 기준을 정해야 했어요.',
     blocks: [{ kind: 'rows', items: [
       { title: '01', body: '플랫폼 전체와 기업별 관리 범위를 구분하는 일이 화면 설계의 출발점이었어요.' },
