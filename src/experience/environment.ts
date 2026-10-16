@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { addSystemsLandmark } from './systemsLandmark'
 import { curveParameterAt } from '../data/ascentRoute'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { cameraPose, routePoint, seeded, showcaseSite, terrainGeometry, TerrainSurface } from './terrain'
@@ -204,6 +205,8 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
     yield
   }
 
+  addSystemsLandmark(world, surface, poleMaterial, shadowMaterial)
+  yield
   world.updateMatrixWorld(true)
   const campBounds = world.children.filter(object => object.name === 'camp-tent').map(object => new THREE.Box3().setFromObject(object).expandByScalar(.6))
   for (const arrival of world.children.filter(object => object.name.startsWith('arrival-'))) campBounds.push(new THREE.Box3().setFromObject(arrival).expandByScalar(.8))

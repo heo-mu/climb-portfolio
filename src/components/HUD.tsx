@@ -1,3 +1,4 @@
+import { PROJECTS_CHECKPOINT } from '../data/checkpoints'
 import { useEffect, useRef, useState } from 'react'
 import { checkpoints } from '../data/expedition'
 import { experienceConfig } from '../config/experience'
@@ -35,7 +36,7 @@ export function HUD({ controller, fallback, enabled = true }: { controller: Scro
       const visible = !frame.sections[0].interactive
       if (visible !== previousVisible) { previousVisible = visible; setAltitudeVisible(visible) }
       // A departed Projects camp is history, not an active exhibit.
-      const current = frame.active === 4 && !frame.sections[4].interactive ? -1 : frame.active
+      const current = frame.active === PROJECTS_CHECKPOINT && !frame.sections[PROJECTS_CHECKPOINT].interactive ? -1 : frame.active
       if (current !== previousActive) { previousActive = current; setActive(current) }
       const showHome = frame.journeyProgress > experienceConfig.home.exitRange
       if (showHome !== previousHome) { previousHome = showHome; setHomeVisible(showHome) }

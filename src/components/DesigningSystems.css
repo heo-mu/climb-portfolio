@@ -1,0 +1,53 @@
+.checkpoint-systems { width: 54vw; max-width: 810px; --panel-reach: calc(min(54vw, 810px) - 30px); }
+.systems-intro { margin-top: 20px; font-size: 16px; line-height: 26px; color: #d2dcd9; word-break: keep-all; }
+.systems-foundations { list-style: none; padding: 0; margin: 26px 0 0; }
+.systems-foundations > li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; padding: 15px 0; border-top: 1px solid rgb(217 233 240 / 16%); }
+.systems-index { color: #a6b87d; font-size: 10px; line-height: 22px; font-variant-numeric: tabular-nums; }
+.systems-foundations h2 { font-size: 15px; line-height: 22px; font-weight: 550; }
+.systems-foundations p { color: #c4d1d1; font-size: 13px; line-height: 22px; margin-top: 3px; }
+.systems-terms { display: block; font-size: 11px; line-height: 18px; color: #9eb3be; margin-top: 6px; }
+.systems-chain { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 15px; border-top: 1px solid rgb(217 233 240 / 16%); color: #b7c8ce; font-size: 10px; line-height: 18px; }
+.systems-chain i { font-style: normal; color: #728a98; }
+.systems-chain-code { flex-basis: 100%; color: #99aeb6; }
+.systems-case-link { display: inline-flex; align-items: center; gap: 22px; min-height: 44px; margin-top: 16px; font-size: 13px; border-bottom: 1px solid #71858a; transition: color .18s, border-color .18s; }
+.systems-case-link svg { width: 14px; height: 14px; }
+.systems-case-link:is(:hover, :focus-visible) { color: #d5ff40; border-color: #d5ff40; }
+@media (max-width: 1000px) and (min-width: 768px) {
+  .checkpoint-systems { width: calc(100vw - 200px); max-width: 620px; --panel-reach: calc(min(100vw - 200px, 620px) - 20px); }
+}
+@media (max-height: 800px) and (min-width: 768px) {
+  .checkpoint-systems .panel-kicker { margin-bottom: 12px; }
+  .systems-intro { margin-top: 14px; font-size: 14px; line-height: 22px; }
+  .systems-foundations { margin-top: 18px; }
+  .systems-foundations > li { padding-block: 10px; }
+  .systems-terms { margin-top: 3px; }
+  .systems-chain { padding-top: 10px; gap: 6px; }
+  .systems-case-link { margin-top: 8px; }
+}
+@media (max-width: 767px) {
+  .checkpoint-systems { width: 100%; max-width: none; }
+  .systems-intro { font-size: 14px; line-height: 23px; margin-top: 14px; }
+  .systems-foundations { margin-top: 22px; }
+  .systems-foundations > li { padding-block: 12px; gap: 10px; }
+  .systems-foundations h2 { font-size: 14px; line-height: 20px; }
+  .systems-foundations p { font-size: 12px; line-height: 20px; }
+  .systems-terms { font-size: 10px; line-height: 17px; margin-top: 4px; }
+  .systems-chain { gap: 6px; font-size: 10px; }
+  .systems-case-link { margin-top: 12px; }
+}
+@media (max-height: 740px) and (max-width: 767px) {
+  .systems-intro { margin-top: 10px; }
+  .systems-foundations { margin-top: 14px; }
+  .systems-foundations > li { padding-block: 8px; }
+  .systems-chain { padding-top: 10px; gap: 4px 6px; }
+  .systems-case-link { margin-top: 6px; }
+}
+
+@media (max-height: 650px) and (min-width: 768px) {
+  .systems-foundations > li > div { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; align-items: baseline; }
+  .systems-foundations p { margin: 0; }
+  .systems-terms { grid-column: 1 / -1; margin: 0; }
+  .systems-foundations { margin-top: 14px; }
+  .systems-foundations > li { padding-block: 8px; }
+  .systems-chain-code { flex-basis: auto; margin-left: 8px; }
+}

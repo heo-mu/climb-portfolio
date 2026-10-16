@@ -1,3 +1,4 @@
+import { PROJECTS_CHECKPOINT } from '../data/checkpoints'
 import type { PerspectiveCamera } from 'three'
 import { campFog, homeFog, SpatialAnchorProjection } from './SpatialAnchorProjection'
 import { campZones, projectsPresentation, smoothstep } from './progress'
@@ -98,10 +99,10 @@ export class SpatialSectionTransition {
     this.pending = false
     let homeOpacity = 1
     this.stages.forEach((stage, index) => {
-      if (index === 4 && frame.projectsReady === false) return this.apply(stage, 'hidden')
+      if (index === PROJECTS_CHECKPOINT && frame.projectsReady === false) return this.apply(stage, 'hidden')
       const arrived = frame.sections[index].interactive
       const [entry, exit] = stage.zone.plateau
-      if (index === 4 && !frame.reducedMotion && !frame.returningHome && this.root.dataset.showcase === '3d') {
+      if (index === PROJECTS_CHECKPOINT && !frame.reducedMotion && !frame.returningHome && this.root.dataset.showcase === '3d') {
         const { presence, departure } = projectsPresentation(frame.journeyProgress)
         if (arrived) return this.apply(stage, 'readable')
         if (!presence) return this.apply(stage, 'hidden')

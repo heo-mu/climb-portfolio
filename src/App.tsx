@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, useLocation, useNavigationType } from 're
 import { Expedition } from './experience/Expedition'
 import { ProjectDetail } from './pages/ProjectDetail'
 import { NotFound } from './pages/NotFound'
+import { DesignSystemDetail } from './pages/DesignSystemDetail'
 
 export function App() {
   return <BrowserRouter><JourneyRoutes /></BrowserRouter>
@@ -20,6 +21,6 @@ function JourneyRoutes() {
     {journeyLocation && <div className="journey-layer" data-active={active} inert={!active} aria-hidden={!active}>
       <Routes location={journeyLocation}><Route path="/" element={<Expedition active={active} navigationType={navigationType} />} /></Routes>
     </div>}
-    {!active && <Routes><Route path="/project/:slug" element={<ProjectDetail />} /><Route path="*" element={<NotFound />} /></Routes>}
+    {!active && <Routes><Route path="/design-system" element={<DesignSystemDetail />} /><Route path="/project/:slug" element={<ProjectDetail />} /><Route path="*" element={<NotFound />} /></Routes>}
   </>
 }

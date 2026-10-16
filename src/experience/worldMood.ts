@@ -1,12 +1,13 @@
 import { MathUtils } from 'three'
 import { journeyAtCurveParameter } from '../data/ascentRoute'
-import { checkpoints } from '../data/expedition'
+import { checkpoints, checkpointAt } from '../data/checkpoints'
 
 const iceBounds = [.09, .15, .29, .37].map(journeyAtCurveParameter)
 const basinBounds = [.31, .4, .53, .6].map(journeyAtCurveParameter)
 const faceBounds = [.55, .64, .77, .84].map(journeyAtCurveParameter)
 const ridgeBounds = [.78, .86].map(journeyAtCurveParameter)
-const stormBounds = [.83, .89, .935, 1].map(journeyAtCurveParameter)
+const highCamp = checkpointAt('high-camp').progress
+const stormBounds = [highCamp + .03, highCamp + .087, highCamp + .102, 1]
 const summitBounds = [.955, .995].map(journeyAtCurveParameter)
 const ramp = (a: number, b: number, t: number) => MathUtils.smoothstep(t, a, b)
 const band = (a: number, b: number, c: number, d: number, t: number) => ramp(a, b, t) * (1 - ramp(c, d, t))

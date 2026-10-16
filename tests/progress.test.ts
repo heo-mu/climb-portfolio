@@ -1,3 +1,4 @@
+import { PROJECTS_CHECKPOINT, checkpointAt } from '../src/data/checkpoints'
 import { describe, expect, it } from 'vitest'
 import { projectsPresentation, activeCheckpoint, altitudeAt, campZones, readableCheckpoint, sectionUIAt } from '../src/experience/progress'
 import { checkpoints } from '../src/data/expedition'
@@ -10,14 +11,16 @@ const eye = (progress: number) => new Vector3(...routeEyeAt(curveParameterAt(pro
 
 describe('spatial arrival', () => {
   it('uses a reversible presentation envelope', () => {
-    for (const edge of campZones[4].arrival) expect(projectsPresentation(edge).presence).toBeCloseTo(1)
+    for (const edge of campZones[PROJECTS_CHECKPOINT].arrival) expect(projectsPresentation(edge).presence).toBeCloseTo(1)
   })
   it('waits for the first Projects capture without enabling empty content', () => {
-    for (const progress of campZones[4].arrival) {
-      expect(sectionUIAt(progress, false, false)[4].interactive).toBe(false)
-      expect(sectionUIAt(progress, false, true)[4].interactive).toBe(true)
+    for (const progress of campZones[PROJECTS_CHECKPOINT].arrival) {
+      expect(sectionUIAt(progress, false, false)[PROJECTS_CHECKPOINT].interactive).toBe(false)
+      expect(sectionUIAt(progress, false, true)[PROJECTS_CHECKPOINT].interactive).toBe(true)
     }
-    expect(sectionUIAt(checkpoints[3].progress, false, false)[3].interactive).toBe(true)
+    checkpoints.forEach((camp, index) => {
+      if (index !== PROJECTS_CHECKPOINT) expect(sectionUIAt(camp.progress, false, false)[index].interactive).toBe(true)
+    })
   })
   it('derives every arrival zone from the walker’s real distance to its reading plateau', () => {
     const { arrivalDistance, homeDockDistance } = experienceConfig.content
@@ -74,8 +77,8 @@ describe('spatial arrival', () => {
       // Without a history (a restored position), name the camp last passed uphill.
       expect(activeCheckpoint(midpoint)).toBe(index - 1)
     }
-    expect(activeCheckpoint(1, 1)).toBe(5)
-    expect(activeCheckpoint(0, 5)).toBe(0)
+    expect(activeCheckpoint(1, 1)).toBe(checkpoints.length - 1)
+    expect(activeCheckpoint(0, checkpoints.length - 1)).toBe(0)
   })
 })
 
@@ -144,12 +147,12 @@ describe('first-person route', () => {
       expect(position.y - trail.y).toBeCloseTo(experienceConfig.camera.eyeHeight, 9)
     }
   })
-  it('extends all five reading windows by 25% without moving their checkpoints', () => {
-    expect(checkpoints.map(camp => camp.progress)).toEqual([0, .2, .4, .6, .8, 1])
+  it('keeps reading windows at six equal camera-distance intervals', () => {
+    expect(checkpoints.map(camp => camp.progress)).toEqual([0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1])
     expect(experienceConfig.content.readableRange / .024).toBeCloseTo(1.25)
     for (const [index, zone] of campZones.entries()) {
       if (!index) { expect(zone.plateau).toEqual([0, 0]); continue }
-      const expected = index === 5 ? .03 : .06
+      const expected = index === checkpoints.length - 1 ? .03 : .06
       expect(zone.plateau[1] - zone.plateau[0]).toBeCloseTo(expected)
       for (const progress of zone.arrival) expect(sectionUIAt(progress)[index].interactive).toBe(true)
     }
@@ -168,10 +171,10 @@ describe('first-person route', () => {
     }
   })
   it('keeps full travel and increasing altitude throughout the reading dwell', () => {
-    const positions = [.773, .785, .8, .815, .827].map(progress => {
+    const positions = [-.027, -.015, 0, .015, .027].map(offset => checkpointAt('high-camp').progress + offset).map(progress => {
       const position = new Vector3()
       cameraPose((progress), position, new Vector3())
-      expect(sectionUIAt(progress)[4].interactive).toBe(true)
+      expect(sectionUIAt(progress)[PROJECTS_CHECKPOINT].interactive).toBe(true)
       return { position, altitude: altitudeAt(progress) }
     })
     for (let i = 1; i < positions.length; i++) {

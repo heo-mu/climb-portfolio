@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { projects } from '../data/projects'
-import { checkpoints } from '../data/checkpoints'
+import { PROJECTS_CHECKPOINT, checkpointAt } from '../data/checkpoints'
 import { buildDisplay, captureFit, SCREEN_HEIGHT, type ShowcaseDevice } from './showcaseDevices'
 import { cameraFieldOfView, cameraPose, showcaseSite, type TerrainSurface } from './terrain'
 import { contactPatch, seatOnGround } from './grounding'
@@ -8,9 +8,11 @@ import { campZones, projectsPresentation, type ExpeditionFrame } from './progres
 import { CaptureDecoder } from './CaptureDecoder'
 
 const CROSSFADE = .28
-const PROJECTS = checkpoints.findIndex(camp => camp.id === 'high-camp')
+const PROJECTS = PROJECTS_CHECKPOINT
+const VISIBILITY_START = checkpointAt('high-camp').progress - .12
+const VISIBILITY_SPAN = .24
 /** Where the exhibit may stand, in the High Camp view (metres): ahead of the plateau the walker can rest on. */
-const ANCHOR = { forward: [100, 110, 120], right: 100 }
+const ANCHOR = { forward: [100, 110, 120], right: 120 }
 /** Display width search range in metres; final size is fitted independently in projected space. */
 const SCALE = { max: 140, min: 40 }
 const GROUND_EMBED = .003
@@ -249,7 +251,7 @@ export class ProjectShowcase {
     // Terrain sightlines are sampled once on layout, never during scrolling.
     const probe = view.clone()
     for (let i = 0; i < this.visibilityProfile.length; i++) {
-      const progress = .68 + .24 * i / (this.visibilityProfile.length - 1)
+      const progress = VISIBILITY_START + VISIBILITY_SPAN * i / (this.visibilityProfile.length - 1)
       cameraPose(progress, probe.position, target)
       probe.fov = cameraFieldOfView(progress, probe.aspect, width)
       probe.updateProjectionMatrix(); probe.lookAt(target); probe.updateMatrixWorld(true)
@@ -276,7 +278,7 @@ export class ProjectShowcase {
     return { left: left / width * 2 - 1, right: right / width * 2 - 1 }
   }
 
-  private projectedBox(slot: Exhibit, anchor: THREE.Vector3, quaternion: THREE.Quaternion, scale: number, height = showcaseSite.level - GROUND_EMBED * scale) {
+  private projectedBox(slot: Exhibit, anchor: THREE.Vector3, quaternion: THREE.Quaternion, scale: number, height = this.surface!.heightAt(anchor.x, anchor.z) - GROUND_EMBED * scale) {
     const origin = anchor.clone().setY(height)
     const matrix = new THREE.Matrix4().compose(origin, quaternion, new THREE.Vector3(scale, scale, scale))
     let right = -Infinity, top = -Infinity, left = Infinity, bottom = Infinity, screenLeft = Infinity, screenRight = -Infinity
@@ -336,7 +338,7 @@ export class ProjectShowcase {
     this.lastTime = frame.time
     this.hitCamera = camera
     // Captures load on the way up (or as soon as Projects is the destination), never at Home.
-    if (this.enabled && !this.loading && (frame.journeyProgress > .38 || frame.destination >= PROJECTS)) void this.loadCaptures()
+    if (this.enabled && !this.loading && (frame.journeyProgress > checkpointAt('camp-one').progress - .02 || frame.destination >= PROJECTS)) void this.loadCaptures()
     let moving = false
     // Camera staging and presence share the same arrival envelope, in either direction.
     if (this.enabled && (frame.journeyProgress !== this.poseRoute || this.dirty)) {
@@ -375,7 +377,7 @@ export class ProjectShowcase {
 
   /** Cached terrain visibility; the object never follows the camera. */
   private clearanceAt(progress: number) {
-    const sample = THREE.MathUtils.clamp((progress - .68) / .24, 0, 1) * (this.visibilityProfile.length - 1)
+    const sample = THREE.MathUtils.clamp((progress - VISIBILITY_START) / VISIBILITY_SPAN, 0, 1) * (this.visibilityProfile.length - 1)
     const low = Math.min(Math.floor(sample), this.visibilityProfile.length - 2)
     return THREE.MathUtils.lerp(this.visibilityProfile[low], this.visibilityProfile[low + 1], sample - low)
   }

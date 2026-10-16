@@ -33,7 +33,7 @@ describe.each(checkpoints.slice(1).map((camp, i) => ({ ...camp, index: i + 1 }))
         pose(camera, p, width)
         projection.update(camera)
         expect(projection.matrix.elements.every(Number.isFinite)).toBe(true)
-        if (camp.index === 4 && width > 1024) expect(projection.distance).toBeGreaterThanOrEqual(0)
+        if (camp.id === 'high-camp' && width > 1024) expect(projection.distance).toBeGreaterThanOrEqual(0)
         else if (p !== boundary) expect(projection.distance).toBeGreaterThan(0)
         expect(projection.blur).toBeLessThanOrEqual(2)
       }
@@ -56,7 +56,7 @@ describe.each(checkpoints.slice(1).map((camp, i) => ({ ...camp, index: i + 1 }))
     approach.resize(camera, 1440, 900)
     pose(camera, arrival[0] - .0005)
     approach.update(camera)
-    if (camp.index === 4) {
+    if (camp.id === 'high-camp') {
       // The overlook drifts into camp; it is near reading scale, never parked.
       expect(scaleOf(approach, 1440, 900)).toBeGreaterThan(.7)
       expect(scaleOf(approach, 1440, 900)).toBeLessThan(1)

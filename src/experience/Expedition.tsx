@@ -1,3 +1,4 @@
+import { PROJECTS_CHECKPOINT, checkpointAt } from '../data/checkpoints'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, type NavigationType } from 'react-router-dom'
 import { Scene } from './Scene'
@@ -16,7 +17,7 @@ export function Expedition({ active = true, navigationType }: { active?: boolean
   const [controller] = useState(() => new ScrollController())
   const [fallback, setFallback] = useState(false)
   const root = useRef<HTMLElement>(null)
-  const focusProjectsOnArrival = useRef(false)
+  const focusOnArrival = useRef<number | null>(null)
   const visited = useRef(false)
   const [initialProgress] = useState(() => {
     if (location.hash) return checkpoints.find(camp => `#${camp.id}` === location.hash)?.progress ?? 0
@@ -28,7 +29,7 @@ export function Expedition({ active = true, navigationType }: { active?: boolean
 
   useLayoutEffect(() => {
     if (!active) return
-    const returning = Math.abs(initialProgress - checkpoints[4].progress) < experienceConfig.content.readableRange
+    const returning = Math.abs(initialProgress - checkpoints[PROJECTS_CHECKPOINT].progress) < experienceConfig.content.readableRange
     const restored = projects.findIndex(project => project.slug === (location.state as { project?: string } | null)?.project)
     if (!visited.current) projectSelection.reset(returning ? (restored >= 0 ? restored : projectSelection.get()) : 0)
     // A POP restores the live selection, not the stale state stored by an older
@@ -46,7 +47,7 @@ export function Expedition({ active = true, navigationType }: { active?: boolean
     const destination = navigationType !== 'POP' && location.hash ? checkpoints.find(camp => `#${camp.id}` === location.hash)?.progress : undefined
     const resumeProgress = destination ?? lastProgress.current
     const sections = Array.from(root.current!.querySelectorAll<HTMLElement>('[data-checkpoint]'))
-    const projectsHeading = root.current!.querySelector<HTMLElement>('#title-high-camp')
+    if (location.hash === '#systems') focusOnArrival.current = checkpoints.findIndex(camp => camp.id === 'systems')
     if (fallback) {
       sections.forEach(section => { section.removeAttribute('style'); section.inert = false; section.removeAttribute('aria-hidden') })
       const target = checkpoints.reduce((best, item) => Math.abs(item.progress - resumeProgress) < Math.abs(best.progress - resumeProgress) ? item : best)
@@ -86,16 +87,16 @@ export function Expedition({ active = true, navigationType }: { active?: boolean
         if (focused instanceof HTMLElement && sections.some(section => section.contains(focused))) focused.blur()
         previousActive = frame.active
       }
-      if (focusProjectsOnArrival.current) {
-        if (frame.sections[4].interactive) {
-          // Reduced motion can finish travel before the decoded exhibit becomes visible.
-          queueMicrotask(() => {
-            if (focusProjectsOnArrival.current && !sections[4].inert && getComputedStyle(sections[4]).visibility === 'visible') {
-              projectsHeading?.focus({ preventScroll: true })
-              focusProjectsOnArrival.current = false
-            }
-          })
-        }
+      const focusIndex = focusOnArrival.current
+      if (focusIndex !== null && frame.sections[focusIndex].interactive) {
+        // Reduced motion can finish travel before the world has painted its destination.
+        queueMicrotask(() => {
+          const section = sections[focusIndex]
+          if (focusOnArrival.current === focusIndex && !section.inert && getComputedStyle(section).visibility === 'visible') {
+            section.querySelector<HTMLElement>('.portfolio-heading')?.focus({ preventScroll: true })
+            focusOnArrival.current = null
+          }
+        })
       }
     })
     return () => { unsubscribe(); controller.stop() }
@@ -117,7 +118,7 @@ export function Expedition({ active = true, navigationType }: { active?: boolean
   useEffect(() => {
     if (!active) return
     // A native smooth trip passes other camps; cancel focus only when the visitor takes over.
-    const cancelFocus = () => { focusProjectsOnArrival.current = false }
+    const cancelFocus = () => { focusOnArrival.current = null }
     const events = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
     events.forEach(event => window.addEventListener(event, cancelFocus, { passive: true, capture: true }))
     return () => {
@@ -127,13 +128,13 @@ export function Expedition({ active = true, navigationType }: { active?: boolean
   }, [active])
 
   const viewWork = (instant = false) => {
-    const target = checkpoints.find(camp => camp.id === 'high-camp')!
+    const target = checkpointAt('high-camp')
     if (fallback) {
       document.getElementById(target.id)?.scrollIntoView({ behavior: instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
       document.getElementById('title-high-camp')?.focus({ preventScroll: true })
     } else {
       controller.goTo(target.progress, instant)
-      focusProjectsOnArrival.current = true
+      focusOnArrival.current = PROJECTS_CHECKPOINT
     }
   }
 
@@ -141,7 +142,7 @@ export function Expedition({ active = true, navigationType }: { active?: boolean
     <a className="skip-link" href="#high-camp" onClick={event => { event.preventDefault(); viewWork(true) }}>프로젝트로 바로 가요</a>
     {fallback ? <div className="static-landscape" aria-hidden="true" /> : <Scene controller={controller} onFallback={onFallback} active={active} />}
     <HUD controller={controller} fallback={fallback} enabled={active} />
-    <CheckpointSections onExplore={() => { if (fallback) document.getElementById('about')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); else controller.goTo(checkpoints[1].progress) }} onViewWork={() => viewWork()} />
+    <CheckpointSections onExplore={() => { if (fallback) document.getElementById('about')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); else controller.goTo(checkpointAt('about').progress) }} onViewWork={() => viewWork()} />
     {fallback && <p className="fallback-note">3D 화면을 사용할 수 없어 콘텐츠를 바로 보여드려요.</p>}
   </main>
 }

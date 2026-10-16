@@ -82,9 +82,10 @@ export const showcaseSite = (() => {
   const right = new THREE.Vector3(-forward.z, 0, forward.x)
   // Soft edges: short on the rope side (the corridor and the rope keep their ground), longer at the ends and
   // into the face, so the cut reads as a snow bench rather than a step.
-  const shelf = { forward: [-40, 145] as const, right: [3.6, 110] as const, soft: { rope: .5, ends: 8, face: 14 } }
+  const shelf = { forward: [-40, 145] as const, right: [3.6, 130] as const, soft: { rope: .5, ends: 8, face: 14 } }
   const toWorld = (f: number, r: number) => new THREE.Vector3(origin.x + forward.x * f + right.x * r, 0, origin.z + forward.z * f + right.z * r)
-  return { progress: route, origin: new THREE.Vector3(origin.x, 0, origin.z), forward, right, shelf, toWorld, level: routePoint(-toWorld(100, 0).z / depth).y + .12 }
+  const approachRadius = 135
+  return { progress: route, origin: new THREE.Vector3(origin.x, 0, origin.z), forward, right, shelf, toWorld, approachRadius, level: routePoint(-toWorld(100, 0).z / depth).y + .12 }
 })()
 
 /** 0 outside the levelled exhibit shelf, 1 on it: each side falls off over its own soft edge. */
@@ -102,14 +103,16 @@ export function showcaseShelfBlend(x: number, z: number) {
 export function groundHeight(x: number, z: number) {
   const height = baseHeight(x, z), blend = showcaseShelfBlend(x, z)
   const forward = (x - showcaseSite.origin.x) * showcaseSite.forward.x + (z - showcaseSite.origin.z) * showcaseSite.forward.z
-  // Approach the bench along the slope; a high flat shelf must not form a wall across the sightline.
-  const approach = showcaseSite.level - Math.max(0, 90 - forward) * .8
+  const across = (x - showcaseSite.origin.x) * showcaseSite.right.x + (z - showcaseSite.origin.z) * showcaseSite.right.z
+  // Grade along viewing distance: a forward-only plateau occludes the diagonal
+  // sightline from the newly spaced High Camp. The walking corridor stays untouched.
+  const approach = showcaseSite.level - Math.max(0, showcaseSite.approachRadius - Math.hypot(forward, across)) * .8
   return blend ? THREE.MathUtils.lerp(height, approach, blend) : height
 }
 
 export const exhibitionFocus = (route: number) => projectsPresentation(route).focus
 
-const showcaseLook = showcaseSite.toWorld(100, 50).setY(showcaseSite.level + 36)
+const showcaseLook = showcaseSite.toWorld(120, 65).setY(showcaseSite.level + 36)
 const showcaseEye = new THREE.Vector3()
 writeRouteEye(curveParameterAt(showcaseSite.progress), showcaseEye)
 const showcaseDistance = showcaseEye.distanceTo(showcaseLook)

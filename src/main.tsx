@@ -4,11 +4,10 @@ import '@sun-typeface/suit/fonts/variable/woff2/SUIT-Variable.css'
 import './styles.css'
 import { App } from './App'
 
-// A new document always starts the journey at Home. SPA detail/back navigation
-// stays separate and can still restore its in-memory position.
+// Start at Home unless the URL names a checkpoint. Expedition resolves that
+// semantic destination after the scene is ready, including reload/deep links.
 history.scrollRestoration = 'manual'
 if (location.pathname === '/') {
-  if (location.hash) history.replaceState(history.state, '', location.pathname + location.search)
   window.scrollTo({ top: 0, behavior: 'instant' })
 }
 

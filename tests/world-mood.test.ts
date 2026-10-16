@@ -31,7 +31,7 @@ describe('differentiated ascent', () => {
   })
 
   it('reserves the strongest weather for the final approach, then clears at the summit', () => {
-    const peak = worldMood(.9), summit = worldMood(1), basin = worldMood(.5)
+    const peak = worldMood(.925), summit = worldMood(1), basin = worldMood(.5)
     expect(peak.storm).toBe(1)
     expect(peak.windSpeed).toBeGreaterThan(basin.windSpeed * 5)
     expect(peak.snowDensity).toBeGreaterThan(basin.snowDensity * 4)

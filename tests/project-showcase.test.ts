@@ -1,3 +1,4 @@
+import { checkpoints, PROJECTS_CHECKPOINT, checkpointAt } from '../src/data/checkpoints'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import * as THREE from 'three'
 import { ProjectShowcase } from '../src/experience/ProjectShowcase'
@@ -55,7 +56,7 @@ describe('Projects exhibit', () => {
       let time = 0
       const tick = (reducedMotion = false, interactive = true) => {
         time += .04
-        exhibit.update({ time, journeyProgress: .8, destination: 4, reducedMotion, returningHome: false, sections: Array.from({ length: 5 }, () => ({ interactive })) } as unknown as ExpeditionFrame, camera)
+        exhibit.update({ time, journeyProgress: checkpointAt('high-camp').progress, destination: PROJECTS_CHECKPOINT, reducedMotion, returningHome: false, sections: Array.from({ length: checkpoints.length }, () => ({ interactive })) } as unknown as ExpeditionFrame, camera)
         scene.updateMatrixWorld(true)
         expect(group.matrixWorld.toArray()).toEqual(rest)
       }
@@ -117,7 +118,7 @@ describe('Projects exhibit', () => {
     let time = 0
     const tick = (reducedMotion = false) => {
       time += .04
-      exhibit.update({ time, journeyProgress: .8, curveParameter: 0, destination: 4, reducedMotion, returningHome: false, sections: [] } as unknown as ExpeditionFrame, camera)
+      exhibit.update({ time, journeyProgress: checkpointAt('high-camp').progress, curveParameter: 0, destination: PROJECTS_CHECKPOINT, reducedMotion, returningHome: false, sections: [] } as unknown as ExpeditionFrame, camera)
       scene.updateMatrixWorld(true)
       expect(group.matrixWorld.toArray()).toEqual(pose)
       expect(group.visible).toBe(exhibit.ready)
@@ -315,7 +316,7 @@ describe('Projects exhibit', () => {
       expect(contacts, 'neck physically overlaps its rear mounting joint').toBeGreaterThan(0)
       expect(footContacts, 'neck physically overlaps its weighted base').toBeGreaterThan(0)
       for (const fraction of [0, .5, 1]) {
-        const route = THREE.MathUtils.lerp(...campZones[4].arrival, fraction)
+        const route = THREE.MathUtils.lerp(...campZones[PROJECTS_CHECKPOINT].arrival, fraction)
         cameraPose(route, camera.position, target)
         for (let x = -.48; x <= .48; x += .08) for (let y = -.27; y <= .27; y += .03) {
           const point = new THREE.Vector3(x, y, 0).applyMatrix4(screen.matrixWorld)
@@ -349,8 +350,8 @@ describe('Projects exhibit', () => {
         showcase.update({ journeyProgress: route, time: route, curveParameter: 0, destination: 0, sections: [] } as unknown as ExpeditionFrame, camera)
         return screen.material.uniforms.presence.value as number
       }
-      for (const route of [.6, .69, .72]) { expect(presence(route)).toBe(0); expect(group.visible).toBe(false) }
-      const [entry, exit] = campZones[4].arrival
+      for (const route of [-.2, -.11, -.08].map(offset => checkpointAt('high-camp').progress + offset)) { expect(presence(route)).toBe(0); expect(group.visible).toBe(false) }
+      const [entry, exit] = campZones[PROJECTS_CHECKPOINT].arrival
       for (let i = 0; i <= 20; i++) expect(presence(entry + (exit - entry) * i / 20), `whole exhibit @${width}, sample ${i}`).toBe(1)
       // The camera travels the entire reading distance. Check real world-space
       // sightlines after the local mount transforms, not only its opacity flag.
@@ -364,9 +365,9 @@ describe('Projects exhibit', () => {
           }
         }
       }
-      const values = Array.from({ length: 151 }, (_, i) => presence(.72 + i * .0004))
+      const values = Array.from({ length: 151 }, (_, i) => presence(checkpointAt('high-camp').progress - .08 + i * .0004))
       expect(values.some(value => value > 0 && value < 1), `spatial fade @${width}`).toBe(true)
-      for (let i = 150; i >= 0; i--) expect(presence(.72 + i * .0004)).toBeCloseTo(values[i], 8)
+      for (let i = 150; i >= 0; i--) expect(presence(checkpointAt('high-camp').progress - .08 + i * .0004)).toBeCloseTo(values[i], 8)
     }
   // This exhaustive CPU geometry sweep is not a real-time frame-budget test.
   // Keep every viewport/ray assertion; allow slower and parallel CI workers.
@@ -401,11 +402,11 @@ describe('Projects exhibit', () => {
   })
 
   it('confines the portrait lens and camera staging to Projects, with continuous approach and exit', () => {
-    for (const route of [0, .1, .25, .5, .69, .91, 1]) {
+    for (const route of [0, .1, .25, .5, checkpointAt('high-camp').progress - .12, checkpointAt('high-camp').progress + .12, 1]) {
       expect(exhibitionFocus(route)).toBe(0)
       expect(cameraFieldOfView(route, 16 / 9, 1920)).toBe(64)
     }
-    expect(cameraFieldOfView(.8, 16 / 9, 1920)).toBe(42)
+    expect(cameraFieldOfView(checkpointAt('high-camp').progress, 16 / 9, 1920)).toBe(42)
     expect(cameraFieldOfView(.75, 390 / 844, 390)).toBe(72)
     const a = new THREE.Vector3(), b = new THREE.Vector3(), target = new THREE.Vector3()
     for (let route = .7; route < .815; route += .0001) {

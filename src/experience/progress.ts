@@ -1,3 +1,4 @@
+import { PROJECTS_CHECKPOINT } from '../data/checkpoints'
 import { checkpoints } from '../data/expedition'
 import { routeEyeAt, curveParameterAt } from '../data/ascentRoute'
 import { experienceConfig } from '../config/experience'
@@ -51,7 +52,7 @@ const within = (progress: number, [from, to]: Span) => progress >= from - Number
 
 // One reversible presentation envelope, derived from the actual Projects arrival.
 // Frame the overlook before revealing the display; finish the reveal before input opens.
-const projectsArrival = campZones[4].arrival
+const projectsArrival = campZones[PROJECTS_CHECKPOINT].arrival
 const projectsShoulder = projectsArrival[1] - projectsArrival[0]
 
 export function projectsPresentation(route: number) {
@@ -91,7 +92,7 @@ export function sectionUIAt(progress: number, returningHome = false, projectsRea
   if (!states) {
     // Home return passes through camps without activating them.
     states = checkpoints.map((_, index) => {
-      const interactive = arrived === index && (!returningHome || index === 0) && (index !== 4 || projectsReady)
+      const interactive = arrived === index && (!returningHome || index === 0) && (index !== PROJECTS_CHECKPOINT || projectsReady)
       return { phase: interactive ? 'active' : 'hidden', interactive } as const
     })
     sectionStates.set(key, states)

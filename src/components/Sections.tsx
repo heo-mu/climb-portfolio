@@ -6,6 +6,8 @@ import { projectSelection } from '../experience/projectSelection'
 import { Home } from './Home'
 import { CareerTimeline } from './CareerTimeline'
 import { ArrowUpRight } from './ArrowUpRight'
+import { DesigningSystems } from './DesigningSystems'
+import type { CheckpointId } from '../data/checkpoints'
 
 function About() {
   return <>
@@ -142,10 +144,13 @@ function Contact() {
 }
 
 export function CheckpointSections({ onExplore, onViewWork }: { onExplore: () => void; onViewWork: () => void }) {
-  const sections = [<About />, <AI />, <Tools />, <Projects />, <Contact />]
+  const sections: Record<Exclude<CheckpointId, 'base-camp'>, React.ReactNode> = {
+    about: <About />, 'camp-one': <AI />, systems: <DesigningSystems />,
+    'camp-two': <Tools />, 'high-camp': <Projects />, summit: <Contact />,
+  }
   return <div className="checkpoint-sections"><Home onExplore={onExplore} onViewWork={onViewWork} />{checkpoints.slice(1).map((camp, index) => <section key={camp.id} id={camp.id} className={`checkpoint checkpoint-${camp.id}`} aria-labelledby={`title-${camp.id}`} data-checkpoint={index + 1}>
     <div className="panel-surface" aria-hidden="true" />
-    <div className="spatial-panel"><div className="panel-content"><div className="panel-kicker"><span>{camp.index}</span><span>{camp.navigation}</span></div>{sections[index]}</div></div>
+    <div className="spatial-panel"><div className="panel-content"><div className="panel-kicker"><span>{camp.index}</span><span>{camp.navigation}</span></div>{camp.id !== 'base-camp' && sections[camp.id]}</div></div>
     {camp.id === 'high-camp' && <ShowcaseLink />}
   </section>)}</div>
 }

@@ -22,7 +22,7 @@ describe('camera-derived trail navigation', () => {
       for (const [index, camp] of checkpoints.entries()) {
         const point = map.at(camp.progress)
         const fraction = map.horizontal ? (point.x - start.x) / (end.x - start.x) : (point.y - start.y) / (end.y - start.y)
-        expect(fraction, 'equal-distance camp placement on the journey axis').toBeCloseTo(index / 5, 8)
+        expect(fraction, 'equal-distance camp placement on the journey axis').toBeCloseTo(index / (checkpoints.length - 1), 8)
       }
       let previous = map.at(0)
       for (let i = 1; i <= 2000; i++) {
