@@ -6,6 +6,8 @@ import { experienceConfig as config } from '../config/experience'
 import { alpineWind, worldMood } from './worldMood'
 import { SpatialSectionTransition } from './SpatialSectionTransition'
 import { ProjectShowcase } from './ProjectShowcase'
+import { systemShowcaseSite } from './terrain'
+import { checkpointIndex } from '../data/checkpoints'
 import { projectSelection } from './projectSelection'
 
 type SceneOptions = { canvas: HTMLCanvasElement; root: HTMLElement; onLost: () => void; onProjectsReady: (ready: boolean) => void }
@@ -53,6 +55,7 @@ export class MountainScene {
   private idle = false
   private spatialTransition: SpatialSectionTransition
   private showcase: ProjectShowcase
+  private systemShowcase: ProjectShowcase
   private unsubscribeSelection: () => void
   private unsubscribePreparation: () => void
 
@@ -68,7 +71,12 @@ export class MountainScene {
     this.fill.position.set(200, 100, 150)
     this.scene.add(this.keyLight, this.fill, this.ambient)
     this.showcase = new ProjectShowcase(this.renderer, options.root)
-    this.stages = environmentStages(this.scene, this.wind, this.showcase)
+    this.systemShowcase = new ProjectShowcase(this.renderer, options.root, {
+      site: systemShowcaseSite, maxScale: 200, forward: [60, 80, 100, 120], checkpoint: checkpointIndex('systems'),
+      linkSelector: '.system-showcase-link', contentSelector: '#systems .panel-content', dataset: 'systemShowcase',
+      capture: { slug: 'design-system', screen: { desktop: new URL('../../img/system/system.png', import.meta.url).href, width: 1671, height: 941 } },
+    })
+    this.stages = environmentStages(this.scene, this.wind, this.showcase, this.systemShowcase)
     this.stages.next()
     this.skyMaterial = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false,
@@ -122,6 +130,7 @@ export class MountainScene {
     if (this.disposed || this.active === active) return
     this.active = active
     if (!active) {
+      this.systemShowcase.suspend()
       this.needsResumePaint = false
       if (this.idle) window.cancelIdleCallback(this.deferred)
       else window.clearTimeout(this.deferred)
@@ -192,6 +201,7 @@ export class MountainScene {
     this.camera.updateProjectionMatrix()
     this.spatialTransition.resize(this.camera, width, height)
     this.showcase.layout(this.camera, width, height)
+    this.systemShowcase.layout(this.camera, width, height)
     this.renderer.setPixelRatio(pixelRatio)
     this.renderer.setSize(width, height, false)
     this.snow.forEach(layer => { layer.points.material.uniforms.uHeight.value = height * this.renderer.getPixelRatio() })
@@ -216,8 +226,9 @@ export class MountainScene {
     this.spatialTransition.update(this.camera, frame)
     // A project change crossfades the capture; the exhibit stays fixed in world space.
     const exhibit = this.showcase.update(frame, this.camera) || this.showcase.drawWarmUp(this.camera)
+    const field = this.systemShowcase.update(frame, this.camera)
     this.options.onProjectsReady(this.showcase.ready)
-    const moving = this.needsResumePaint || frame.journeyProgress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit
+    const moving = this.needsResumePaint || frame.journeyProgress !== this.lastProgress || frame.reducedMotion !== this.lastReducedMotion || exhibit || field
     if (frame.reducedMotion && !moving) return
     if (!moving && frame.time - this.lastRender < 1 / 30) return
     const elapsed = Math.min(.1, Math.max(0, frame.time - this.lastRender))
@@ -260,6 +271,7 @@ export class MountainScene {
     this.unsubscribeSelection()
     this.unsubscribePreparation()
     this.showcase.dispose()
+    this.systemShowcase.dispose()
     if (this.idle) window.cancelIdleCallback(this.deferred)
     else window.clearTimeout(this.deferred)
     this.stages.return()

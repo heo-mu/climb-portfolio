@@ -401,8 +401,8 @@ describe('Projects exhibit', () => {
     expect(showcaseShelfBlend(center.x, center.z)).toBe(1)
   })
 
-  it('confines the portrait lens and camera staging to Projects, with continuous approach and exit', () => {
-    for (const route of [0, .1, .25, .5, checkpointAt('high-camp').progress - .12, checkpointAt('high-camp').progress + .12, 1]) {
+  it('confines the Projects lens and camera staging to its arrival, with continuous approach and exit', () => {
+    for (const route of [0, .1, .25, checkpointAt('high-camp').progress - .12, checkpointAt('high-camp').progress + .12, 1]) {
       expect(exhibitionFocus(route)).toBe(0)
       expect(cameraFieldOfView(route, 16 / 9, 1920)).toBe(64)
     }

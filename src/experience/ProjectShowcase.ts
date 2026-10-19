@@ -4,12 +4,12 @@ import { PROJECTS_CHECKPOINT, checkpointAt } from '../data/checkpoints'
 import { buildDisplay, captureFit, SCREEN_HEIGHT, type ShowcaseDevice } from './showcaseDevices'
 import { cameraFieldOfView, cameraPose, showcaseSite, type TerrainSurface } from './terrain'
 import { contactPatch, seatOnGround } from './grounding'
-import { campZones, projectsPresentation, type ExpeditionFrame } from './progress'
+import { campZones, showcasePresentation, type ExpeditionFrame } from './progress'
+import { projectDisplayLink } from './projectDisplayLink'
 import { CaptureDecoder } from './CaptureDecoder'
 
 const CROSSFADE = .28
 const PROJECTS = PROJECTS_CHECKPOINT
-const VISIBILITY_START = checkpointAt('high-camp').progress - .12
 const VISIBILITY_SPAN = .24
 /** Where the exhibit may stand, in the High Camp view (metres): ahead of the plateau the walker can rest on. */
 const ANCHOR = { forward: [100, 110, 120], right: 120 }
@@ -39,7 +39,6 @@ const visibilityFace = [
   ...Array.from({ length: 9 }, (_, i) => [-.514 + 1.028 * i / 8, -.295]),
   ...[-.514, 0, .514].flatMap(x => [[x, 0], [x, .295]]),
 ]
-const screenHitCorners = [[-.5, -1], [.5, -1], [-.5, 1], [.5, 1]] as const
 const corners = (box: THREE.Box3) => [0, 1].flatMap(x => [0, 1].flatMap(y => [0, 1].map(z => new THREE.Vector3(x ? box.max.x : box.min.x, y ? box.max.y : box.min.y, z ? box.max.z : box.min.z))))
 const idle = () => new Promise<void>(resolve => typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(() => resolve(), { timeout: 200 }) : window.setTimeout(resolve, 16))
 
@@ -65,6 +64,16 @@ function exhibitEnvironment(renderer: THREE.WebGLRenderer) {
 }
 
 /** A world-fixed camp display; selection changes only its capture. */
+export type ShowcaseOptions = {
+  forward?: readonly number[]
+  maxScale?: number
+  site: typeof showcaseSite
+  checkpoint: number
+  linkSelector: string
+  contentSelector: string
+  dataset: string
+  capture: { slug: string; screen: { desktop: string; width: number; height: number } }
+}
 export class ProjectShowcase {
   readonly group = new THREE.Group()
   private exhibit: Exhibit | null = null
@@ -110,8 +119,9 @@ export class ProjectShowcase {
   private raycaster = new THREE.Raycaster()
   private hits: THREE.Intersection[] = []
 
-  constructor(private renderer: THREE.WebGLRenderer | null = null, private root: HTMLElement | null = null) {
-    this.link = root?.querySelector<HTMLAnchorElement>('.showcase-link') ?? null
+  constructor(private renderer: THREE.WebGLRenderer | null = null, private root: HTMLElement | null = null, private options?: ShowcaseOptions) {
+    if (options) this.textures = [null]
+    this.link = root?.querySelector<HTMLAnchorElement>(options?.linkSelector ?? '.showcase-link') ?? null
     this.pointerWindow = root?.ownerDocument.defaultView ?? null
     this.finePointer = this.pointerWindow?.matchMedia('(hover: hover) and (pointer: fine)') ?? null
     this.link?.addEventListener('pointerenter', this.trackPointer)
@@ -121,10 +131,25 @@ export class ProjectShowcase {
     this.link?.addEventListener('click', this.checkClick)
     this.pointerWindow?.addEventListener('blur', this.clearPointer)
     this.finePointer?.addEventListener('change', this.clearPointer)
-    this.group.name = 'project-showcase'
+    this.group.name = options ? 'system-showcase' : 'project-showcase'
     this.placeholder.colorSpace = THREE.SRGBColorSpace
     this.placeholder.needsUpdate = true
     if (renderer) this.environment = exhibitEnvironment(renderer)
+  }
+
+  private get site() { return this.options?.site ?? showcaseSite }
+  private get checkpoint() { return this.options?.checkpoint ?? PROJECTS }
+  private get items() { return this.options ? [this.options.capture] : projects }
+  private get visibilityStart() { return this.site.progress - .12 }
+  private get dataKey() { return this.options?.dataset ?? 'showcase' }
+  private decode(index: number, limit: number): Promise<ImageBitmap | HTMLImageElement> {
+    if (!this.options) return this.decoder.decode(index, limit)
+    return new THREE.ImageLoader().loadAsync(this.options.capture.screen.desktop)
+  }
+  suspend() {
+    this.clearPointer()
+    if (this.link) this.link.style.visibility = 'hidden'
+    this.linkState = 'hidden'
   }
 
   private link: HTMLAnchorElement | null = null
@@ -173,11 +198,11 @@ export class ProjectShowcase {
     slot.panel.scale.setScalar(1)
     slot.screen.material.uniforms.hoverAmount.value = 0
     // Measure the destination layout, not the previous viewport's 2D grid.
-    if (this.root) this.root.dataset.showcase = width > 1024 && camera.aspect >= 1.2 ? '3d' : '2d'
+    if (this.root) this.root.dataset[this.dataKey] = width > 1024 && camera.aspect >= 1.2 ? '3d' : '2d'
     const view = this.view, target = new THREE.Vector3()
-    view.fov = cameraFieldOfView(showcaseSite.progress, camera.aspect, width); view.aspect = camera.aspect; view.near = camera.near; view.far = camera.far
+    view.fov = cameraFieldOfView(this.site.progress, camera.aspect, width); view.aspect = camera.aspect; view.near = camera.near; view.far = camera.far
     view.updateProjectionMatrix()
-    cameraPose(showcaseSite.progress, view.position, target)
+    cameraPose(this.site.progress, view.position, target)
     view.lookAt(target); view.updateMatrixWorld(true)
     // Parallel to the camp camera's image plane, not aimed at its off-centre eye position.
     // Only the display tilts: the support and footing remain vertical and grounded.
@@ -198,7 +223,7 @@ export class ProjectShowcase {
     const limits = this.limits = this.freeSpace(width)
     type Placement = { anchor: THREE.Vector3; quaternion: THREE.Quaternion; facing: number; scale: number; size: number }
     // Fit the common display between the text and trail, with its footing beyond the rope.
-    const readingViews = Array.from({ length: 11 }, (_, i) => THREE.MathUtils.lerp(...campZones[PROJECTS].arrival, i / 10)).map(progress => {
+    const readingViews = Array.from({ length: 11 }, (_, i) => THREE.MathUtils.lerp(...campZones[this.checkpoint].arrival, i / 10)).map(progress => {
       const probe = view.clone()
       cameraPose(progress, probe.position, target)
       probe.fov = cameraFieldOfView(progress, probe.aspect, width)
@@ -208,7 +233,7 @@ export class ProjectShowcase {
     const installation = new THREE.Object3D()
     const place = (slot: Exhibit, forward: number, scale: number): Placement | null => {
       for (let right = ROPE_CLEARANCE; right <= ANCHOR.right; right += 1) {
-        const anchor = showcaseSite.toWorld(forward, right)
+        const anchor = this.site.toWorld(forward, right)
         const box = this.projectedBox(slot, anchor, quaternion, scale)
         // Candidate footings stay outside the rope and the walked corridor.
         if (!box.clear || !box.walk) continue
@@ -227,15 +252,15 @@ export class ProjectShowcase {
       return null
     }
     let placement: Placement | null = null
-    for (const forward of ANCHOR.forward) {
-      for (let scale = SCALE.max; scale >= SCALE.min; scale -= 1) {
+    for (const forward of this.options?.forward ?? ANCHOR.forward) {
+      for (let scale = this.options?.maxScale ?? SCALE.max; scale >= SCALE.min; scale -= 1) {
         const candidate = place(slot, forward, scale)
         if (candidate) { if (!placement || candidate.size > placement.size) placement = candidate; break }
       }
     }
     this.enabled = width > 1024 && camera.aspect >= 1.2 && placement !== null
     this.layoutReady = true
-    const { anchor, scale } = placement ?? { anchor: showcaseSite.toWorld(ANCHOR.forward[0], ANCHOR.right), scale: SCALE.min }
+    const { anchor, scale } = placement ?? { anchor: this.site.toWorld(ANCHOR.forward[0], ANCHOR.right), scale: SCALE.min }
     slot.group.position.copy(anchor); slot.group.quaternion.copy(quaternion); slot.group.scale.setScalar(scale)
     seatOnGround(slot.group, slot.footing, this.surface, slot.bury * scale)
     slot.rest.scale = scale
@@ -251,14 +276,14 @@ export class ProjectShowcase {
     // Terrain sightlines are sampled once on layout, never during scrolling.
     const probe = view.clone()
     for (let i = 0; i < this.visibilityProfile.length; i++) {
-      const progress = VISIBILITY_START + VISIBILITY_SPAN * i / (this.visibilityProfile.length - 1)
+      const progress = this.visibilityStart + VISIBILITY_SPAN * i / (this.visibilityProfile.length - 1)
       cameraPose(progress, probe.position, target)
       probe.fov = cameraFieldOfView(progress, probe.aspect, width)
       probe.updateProjectionMatrix(); probe.lookAt(target); probe.updateMatrixWorld(true)
       this.visibilityProfile[i] = this.enabled ? this.measureClearance(probe) : 0
     }
     this.apply(slot)
-    if (this.root) this.root.dataset.showcase = this.enabled ? '3d' : '2d'
+    if (this.root) this.root.dataset[this.dataKey] = this.enabled ? '3d' : '2d'
     this.linkState = ''
     this.dirty = true
   }
@@ -268,7 +293,7 @@ export class ProjectShowcase {
     const root = this.root
     const labels = root ? Array.from(root.querySelectorAll<HTMLElement>('.trail-checkpoint .nav-label')).map(label => label.getBoundingClientRect()).filter(rect => rect.width) : []
     const right = labels.length ? Math.min(...labels.map(rect => rect.left)) - 24 : width * .86
-    const text = root?.querySelector<HTMLElement>('#high-camp .projects-editorial')
+    const text = root?.querySelector<HTMLElement>(this.options?.contentSelector ?? '#high-camp .projects-editorial')
     let left = width * .34
     if (text) {
       // Offsets ignore the spatial transforms the panel may be carrying right now.
@@ -296,7 +321,7 @@ export class ProjectShowcase {
       return { right, top, left, bottom, screenLeft, screenRight, clear: false, face: false, walk: false }
     }
     // Whatever stands on the ground keeps outside the guide rope; displays may reach over it, well above head height.
-    const { origin: site, right: across } = showcaseSite
+    const { origin: site, right: across } = this.site
     let nearest = Infinity
     for (const point of slot.groundHull) {
       const p = this.corner.copy(point).applyMatrix4(matrix)
@@ -309,7 +334,7 @@ export class ProjectShowcase {
       const p = this.corner.copy(point).applyMatrix4(matrix)
       const lateral = (p.x - site.x) * across.x + (p.z - site.z) * across.z
       face &&= p.y >= this.surface!.heightAt(p.x, p.z) + .15
-      walk &&= p.y - showcaseSite.level >= WALK.height || lateral >= WALK.clearance
+      walk &&= p.y - this.site.level >= WALK.height || lateral >= WALK.clearance
     }
     // Validate the rotated parts' world bounds too: their exposed corners must
     // not disappear into the rising edge of the new camp shelf.
@@ -323,7 +348,7 @@ export class ProjectShowcase {
   }
 
   select(index: number, instant = false) {
-    if (!projects[index]) return
+    if (!this.items[index]) return
     if (index === this.selected && !instant) return
     this.selected = index
     if (instant) { this.transition = 1; this.instantSelection = true }
@@ -338,12 +363,12 @@ export class ProjectShowcase {
     this.lastTime = frame.time
     this.hitCamera = camera
     // Captures load on the way up (or as soon as Projects is the destination), never at Home.
-    if (this.enabled && !this.loading && (frame.journeyProgress > checkpointAt('camp-one').progress - .02 || frame.destination >= PROJECTS)) void this.loadCaptures()
+    if (this.enabled && !this.loading && (frame.journeyProgress > checkpointAt('camp-one').progress - .02 || frame.destination >= this.checkpoint)) void this.loadCaptures()
     let moving = false
     // Camera staging and presence share the same arrival envelope, in either direction.
     if (this.enabled && (frame.journeyProgress !== this.poseRoute || this.dirty)) {
       this.poseRoute = frame.journeyProgress
-      const { presence } = projectsPresentation(frame.journeyProgress)
+      const { presence } = showcasePresentation(frame.journeyProgress, this.checkpoint)
       // The exhibit and its shadows stay at their surveyed world pose.
       const nearness = (this.displayed >= 0 || this.textures[this.selected]) && presence > 0 ? this.clearanceAt(frame.journeyProgress) * presence : 0
       if (nearness !== this.nearness) { this.nearness = nearness; this.apply(slot) }
@@ -353,7 +378,7 @@ export class ProjectShowcase {
       screen.fromMap.value = screen.toMap.value
       screen.fromFit.value.copy(screen.toFit.value)
       screen.toMap.value = this.textures[this.selected]
-      const { width, height } = projects[this.selected].screen
+      const { width, height } = this.items[this.selected].screen
       screen.toFit.value.copy(captureFit(width, height))
       this.transition = this.displayed < 0 || this.instantSelection ? 1 : 0
       this.displayed = this.selected
@@ -377,7 +402,7 @@ export class ProjectShowcase {
 
   /** Cached terrain visibility; the object never follows the camera. */
   private clearanceAt(progress: number) {
-    const sample = THREE.MathUtils.clamp((progress - VISIBILITY_START) / VISIBILITY_SPAN, 0, 1) * (this.visibilityProfile.length - 1)
+    const sample = THREE.MathUtils.clamp((progress - this.visibilityStart) / VISIBILITY_SPAN, 0, 1) * (this.visibilityProfile.length - 1)
     const low = Math.min(Math.floor(sample), this.visibilityProfile.length - 2)
     return THREE.MathUtils.lerp(this.visibilityProfile[low], this.visibilityProfile[low + 1], sample - low)
   }
@@ -416,7 +441,7 @@ export class ProjectShowcase {
 
   private async loadCaptures() {
     this.loading = true
-    const order = [this.selected, ...projects.map((_, i) => i).filter(i => i !== this.selected)]
+    const order = [this.selected, ...this.items.map((_, i) => i).filter(i => i !== this.selected)]
     for (const index of order) {
       if (this.disposed) return
       try { await this.prepare(index) } catch { /* Keep the current exhibit; selection can retry. */ }
@@ -429,7 +454,7 @@ export class ProjectShowcase {
     const existing = this.preparing.get(index)
     if (existing) return existing
     const limit = Math.min(4096, this.renderer?.capabilities.maxTextureSize ?? 4096)
-    const pending = this.decoder.decode(index, limit).then(async image => {
+    const pending = this.decode(index, limit).then(async image => {
       const bitmap = 'close' in image ? image as ImageBitmap : null
       if (this.disposed) { bitmap?.close(); return }
       const texture = new THREE.Texture(bitmap ?? image)
@@ -454,7 +479,7 @@ export class ProjectShowcase {
 
   /** A pointer target over the visible display, so the exhibit itself opens the project. */
   private interactive(frame: ExpeditionFrame) {
-    return this.enabled && !!frame.sections[PROJECTS]?.interactive && !frame.returningHome && this.displayed === this.selected && this.transition === 1 && this.nearness === 1
+    return this.enabled && !!frame.sections[this.checkpoint]?.interactive && !frame.returningHome && this.displayed === this.selected && this.transition === 1 && this.nearness === 1
   }
 
   private trackPointer = (event: PointerEvent) => {
@@ -518,24 +543,7 @@ export class ProjectShowcase {
     }
     if (!force && !this.dirty && this.linkState !== 'hidden' && this.linkRoute === frame.journeyProgress) return
     this.linkRoute = frame.journeyProgress
-    slot.screen.updateWorldMatrix(true, false)
-    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity
-    const projected: [number, number][] = []
-    for (const [x, y] of screenHitCorners) {
-      const p = this.corner.set(x, y * SCREEN_HEIGHT / 2, 0).applyMatrix4(slot.screen.matrixWorld).project(camera)
-      const px = (p.x + 1) / 2 * this.width, py = (1 - p.y) / 2 * this.height
-      projected.push([px, py])
-      left = Math.min(left, px); right = Math.max(right, px); top = Math.min(top, py); bottom = Math.max(bottom, py)
-    }
-    const x = Math.round(left), y = Math.round(top), w = Math.round(right - left), h = Math.round(bottom - top)
-    const polygon = [2, 3, 1, 0].map(i => `${(projected[i][0] - x).toFixed(2)}px ${(projected[i][1] - y).toFixed(2)}px`).join(', ')
-    const state = `${x},${y},${w},${h}|${polygon}`
-    if (state === this.linkState) return
-    this.linkState = state
-    link.style.visibility = 'visible'
-    link.style.transform = `translate(${x}px, ${y}px)`
-    link.style.width = `${w}px`; link.style.height = `${h}px`
-    link.style.clipPath = `polygon(${polygon})`
+    this.linkState = projectDisplayLink(link, slot.screen, camera, { width: this.width, height: this.height }, { width: 1, height: SCREEN_HEIGHT }, this.linkState, this.corner)
   }
 
   /**
@@ -595,14 +603,14 @@ export class ProjectShowcase {
   /** What the exhibit shows, on the root for the DOM and its checks: the settled project and whether its capture is lit. */
   private report() {
     const presence = this.enabled ? this.nearness : 0
-    if (this.root && this.reportedPresence !== presence) { this.root.dataset.showcasePresence = String(presence); this.reportedPresence = presence }
+    if (this.root && this.reportedPresence !== presence) { this.root.dataset[this.dataKey + 'Presence'] = String(presence); this.reportedPresence = presence }
     const settled = this.displayed === this.selected && this.transition === 1
-    const state = this.enabled ? `${settled ? projects[this.selected].slug : ''}|${settled}` : ''
+    const state = this.enabled ? `${settled ? this.items[this.selected].slug : ''}|${settled}` : ''
     if (state === this.reported || !this.root) return
     this.reported = state
-    if (!this.enabled || !settled) delete this.root.dataset.showcaseProject
-    else this.root.dataset.showcaseProject = projects[this.selected].slug
-    this.root.dataset.showcaseLit = String(this.enabled && settled)
+    if (!this.enabled || !settled) delete this.root.dataset[this.dataKey + 'Project']
+    else this.root.dataset[this.dataKey + 'Project'] = this.items[this.selected].slug
+    this.root.dataset[this.dataKey + 'Lit'] = String(this.enabled && settled)
   }
 
   dispose() {
@@ -622,6 +630,6 @@ export class ProjectShowcase {
     this.environment?.dispose()
     this.warm?.copies.forEach(material => material.dispose())
     this.warm = null
-    if (this.root) { delete this.root.dataset.showcase; delete this.root.dataset.showcaseProject; delete this.root.dataset.showcaseLit }
+    if (this.root) { delete this.root.dataset[this.dataKey]; delete this.root.dataset[this.dataKey + 'Project']; delete this.root.dataset[this.dataKey + 'Lit'] }
   }
 }

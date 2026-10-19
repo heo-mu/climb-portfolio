@@ -1,0 +1,6 @@
+.storybook-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 4px; background: rgb(210 225 222 / 4%); color: #bdccc6; font: inherit; font-size: 13px; line-height: 24px; text-decoration: none; }
+.storybook-action:disabled { cursor: default; opacity: 1; }
+.storybook-action small { font-size: 11px; color: #91a6a1; }
+.storybook-action svg { width: 16px; height: 16px; }
+a.storybook-action:hover { background: rgb(210 225 222 / 8%); }
+a.storybook-action:focus-visible { outline: 1px solid #c6dbd1; outline-offset: 3px; }

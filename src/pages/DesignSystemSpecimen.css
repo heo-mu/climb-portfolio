@@ -1,0 +1,78 @@
+@font-face { font-family: 'Specimen Pretendard'; src: url('/design-system/PretendardVariable.woff2') format('woff2'); font-weight: 45 920; font-style: normal; font-display: swap; }
+.system-detail .ds-field { display: flex; flex-direction: column; gap: 6px; width: 320px; max-width: 100%; font-family: 'Specimen Pretendard', sans-serif; letter-spacing: 0; }
+.ds-field > label { font-size: 14px; line-height: 20px; color: #404b5d; }
+.ds-input-shell { position: relative; display: flex; gap: 8px; align-items: center; height: 44px; padding: 10px 12px; border-radius: 4px; border-style: solid; }
+.ds-input-shell input { width: 0; min-width: 0; flex: 1; padding: 0; border: 0; outline: none; background: transparent; color: inherit; font: 400 16px/24px 'Specimen Pretendard', sans-serif; }
+.ds-input-shell input::placeholder { color: var(--input-placeholder); opacity: 1; }
+.ds-input-shell input:disabled { opacity: 1; -webkit-text-fill-color: currentColor; }
+.system-detail .ds-field-action { display: flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 24px; position: relative; }
+.ds-field-action::before { content: ''; position: absolute; inset: -10px -2px; }
+.ds-field-action svg { display: block; flex: none; }
+.system-detail .ds-field-action:focus-visible { outline: 2px solid #131c2b; outline-offset: 2px; }
+.ds-field-action:disabled { cursor: default; }
+.ds-input-helper { min-height: 16px; display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; letter-spacing: .12px; }
+.ds-input-helper svg { display: block; flex: none; }
+
+
+/* Dark editorial stage: field geometry and internal states retain their source values. */
+.system-specimen { min-width: 0; }
+.input-workspace { display: grid; grid-template-columns: round(down, 36%, 2px) minmax(0, 1fr); grid-template-areas: 'variant preview' 'content preview' 'visibility preview'; gap: 0; align-items: start; padding: 0; background: rgb(10 20 24 / 18%); }
+.input-properties { min-width: 0; display: grid; gap: 8px; padding: 12px 24px; }
+.property-variant { grid-area: variant; padding-top: 28px; }
+.property-content { grid-area: content; }
+.property-visibility { grid-area: visibility; padding-bottom: 28px; }
+.specimen-choices { position: relative; border: 0; padding: 0 0 0 80px; min-width: 0; margin: 0; }
+.specimen-choices legend { position: absolute; left: 0; top: 12px; padding: 0; color: #dce5e2; font-size: 14px; line-height: 20px; }
+.specimen-choices > div { display: flex; flex-wrap: wrap; gap: 4px; }
+.specimen-choices label { position: relative; display: flex; min-width: 44px; cursor: pointer; }
+.specimen-choices input { position: absolute; inset: 0; opacity: 0; margin: 0; width: 100%; height: 100%; cursor: pointer; }
+.specimen-choices label > span { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 4px; font-size: 14px; line-height: 20px; color: #aebfb6; }
+.specimen-choices input:checked + span { background: #3b514b; color: #eff4f1; }
+.specimen-choices label:hover > span { background: #354740; }
+.specimen-choices input:focus-visible + span { outline: 2px solid #c6dbd1; outline-offset: 2px; }
+.property-text, .property-select { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: center; font-size: 14px; line-height: 20px; color: #dce5e2; }
+.property-text input, .property-select select { width: 100%; min-width: 0; height: 44px; border: 1px solid transparent; border-radius: 4px; padding: 8px 10px; background: rgb(210 225 222 / 5%); color: #e2ebe6; font: 400 14px/20px 'Specimen Pretendard', sans-serif; }
+.property-text input:hover, .property-select select:hover { background: #2c3b3f; }
+.property-text input:focus-visible { outline: 2px solid #c6dbd1; outline-offset: 2px; }
+/* Native select keeps its keyboard behavior. */
+.property-select-control { position: relative; min-width: 0; }
+.property-select select { appearance: none; padding: 12px 40px 12px 12px; cursor: pointer; }
+.property-select-control > svg { position: absolute; right: 12px; top: 14px; pointer-events: none; color: #b8cbc4; }
+.property-select select:hover { background: #253137; }
+.property-select select:focus-visible { background: #2c3b3f; outline: 1px solid #c6dbd1; outline-offset: 2px; }
+.property-booleans { display: grid; gap: 0; }
+.property-booleans button { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 36px; padding: 0; border-radius: 4px; font-size: 14px; line-height: 20px; color: #bfcec6; cursor: pointer; }
+.property-switch-state { display: flex; align-items: center; gap: 10px; }
+.property-switch-state > span { width: 24px; text-align: center; font-size: 11px; line-height: 16px; letter-spacing: .02em; }
+.property-booleans i { position: relative; display: block; flex: none; width: 28px; height: 16px; border: 0; border-radius: 4px; background: #35443f; }
+.property-booleans i::before { content: ''; position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 2px; background: #8d9d96; }
+.property-booleans [aria-checked="true"] { color: #e2ebe6; }
+.property-booleans [aria-checked="true"] i { background: #465a50; }
+.property-booleans [aria-checked="true"] i::before { left: 15px; background: #bccbc2; }
+.property-booleans button:hover i { background: #52675d; }
+.property-booleans button:focus-visible { outline: 1px solid #c6dbd1; outline-offset: 2px; }
+.input-preview { grid-area: preview; min-width: 0; align-self: stretch; display: grid; position: static; }
+.input-stage { display: flex; flex-direction: column; min-width: 0; padding: var(--system-pad-interactive, 32px); background: rgb(210 225 222 / 4%); }
+.input-preview-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding-block: 36px; }
+.input-preview-paper { min-width: 0; width: min(100%, 320px); padding: 0; color-scheme: light; }
+@media (max-width: 1000px) {
+ .input-properties { padding-inline: 20px; }
+ .input-stage { padding: 24px; }
+ .specimen-choices { padding-left: 76px; }
+ .property-text, .property-select { grid-template-columns: 76px minmax(0, 1fr); }
+ .specimen-choices legend, .property-text, .property-select { font-size: 13px; }
+
+}
+@media (max-width: 700px) {
+ .input-workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'variant' 'preview' 'content' 'visibility'; gap: 0; padding: 0; }
+ .input-stage { padding: 40px 24px; }
+
+ .input-preview-body { padding-block: 20px; }
+
+}
+
+.system-detail .property-group-heading { margin: 0 0 4px; font-size: 12px; line-height: 20px; font-weight: 500; color: #91a6a1; }
+
+@media (pointer: coarse), (max-width: 700px) {
+ .property-booleans button { min-height: 44px; }
+}

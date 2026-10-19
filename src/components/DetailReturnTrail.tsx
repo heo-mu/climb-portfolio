@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
 import './DetailReturnTrail.css'
 
-export function DetailReturnTrail({ projectSlug, backLinkRef }: { projectSlug: string; backLinkRef: RefObject<HTMLAnchorElement | null> }) {
+export function DetailReturnTrail({ projectSlug, backLinkRef, destination = '/#high-camp', label = 'Projects' }: { projectSlug?: string; backLinkRef: RefObject<HTMLAnchorElement | null>; destination?: string; label?: string }) {
   const [visible, setVisible] = useState(false)
   const trailRef = useRef<HTMLAnchorElement>(null)
 
@@ -34,11 +34,11 @@ export function DetailReturnTrail({ projectSlug, backLinkRef }: { projectSlug: s
       window.removeEventListener('resize', schedule)
       cancelAnimationFrame(frame)
     }
-  }, [backLinkRef, projectSlug])
+  }, [backLinkRef, projectSlug, destination])
 
-  return <Link ref={trailRef} className="detail-return-trail" data-visible={visible} to="/#high-camp" state={{ project: projectSlug }} aria-label="Projects로 돌아가기" aria-hidden={!visible} tabIndex={visible ? 0 : -1}>
+  return <Link ref={trailRef} className="detail-return-trail" data-visible={visible} to={destination} state={projectSlug ? { project: projectSlug } : undefined} aria-label={label + "로 돌아가기"} aria-hidden={!visible} tabIndex={visible ? 0 : -1}>
     <span className="detail-return-trail-arrow" aria-hidden="true">←</span>
-    <span className="detail-return-trail-label">Projects</span>
+    <span className="detail-return-trail-label">{label}</span>
     <span className="detail-return-trail-track" aria-hidden="true"><span /></span>
   </Link>
 }

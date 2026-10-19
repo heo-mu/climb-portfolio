@@ -1,0 +1,38 @@
+.system-detail {
+  --code-fill: rgb(210 225 222 / 6%);
+  --code-border: transparent;
+  --code-text: #aebfba;
+}
+.system-detail code.code-badge {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--code-border);
+  border-radius: 5px;
+  background: var(--code-fill);
+  color: var(--code-text);
+  font: 400 12px/20px ui-monospace, 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-align: start;
+  vertical-align: baseline;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.system-detail code.code-badge--inline {
+  display: inline;
+  padding: 1px 5px;
+  font-size: 12px;
+  line-height: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.code-badge-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.system-detail .specimen-stage {
+  --code-fill: rgb(48 77 70 / 5%);
+  --code-border: transparent;
+  --code-text: #435b54;
+}

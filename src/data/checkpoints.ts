@@ -3,7 +3,7 @@ const routeStops = [
   { id: 'base-camp', navigation: 'Home', name: 'Base Camp', altitude: 1240 },
   { id: 'about', navigation: 'About', name: 'Approach', altitude: 1887 },
   { id: 'camp-one', navigation: 'AI Workflow', name: 'Camp I', altitude: 2858 },
-  { id: 'systems', navigation: 'Systems', name: 'Systems Camp', altitude: 3560 },
+  { id: 'systems', navigation: 'Design System', name: 'Design System Camp', altitude: 3560 },
   { id: 'camp-two', navigation: 'Tools', name: 'Camp II', altitude: 4321 },
   { id: 'high-camp', navigation: 'Projects', name: 'High Camp', altitude: 5824 },
   { id: 'summit', navigation: 'Contact', name: 'Summit', altitude: 6956 },

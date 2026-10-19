@@ -1,136 +1,167 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
+import { UserCircleIcon } from '@phosphor-icons/react/dist/csr/UserCircle'
+import { PlugsConnectedIcon } from '@phosphor-icons/react/dist/csr/PlugsConnected'
+import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ClockCounterClockwise'
+import { PackageIcon } from '@phosphor-icons/react/dist/csr/Package'
+import { CodeIcon } from '@phosphor-icons/react/dist/csr/Code'
+import { LayoutIcon } from '@phosphor-icons/react/dist/csr/Layout'
+import { StackIcon } from '@phosphor-icons/react/dist/csr/Stack'
+import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour'
 import { useCaseMotion } from '../components/useCaseMotion'
+import { DetailReturnTrail } from '../components/DetailReturnTrail'
 import { ArrowUpRight } from '../components/ArrowUpRight'
+import { SystemFoundations } from '../components/SystemFoundations'
+import { CodeBadge } from './CodeBadge'
+import { StorybookAction } from '../components/StorybookAction'
+import { InputSpecimen } from './DesignSystemSpecimen'
 import '../components/CaseStudy.css'
 import '../components/CaseMotion.css'
 import './DesignSystemDetail.css'
+import figmaMark from '../assets/brands/Figma Icon (Full-color).svg'
+import claudeMark from '../assets/brands/Claude Spark - Clay.svg'
+import mcpMark from '../assets/brands/mcp-favicon.svg'
 
-const architecture = [
-  ['Foundation', '색·글자·간격의 기본 언어'], ['Tokens', '의미와 역할을 가진 공통 값'],
-  ['Components', '상태를 포함한 재사용 단위'], ['Patterns', '실제 업무를 수행하는 흐름'],
-  ['UX Policy', '표현·행동·예외의 판단 기준'], ['Product', '같은 기준으로 확장하는 화면'],
-]
-const foundations = [
-  ['Color', '표현의 역할', '텍스트 · 배경 · 상태'], ['Typography', '정보의 위계', '제목 · 본문 · 보조 설명'],
-  ['Spacing / Grid', '배치의 관계', '입력 내부 간격 · 폼 간격 · 화면 정렬'], ['Radius / Breakpoint', '형태와 화면 대응', '컴포넌트 모서리 · 화면 크기에 따른 배치'],
-]
-const states = [
-  ['Default', '기본 상태', '시작할 수 있는 행동을 보여줘요.'], ['Hover / Active', '가리킴 · 선택', '반응과 현재 선택을 구분해요.'],
-  ['Focus', '입력 위치', '키보드로 이동한 위치를 보여줘요.'], ['Disabled', '사용 불가', '지금 실행할 수 없는 상태를 구분해요.'],
-  ['Read-only', '읽기 전용', '확인할 수 있지만 수정할 수 없어요.'], ['Error', '확인 필요', '무엇을 수정해야 하는지 함께 알려줘요.'],
-]
+// Original assets: Figma brand ZIP, Anthropic press kit, and official MCP repository.
+// https://www.figma.com/using-the-figma-brand/ | https://anthropic.com/press-kit
+// https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/favicon.svg
+const brandMarks = { figma: figmaMark, claude: claudeMark, mcp: mcpMark }
+function BrandMark({ brand }: { brand: keyof typeof brandMarks }) {
+  return <span className={'ai-brand-mark ai-brand-mark--' + brand} aria-hidden="true"><img src={brandMarks[brand]} alt="" /></span>
+}
 
-function SystemSection({ index, label, heading, body, tone = 'base', children }: {
-  index: number; label: string; heading: string; body?: string; tone?: 'base' | 'elevated' | 'focus'; children?: ReactNode
+
+// Existing Figma-verified alias chain. The visual introduces no new token or variant.
+const variableLinks = [
+  ['Primitive', '원본 색상', 'colors/emerald/900', '#004A38'],
+  ['Theme', '브랜드 기준', 'colors/brand/900', 'colors/emerald/900'],
+  ['Semantic', '화면에서 쓰는 역할', 'colors/fill/primary/strong/default', 'colors/brand/900'],
+  ['Component', '실제 컴포넌트', 'colors/button/primary/solid/background/default', 'colors/fill/primary/strong/default'],
+]
+// The delivery and review practices below are supplied by the case-study author.
+const systemDelivery = [
+  [ClockCounterClockwiseIcon, '버전 관리', '변경 내용을 버전 단위로 관리해요.'],
+  [PackageIcon, 'npm 패키지', '개발자가 설치해 사용할 수 있는 형태로 만들었어요.'],
+  [CodeIcon, '프론트엔드 사용', '실제 화면 개발에서 재사용해요.'],
+] as const
+
+function SystemSection({ index, title, description, scene, children }: {
+  index: number; title: string; description?: string; scene: string; children: ReactNode
 }) {
-  return <section className="case-section system-section" data-tone={tone} aria-labelledby={`system-heading-${index}`}>
-    <div className="case-label mono"><span>{String(index).padStart(2, '0')}</span>{label}</div>
-    <div className="case-content"><h2 id={`system-heading-${index}`}>{heading}</h2>{body && <p>{body}</p>}</div>
+  return <section className={'case-section system-section system-scene--' + scene} data-section-order={index} aria-labelledby={'system-heading-' + index}>
+    <div className="system-section-heading">
+      <div className="case-content"><h2 id={'system-heading-' + index}>{title}</h2>{description && <p>{description}</p>}</div>
+    </div>
     {children}
   </section>
 }
-
-function SystemReturn({ closing = false }: { closing?: boolean }) {
-  return <Link to="/#systems" className={closing ? 'case-external-link' : 'back-link'}>
+function SystemReturn({ closing = false, linkRef }: { closing?: boolean; linkRef?: RefObject<HTMLAnchorElement | null> }) {
+  return <Link ref={linkRef} to="/#systems" className={closing ? 'case-external-link' : 'back-link'}>
     {!closing && <svg className="back-link-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><path d="M13.5 8.5h-11m4-4-4 4 4 4" /></svg>}
-    Back to Designing Systems{closing && <ArrowUpRight className="case-external-arrow" />}
+    Back to Design System{closing && <ArrowUpRight className="case-external-arrow" />}
   </Link>
 }
-
+function SystemOverview() {
+  return <div className="system-glance system-group system-wide">
+    <div className="glance-stage glance-core">
+      <StackIcon size={32} weight="regular" aria-hidden="true" /><h3>공통 기준</h3><p>Core</p>
+      <SystemFoundations className="foundation-grid" />
+    </div>
+    <div className="glance-spine" aria-hidden="true" />
+    <div className="glance-stage glance-platform">
+      <LayoutIcon size={32} weight="regular" aria-hidden="true" /><h3>환경별 시스템</h3><p>Platform</p>
+      <div className="glance-branches">{['DT', 'Web'].map(name => <div className="glance-branch" key={name}><h4>{name} 디자인 시스템</h4></div>)}</div>
+    </div>
+    <div className="glance-spine" aria-hidden="true" />
+    <div className="glance-stage glance-project">
+      <SquaresFourIcon size={32} weight="regular" aria-hidden="true" /><h3>실제 서비스</h3><p>Project</p>
+    </div>
+  </div>
+}
+function TokenFlow() {
+  return <div className="token-composition system-wide">
+    <ol className="token-flow" aria-label="Primitive → Theme → Semantic → Component">{variableLinks.map(([layer, meaning, name], index) => <li key={layer}>
+      <span className="token-order" aria-hidden="true">0{index + 1}</span>
+      <div className="token-meaning"><h3>{meaning}</h3><p>{layer}</p></div>
+      <div className="token-reference">{index === 0 ? <div className="token-source"><div className="token-source-color" aria-label="원본 색상 #004A38" /><div className="code-badge-group"><CodeBadge>#004A38</CodeBadge><CodeBadge>{name}</CodeBadge></div></div> : <CodeBadge>{name}</CodeBadge>}</div>
+    </li>)}</ol>
+  </div>
+}
+function ChangePropagation() {
+  return <div className="propagation-network system-wide">
+    <div className="propagation-reach system-group">
+      <ol className="propagation-chain" aria-label="Theme → Semantic → Component → Service">
+        <li className="propagation-origin"><strong>바꾸는 색상 기준</strong><span>Theme</span><div className="propagation-node-visual"><i className="propagation-color" aria-label="확인된 기준 색상 #004A38" /><CodeBadge>#004A38</CodeBadge></div></li>
+        <li><strong>같은 역할 유지</strong><span>Semantic</span><div className="propagation-node-visual"><PlugsConnectedIcon size={32} weight="regular" aria-hidden="true" /><small>참조하는 값만 반영</small></div></li>
+        <li><strong>컴포넌트에 적용</strong><span>Component</span><div className="propagation-node-visual"><SquaresFourIcon size={32} weight="regular" aria-hidden="true" /><small>같은 역할을 쓰는 UI</small></div></li>
+        <li><strong>여러 화면에 반영</strong><span>Service</span>
+          <div className="propagation-services" aria-hidden="true">{[0, 1].map(index => <div className="propagation-service" key={index}><div className="service-wireframe" aria-hidden="true"><i /><div><b /><b /><b /></div></div></div>)}</div>
+        </li>
+      </ol>
+    </div>
+  </div>
+}
+function AIConnectedSystem() {
+  return <div className="ai-connected-system system-group system-wide">
+    <div className="ai-design-loop">
+      <div className="ai-human-review">
+        <UserCircleIcon size={32} weight="regular" aria-hidden="true" />
+        <h3>최종 결과는 직접 검토해요</h3>
+        <p>오류와 디자인을 확인하고, 최종 판단은 직접 해요.</p>
+      </div>
+      <div className="ai-review-bridge" aria-hidden="true" />
+      <ol className="ai-reference-flow" aria-label="디자이너가 함께 검토하는 Figma, Figma MCP, Claude 연결">
+        <li><BrandMark brand="figma" /><h4>Figma</h4><p>컴포넌트와 변수를 관리해요.</p></li>
+        <li><BrandMark brand="mcp" /><h4>Figma MCP</h4><p>Claude가 같은 기준을 보게 연결해요.</p></li>
+        <li><BrandMark brand="claude" /><h4>Claude</h4><p>화면 구조·오류·누락을 함께 살펴요.</p></li>
+      </ol>
+    </div>
+    <div className="ai-delivery">
+      <h3>검토한 기준을 개발자가 쓸 수 있게</h3>
+      <p><span className="ai-copy-line">AI와 컴포넌트 구조·패키지 구성을 정리하고,</span><span className="ai-copy-line">개발자가 npm으로 설치해 쓰도록 만들었어요.</span></p>
+      <ol className="ai-delivery-flow" aria-label="버전 관리에서 npm 패키지를 거쳐 프론트엔드 사용까지">{systemDelivery.map(([Icon, title, description]) => <li key={title}>
+        <Icon size={24} weight="regular" aria-hidden="true" /><h4>{title}</h4><p>{description}</p>
+      </li>)}</ol>
+    </div>
+  </div>
+}
+function StorybookResult() {
+  return <div className="storybook-result system-group system-wide">
+    <ol className="storybook-flow" aria-label="Figma 설계에서 AI 구현, Storybook 확인, 개발 활용까지">
+      <li><strong>설계</strong><span>Figma</span><p>컴포넌트 · 변수 · 상태</p></li>
+      <li><strong>구현</strong><span>AI</span><p>기존 기준으로 구조와 스타일 구현</p></li>
+      <li><strong>확인</strong><span>Storybook</span><p>컴포넌트별 형태와 상태 확인</p></li>
+      <li><strong>개발 활용</strong><span>Frontend</span><p>실제 구현 기준으로 사용</p></li>
+    </ol>
+    <div className="storybook-review">
+      <p>화면 전체를 열지 않아도 컴포넌트 하나씩 상태와 스타일을 확인할 수 있어요.</p>
+      <p>Figma 구조·토큰 확인부터 코드 구현·상태 구성·Storybook 등록까지 AI를 활용했어요. 결과는 직접 비교하고, 오류를 수정하며 정합성을 확인했어요.</p>
+      <StorybookAction />
+    </div>
+  </div>
+}
 export function DesignSystemDetail() {
   const root = useRef<HTMLDivElement>(null)
+  const backLinkRef = useRef<HTMLAnchorElement>(null)
   useCaseMotion(root, 'design-system')
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
-    document.title = 'Designing Systems — Heo Chang Mu'
+    document.title = 'Design System — Heo Chang Mu'
     root.current?.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true })
   }, [])
   return <main className="project-detail project-detail-editorial system-detail">
-    <header className="detail-header"><SystemReturn /></header>
+    <header className="detail-header"><SystemReturn linkRef={backLinkRef} /></header>
+    <DetailReturnTrail backLinkRef={backLinkRef} destination="/#systems" label="Design System" />
     <div ref={root} className="case-study">
-      <div className="detail-wrap system-introduction">
-        <p className="mono system-eyebrow">Company-wide Design System</p>
-        <h1 className="detail-title" tabIndex={-1}>Designing Systems.</h1>
-        <p className="detail-summary">제품을 만드는 기준을,<br />사람과 AI가 함께 쓰는 언어로.</p>
-        <ul className="system-positioning" aria-label="시스템의 범위"><li>Company-wide Foundation</li><li>Product Rules</li><li>AI-ready Workflow</li></ul>
-      </div>
-
-      <SystemSection index={1} label="Overview" heading="제품마다 반복되던 기준을, 하나의 시스템으로 만들었어요." body="프로젝트마다 다시 정의하던 UI 규칙을 공통 기반으로 정리하고, Figma와 코드, AI 작업까지 같은 기준을 참조할 수 있는 사내 범용 디자인 시스템을 구축했어요." />
-
-      <SystemSection index={2} label="The Problem" heading="화면보다, 반복되는 판단을 먼저 줄였어요." body="간격부터 상태·검증·문구까지, 프로젝트마다 같은 결정을 반복하면 결과도 달라지기 쉬워요. AI로 제작이 빨라질수록 공통 기준 없이 UI의 편차도 커질 수 있다고 봤어요." tone="elevated">
-        <div className="system-decision-line"><span>화면마다 다시 결정</span><i aria-hidden="true">→</i><strong>공통 기준으로 먼저 정의</strong><i aria-hidden="true">→</i><span>제품에 맞게 적용</span></div>
-      </SystemSection>
-
-      <SystemSection index={3} label="System Architecture" heading="작은 기준이 제품 전체로 이어지게 설계했어요." body="기반 값, 상태, 업무 흐름과 정책이 이어져야 화면을 확장해도 같은 제품 언어를 유지할 수 있어요." tone="focus">
-        <div className="system-architecture">
-          <ol className="system-architecture-layers">{architecture.map(([title, description], i) => <li key={title}><span className="system-number">0{i + 1}</span><h3>{title}</h3><p>{description}</p></li>)}</ol>
-          <div className="system-reference" aria-label="Figma와 코드, AI가 같은 디자인 시스템을 참조하는 관계">
-            <span className="mono">One shared reference</span><h3>같은 기준을 참조해요.</h3>
-            <div>Figma<span>Variables · Components</span></div><i aria-hidden="true">↕</i>
-            <strong>Design System<span>Token · Pattern · Policy</span></strong><i aria-hidden="true">↕</i>
-            <div>Code / AI Agent<span>구현 · 재사용 · 검토</span></div>
-            <p>화면의 모양뿐 아니라<br />사용하는 규칙까지 연결해요.</p>
-          </div>
-        </div>
-      </SystemSection>
-
-      <SystemSection index={4} label="Foundation" heading="값을 모으는 대신, 사용하는 이유를 연결했어요." body="색·글자·간격·그리드·모서리·화면 크기 대응을 공통 기반으로 정리했어요. 아래는 구체적인 토큰명 대신 값에서 실제 UI로 이어지는 관계를 보여줘요.">
-        <div className="system-token-map" role="table" aria-label="기반 값에서 토큰의 역할과 UI 사용처로 이어지는 관계">
-          <div role="row" className="system-map-header"><span role="columnheader">기반 값</span><span role="columnheader">Token의 역할</span><span role="columnheader">실제 UI</span></div>
-          {foundations.map(row => <div role="row" key={row[0]}>{row.map((cell, i) => <span role={i ? 'cell' : 'rowheader'} key={cell}>{cell}</span>)}</div>)}
-        </div>
-      </SystemSection>
-
-      <SystemSection index={5} label="Components & States" heading="모양뿐 아니라, 상황에 따른 동작까지 정의했어요." body="Button·Input·Select·Table·Modal·Toast를 재사용 단위로 정리하고, 각 컴포넌트에서 필요한 상태를 구분했어요." tone="elevated">
-        <div className="system-state-matrix" role="table" aria-label="컴포넌트의 상태를 구분하는 기준">
-          <div role="row" className="system-map-header"><span role="columnheader">State</span><span role="columnheader">의미</span><span role="columnheader">사용자에게 전달할 정보</span></div>
-          {states.map(([state, label, text]) => <div role="row" key={state}><span role="rowheader" className="system-state-name">{state}</span><span role="cell">{label}</span><span role="cell">{text}</span></div>)}
-        </div>
-      </SystemSection>
-
-      <SystemSection index={6} label="Product Patterns" heading="컴포넌트의 조합을, 업무 흐름으로 정리했어요." body="검색하고, 결과를 확인하고, 입력한 뒤 처리하는 흐름을 더 큰 단위로 묶었어요. 결과가 없거나 접근할 수 없는 상황도 같은 흐름 안에서 다뤄요.">
-        <ol className="system-pattern-flow">
-          <li><span className="system-number">01</span><h3>찾기</h3><p>Search / Filter</p><small>검색 조건과 선택 상태</small></li>
-          <li><span className="system-number">02</span><h3>확인하기</h3><p>Table</p><small>Loading · Empty · Permission</small></li>
-          <li><span className="system-number">03</span><h3>작성하기</h3><p>Form / Modal</p><small>입력 기준 · Validation · Error</small></li>
-          <li><span className="system-number">04</span><h3>마무리하기</h3><p>Confirmation / Toast</p><small>행동 확인과 처리 결과</small></li>
-        </ol>
-      </SystemSection>
-
-      <SystemSection index={7} label="UX Policy" heading="컴포넌트만으로 설명되지 않는 규칙도 시스템에 담았어요." body="같은 행동이 다른 화면에서 다르게 표현되지 않도록, 문구·상태·예외 상황까지 판단 기준으로 연결했어요." tone="elevated">
-        <dl className="system-policy-list">
-          <div><dt>행동의 순서</dt><dd>확인 / 취소 순서, 주요·보조 행동 위계와 Table 액션을 함께 정리해요.</dd></div>
-          <div><dt>입력과 예외</dt><dd>Validation 위치, 오류 메시지, 데이터가 없는 상태의 안내 기준을 정의해요.</dd></div>
-          <div><dt>표현의 일관성</dt><dd>날짜 형식, 버튼 명칭, Toast 문구처럼 반복되는 표현을 통일해요.</dd></div>
-          <div><dt>조회와 관리 범위</dt><dd>Read-only와 Permission을 구분해, 확인과 수정의 범위가 화면에서도 읽히게 해요.</dd></div>
-        </dl>
-      </SystemSection>
-
-      <SystemSection index={8} label="AI Workflow" heading="AI가 빨라질수록, 기준은 더 명확해야 했어요." body="화면만 요청하기보다 Design System을 맥락으로 제공해요. AI가 새 스타일을 임의로 만드는 대신 Token·Component·Pattern·Policy를 기준으로 구현하도록 해요." tone="focus">
-        <ol className="system-ai-flow">{[
-          ['요구사항', '무엇을 만들지 정해요.'], ['시스템 기준 제공', 'Figma · Tokens · MCP'], ['AI 구현', 'Claude / Coding Agent'], ['직접 검토', '업무 흐름과 규칙을 확인해요.'], ['규칙 보완', '반복 문제를 기준에 반영해요.'],
-        ].map(([title, text], i) => <li key={title}><span className="system-number">0{i + 1}</span><h3>{title}</h3><p>{text}</p></li>)}</ol>
-        <div className="case-conclusion"><p className="case-conclusion-primary">반복 제작은 AI가 줄이고, 시스템과 최종 판단은 직접 책임져요.</p></div>
-      </SystemSection>
-
-      <SystemSection index={9} label="Figma & Code" heading="도구가 달라도, 참조하는 기준은 같게 가져가요." body="Figma의 Foundation과 Components를 출발점으로, 이름과 상태·사용 규칙을 코드와 AI 작업에서도 참조할 수 있게 정리했어요.">
-        <div className="system-contract"><div><span className="mono">Design</span><h3>Figma</h3><p>Variables / Tokens<br />Components / States</p></div><div className="system-contract-center"><span className="mono">Shared contract</span><h3>이름 · 역할 · 사용 규칙</h3><p>화면을 옮길 때도 유지할 기준</p></div><div><span className="mono">Implementation</span><h3>Code / AI Agent</h3><p>기존 기준 참조<br />구현 후 직접 검토</p></div></div>
-        <p className="system-scope-note">연결의 기준은 공통 이름과 사용 규칙이에요. 자동 Token Sync나 React 컴포넌트 자동 생성까지 구축했다는 의미는 아니에요.</p>
-      </SystemSection>
-
-      <SystemSection index={10} label="Validation" heading="한 번 만드는 것보다, 계속 같은 기준을 유지하는 게 중요했어요." body="AI가 만든 화면도 시스템을 따르는지 직접 확인해요. 반복되는 문제는 화면 하나만 고치는 대신 공통 규칙으로 돌아가 점검해요." tone="elevated">
-        <dl className="system-policy-list">
-          <div><dt>참조 기준</dt><dd>공통 원본을 기준으로 이름, 컴포넌트 책임과 상태 정의를 확인해요.</dd></div>
-          <div><dt>예외와 변경</dt><dd>새 규칙이 필요한지, 기존 규칙으로 해결할 수 있는지 먼저 검토해요.</dd></div>
-          <div><dt>지속적인 검증</dt><dd>변경된 기준과 더 이상 쓰지 않을 규칙을 구분하고, 적용 화면의 일관성을 확인하는 방향으로 관리해요.</dd></div>
-        </dl>
-      </SystemSection>
-
-      <SystemSection index={11} label="Reflection" heading="AI가 빨라질수록, 디자인 시스템의 역할은 더 커졌어요." body="디자이너와 개발자가 같은 UI를 만드는 기준에서, AI Agent까지 같은 제품 언어를 사용하는 기반으로 역할이 확장됐어요." tone="focus">
-        <div className="case-conclusion"><p className="case-conclusion-primary">더 빨리 만드는 것보다, 같은 기준으로 계속 만들 수 있는 구조를 설계했어요.</p></div>
-        <div className="system-return"><SystemReturn closing /></div>
-      </SystemSection>
+      <div className="detail-wrap system-introduction"><h1 className="detail-title" tabIndex={-1}>Design System.</h1><p className="detail-summary">여러 서비스가 함께 쓸 디자인 기준을 만들고, DT·Web 환경에 맞춰 실제 화면에 적용했어요.</p></div>
+      <SystemSection index={1} title="공통 기준에서 실제 서비스까지" description="공통 기준이 DT·Web 시스템을 거쳐 실제 서비스에 적용되는 구조를 보여줘요." scene="overview"><SystemOverview /></SystemSection>
+      <SystemSection index={2} title="기본 값이 화면에 쓰이기까지" description="색상 같은 기본 값이 역할별 토큰을 거쳐 실제 UI에 연결되는 과정을 보여줘요." scene="token"><TokenFlow /></SystemSection>
+      <SystemSection index={3} title="컴포넌트 하나를 여러 형태로" description="컴포넌트를 다시 만들지 않고, 속성을 바꿔 여러 상황에 사용하는 방식을 보여줘요." scene="component"><div className="system-wide"><InputSpecimen /></div></SystemSection>
+      <SystemSection index={4} title="한 곳의 변경을 연결된 화면까지" description="한 곳의 기준을 바꾸면 연결된 컴포넌트와 서비스 화면에도 같은 변경이 이어져요." scene="propagation"><ChangePropagation /></SystemSection>
+      <SystemSection index={5} title="AI와 검토하고 개발까지 연결해요" description="Figma 기준을 Claude와 검토하고, 개발자가 쓰는 패키지로 연결한 과정을 보여줘요." scene="ai"><AIConnectedSystem /></SystemSection>
+      <SystemSection index={6} title="설계한 컴포넌트를 Storybook까지 구현했어요" description="Figma의 컴포넌트와 상태를 AI로 구현해, Storybook에서 확인할 수 있게 했어요." scene="storybook"><StorybookResult /></SystemSection>
+      <SystemSection index={7} title="하나의 기준을 넓혀, 여러 서비스가 같은 디자인 언어를 쓰도록 만들었어요." scene="conclusion">{null}</SystemSection>
     </div>
+    <footer className="detail-closing"><nav className="detail-closing-inner" aria-label="메인 Journey로 돌아가기"><SystemReturn closing /></nav></footer>
   </main>
 }

@@ -1,53 +1,76 @@
-.checkpoint-systems { width: 54vw; max-width: 810px; --panel-reach: calc(min(54vw, 810px) - 30px); }
-.systems-intro { margin-top: 20px; font-size: 16px; line-height: 26px; color: #d2dcd9; word-break: keep-all; }
-.systems-foundations { list-style: none; padding: 0; margin: 26px 0 0; }
-.systems-foundations > li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; padding: 15px 0; border-top: 1px solid rgb(217 233 240 / 16%); }
-.systems-index { color: #a6b87d; font-size: 10px; line-height: 22px; font-variant-numeric: tabular-nums; }
-.systems-foundations h2 { font-size: 15px; line-height: 22px; font-weight: 550; }
-.systems-foundations p { color: #c4d1d1; font-size: 13px; line-height: 22px; margin-top: 3px; }
-.systems-terms { display: block; font-size: 11px; line-height: 18px; color: #9eb3be; margin-top: 6px; }
-.systems-chain { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 15px; border-top: 1px solid rgb(217 233 240 / 16%); color: #b7c8ce; font-size: 10px; line-height: 18px; }
-.systems-chain i { font-style: normal; color: #728a98; }
-.systems-chain-code { flex-basis: 100%; color: #99aeb6; }
-.systems-case-link { display: inline-flex; align-items: center; gap: 22px; min-height: 44px; margin-top: 16px; font-size: 13px; border-bottom: 1px solid #71858a; transition: color .18s, border-color .18s; }
-.systems-case-link svg { width: 14px; height: 14px; }
-.systems-case-link:is(:hover, :focus-visible) { color: #d5ff40; border-color: #d5ff40; }
-@media (max-width: 1000px) and (min-width: 768px) {
-  .checkpoint-systems { width: calc(100vw - 200px); max-width: 620px; --panel-reach: calc(min(100vw - 200px, 620px) - 20px); }
+.checkpoint-systems { width: 34vw; max-width: 550px; --panel-reach: calc(min(34vw, 550px) - 30px); }
+.checkpoint-systems .panel-kicker { margin-bottom: 14px; }
+.checkpoint-systems .portfolio-heading { font-size: clamp(38px, 3.2vw, 50px); font-weight: 600; line-height: 1.1; line-height: round(nearest, 1.1em, 1px); letter-spacing: -.045em; }
+
+.systems-intro { margin-top: 16px; max-width: none; font-size: 14px; line-height: 24px; color: #bdccd2; word-break: keep-all; }
+.systems-summary { margin-top: 32px; }
+.systems-case-link { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; width: 192px; min-height: 48px; max-width: 100%; padding: 11px 0; margin-top: 32px; border-bottom: 1px solid #637779; color: #e6eeeb; text-decoration: none; transition: border-color 160ms, color 160ms; }
+.systems-case-link strong { font-size: 14px; line-height: 24px; font-weight: 550; }
+.systems-case-link svg { flex: none; width: 18px; height: 18px; color: #c4d2ce; transition: transform 160ms, color 160ms; }
+.systems-case-link:is(:hover, :focus-visible) { border-color: #c0d0c9; color: #fff; }
+.systems-case-link:is(:hover, :focus-visible) svg { color: #d5ff40; transform: translate(2px, -2px); }
+.systems-case-link:active { color: #b9ccc2; }
+.systems-case-link:focus-visible { outline: 2px solid #d5ff40; outline-offset: 5px; }
+@media (min-width: 1025px) {
+  .expedition:not(.reading-mode) .checkpoint-systems { align-items: flex-start; padding-block: round(nearest, clamp(64px, 10vh, 108px), 1px); }
+  .expedition:not(.reading-mode) .checkpoint-systems .panel-content { top: round(nearest, 50%, 1px); transform: translateY(round(nearest, -50%, 1px)); }
 }
-@media (max-height: 800px) and (min-width: 768px) {
-  .checkpoint-systems .panel-kicker { margin-bottom: 12px; }
-  .systems-intro { margin-top: 14px; font-size: 14px; line-height: 22px; }
-  .systems-foundations { margin-top: 18px; }
-  .systems-foundations > li { padding-block: 10px; }
-  .systems-terms { margin-top: 3px; }
-  .systems-chain { padding-top: 10px; gap: 6px; }
-  .systems-case-link { margin-top: 8px; }
+@media (max-width: 1024px) and (min-width: 768px) {
+  .checkpoint-systems { width: calc(100vw - 200px); max-width: 620px; --panel-reach: calc(min(100vw - 200px, 620px) - 20px); }
 }
 @media (max-width: 767px) {
   .checkpoint-systems { width: 100%; max-width: none; }
-  .systems-intro { font-size: 14px; line-height: 23px; margin-top: 14px; }
-  .systems-foundations { margin-top: 22px; }
-  .systems-foundations > li { padding-block: 12px; gap: 10px; }
-  .systems-foundations h2 { font-size: 14px; line-height: 20px; }
-  .systems-foundations p { font-size: 12px; line-height: 20px; }
-  .systems-terms { font-size: 10px; line-height: 17px; margin-top: 4px; }
-  .systems-chain { gap: 6px; font-size: 10px; }
-  .systems-case-link { margin-top: 12px; }
-}
-@media (max-height: 740px) and (max-width: 767px) {
-  .systems-intro { margin-top: 10px; }
-  .systems-foundations { margin-top: 14px; }
-  .systems-foundations > li { padding-block: 8px; }
-  .systems-chain { padding-top: 10px; gap: 4px 6px; }
-  .systems-case-link { margin-top: 6px; }
+  .checkpoint-systems .portfolio-heading { font-size: 36px; line-height: 40px; }
+  .checkpoint-systems .panel-kicker { margin-bottom: 12px; }
+  .systems-intro { margin-top: 14px; }
+  .systems-summary { margin-top: 24px; }
+  .systems-case-link { margin-top: 24px; }
 }
 
-@media (max-height: 650px) and (min-width: 768px) {
-  .systems-foundations > li > div { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; align-items: baseline; }
-  .systems-foundations p { margin: 0; }
-  .systems-terms { grid-column: 1 / -1; margin: 0; }
-  .systems-foundations { margin-top: 14px; }
-  .systems-foundations > li { padding-block: 8px; }
-  .systems-chain-code { flex-basis: auto; margin-left: 8px; }
+@media (max-height: 700px) {
+  .checkpoint-systems .panel-kicker { margin-bottom: 10px; }
+  .systems-intro { margin-top: 12px; line-height: 22px; }
+  .systems-summary { margin-top: 20px; }
+  .systems-case-link { margin-top: 20px; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .systems-case-link, .systems-case-link svg { transition: none; }
+  .systems-case-link:is(:hover, :focus-visible) svg { transform: none; }
+}
+
+/* Projected onto the screen face; the primary CTA supplies keyboard access. */
+.system-showcase-link { position: fixed; left: 0; top: 0; visibility: hidden; cursor: pointer; pointer-events: auto; }
+@media (max-width: 1024px) { .system-showcase-link { display: none; } }
+.reading-mode .system-showcase-link { display: none; }
+
+@media (min-width: 1025px) {
+  .checkpoint-systems .panel-surface { background: linear-gradient(90deg, rgb(16 32 44 / 90%) 0, rgb(16 32 44 / 84%) calc(var(--panel-reach) * .45), rgb(16 32 44 / 58%) calc(var(--panel-reach) * .75), rgb(16 32 44 / 20%) var(--panel-reach), transparent calc(var(--panel-reach) + 48px)); }
+}
+
+
+/* One connected rail: meaning first, system names second. */
+.systems-structure { display: grid; gap: 0; margin: 0; padding: 0 0 0 24px; list-style: none; position: relative; }
+.systems-structure::before { content: ''; position: absolute; top: 24px; bottom: 38px; left: 3px; width: 1px; background: #526a73; }
+.systems-structure li { min-width: 0; position: relative; padding: 12px 16px; }
+.systems-structure li:first-child { background: rgb(210 225 222 / 4%); border-radius: 4px; }
+.systems-structure li + li { border-top: 1px solid rgb(180 196 193 / 12%); }
+.systems-structure li::before { content: ''; position: absolute; top: 22px; left: -24px; width: 7px; height: 7px; border: 1px solid #91a8aa; background: #172b37; border-radius: 2px; }
+.systems-structure li:first-child::before { background: #d5ff40; border-color: #d5ff40; }
+.systems-structure h2 { margin: 0; font-size: 16px; line-height: 24px; font-weight: 550; color: #e0e9e6; }
+.systems-structure p { margin: 2px 0 0; font-size: 12px; line-height: 20px; color: #aabec5; }
+.systems-structure p > span { margin-inline: 6px; color: #718b94; }
+.systems-foundations { margin-top: 6px; font-size: 12px; line-height: 20px; color: #aabec5; word-break: keep-all; }
+@media (max-height: 700px) and (min-width: 1025px) {
+ .expedition:not(.reading-mode) .checkpoint-systems { padding-top: 88px; }
+ .systems-structure li { padding-block: 8px; }
+ .systems-structure li::before { top: 18px; }
+ .systems-structure::before { top: 20px; bottom: 34px; }
+}
+
+.systems-intro > span { display: block; }
+@media (min-width: 1025px) { .systems-intro > span { white-space: nowrap; } }
+
+.systems-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-top: 32px; }
+.systems-actions .systems-case-link { margin-top: 0; }
+@media (max-width: 767px) { .systems-actions { margin-top: 24px; } }
+@media (max-height: 700px) { .systems-actions { margin-top: 20px; } }

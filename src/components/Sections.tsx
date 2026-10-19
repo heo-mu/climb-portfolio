@@ -152,5 +152,6 @@ export function CheckpointSections({ onExplore, onViewWork }: { onExplore: () =>
     <div className="panel-surface" aria-hidden="true" />
     <div className="spatial-panel"><div className="panel-content"><div className="panel-kicker"><span>{camp.index}</span><span>{camp.navigation}</span></div>{camp.id !== 'base-camp' && sections[camp.id]}</div></div>
     {camp.id === 'high-camp' && <ShowcaseLink />}
+    {camp.id === 'systems' && <Link className="system-showcase-link" to="/design-system" tabIndex={-1} aria-hidden="true" />}
   </section>)}</div>
 }

@@ -1,4 +1,4 @@
-import { PROJECTS_CHECKPOINT } from '../data/checkpoints'
+import { PROJECTS_CHECKPOINT, checkpointIndex } from '../data/checkpoints'
 import { checkpoints } from '../data/expedition'
 import { routeEyeAt, curveParameterAt } from '../data/ascentRoute'
 import { experienceConfig } from '../config/experience'
@@ -52,18 +52,18 @@ const within = (progress: number, [from, to]: Span) => progress >= from - Number
 
 // One reversible presentation envelope, derived from the actual Projects arrival.
 // Frame the overlook before revealing the display; finish the reveal before input opens.
-const projectsArrival = campZones[PROJECTS_CHECKPOINT].arrival
-const projectsShoulder = projectsArrival[1] - projectsArrival[0]
-
-export function projectsPresentation(route: number) {
-  const [entry, exit] = projectsArrival
+export function showcasePresentation(route: number, checkpoint = PROJECTS_CHECKPOINT) {
+  const [entry, exit] = campZones[checkpoint].arrival
+  const shoulder = exit - entry
   const ramp = (from: number, to: number) => smoothstep((route - from) / (to - from))
-  const focus = ramp(entry - projectsShoulder, entry - projectsShoulder * .15)
-    * (1 - ramp(exit + projectsShoulder * .15, exit + projectsShoulder))
-  const presence = ramp(entry - projectsShoulder * .15, entry)
-    * (1 - ramp(exit, exit + projectsShoulder * .15))
+  const focus = ramp(entry - shoulder, entry - shoulder * .15)
+    * (1 - ramp(exit + shoulder * .15, exit + shoulder))
+  const presence = ramp(entry - shoulder * .15, entry)
+    * (1 - ramp(exit, exit + shoulder * .15))
   return { focus, lens: focus, presence, departure: 1 - presence }
 }
+export const projectsPresentation = (route: number) => showcasePresentation(route)
+export const systemsPresentation = (route: number) => showcasePresentation(route, checkpointIndex('systems'))
 
 // Arrival is spatial, never dependent on a second animation clock.
 export function readableCheckpoint(progress: number) {

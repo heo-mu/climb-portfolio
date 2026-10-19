@@ -1,8 +1,7 @@
 import * as THREE from 'three'
-import { addSystemsLandmark } from './systemsLandmark'
 import { curveParameterAt } from '../data/ascentRoute'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { cameraPose, routePoint, seeded, showcaseSite, terrainGeometry, TerrainSurface } from './terrain'
+import { cameraPose, routePoint, seeded, showcaseSite, systemShowcaseSite, terrainGeometry, TerrainSurface } from './terrain'
 import { rockGeometry, iceGeometry, tentGeometry, tentSeams, tentVestibule } from './props'
 import { contactPatch, groundPole, guideRoute, HangingRope, ROPE_RADIUS, seatOnGround } from './grounding'
 import { addSummit } from './summit'
@@ -112,7 +111,7 @@ function addCamp(world: THREE.Group, surface: TerrainSurface, camp: CampSetup, p
   door.moveTo(-.58, .08); door.lineTo(.58, .08); door.lineTo(.4, .76); door.quadraticCurveTo(0, 1.33, -.4, .76); door.closePath()
   const entrance = new THREE.ShapeGeometry(door, 16)
   const skirtGeometry = new THREE.BoxGeometry(2.45, .26, 3.68)
-  const view = new THREE.PerspectiveCamera(64, 1.6, .08, 2400), target = new THREE.Vector3()
+  const view = new THREE.PerspectiveCamera(64, camp.framingAspect ?? 1.6, .08, 2400), target = new THREE.Vector3()
   cameraPose(camp.progress, view.position, target); view.lookAt(target); view.updateMatrixWorld(true)
   for (let i = 0; i < count; i++) {
     const initialZ = center.z - camp.tentDepth - i * 12
@@ -173,7 +172,7 @@ function addCamp(world: THREE.Group, surface: TerrainSurface, camp: CampSetup, p
 export type ShowcaseBuilder = { build(world: THREE.Group, surface: TerrainSurface, shadow: () => THREE.Material): void }
 
 /** One bounded stage per idle callback. No extra loading surface blocks Home. */
-export function* environmentStages(parent: THREE.Object3D, wind: { value: number }, showcase?: ShowcaseBuilder) {
+export function* environmentStages(parent: THREE.Object3D, wind: { value: number }, showcase?: ShowcaseBuilder, systemShowcase?: ShowcaseBuilder) {
   const world = new THREE.Group()
   parent.add(world)
   const snowMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .96 })
@@ -205,14 +204,15 @@ export function* environmentStages(parent: THREE.Object3D, wind: { value: number
     yield
   }
 
-  addSystemsLandmark(world, surface, poleMaterial, shadowMaterial)
-  yield
+  if (systemShowcase) { systemShowcase.build(world, surface, contactMaterial); yield }
   world.updateMatrixWorld(true)
   const campBounds = world.children.filter(object => object.name === 'camp-tent').map(object => new THREE.Box3().setFromObject(object).expandByScalar(.6))
-  for (const arrival of world.children.filter(object => object.name.startsWith('arrival-'))) campBounds.push(new THREE.Box3().setFromObject(arrival).expandByScalar(.8))
-  // The levelled exhibit shelf at High Camp stays clear of loose boulders, with or without the exhibit built.
-  const { forward: [nearShelf, farShelf], right: [ropeSide, faceSide], soft } = showcaseSite.shelf
-  campBounds.push(new THREE.Box3().setFromPoints([nearShelf, farShelf].flatMap(f => [ropeSide, faceSide + soft.face].map(r => showcaseSite.toWorld(f, r)))).expandByVector(new THREE.Vector3(1, Infinity, 1)))
+  for (const arrival of world.children.filter(object => object.name.startsWith('arrival-'))) campBounds.push(new THREE.Box3().setFromObject(arrival).expandByScalar(arrival.userData.groundClearance ?? .8))
+  // Both exhibit shelves stay clear of loose boulders, including before the devices are built.
+  for (const site of [showcaseSite, systemShowcaseSite]) {
+    const { forward: [nearShelf, farShelf], right: [ropeSide, faceSide], soft } = site.shelf
+    campBounds.push(new THREE.Box3().setFromPoints([nearShelf, farShelf].flatMap(f => [ropeSide, faceSide + soft.face].map(r => site.toWorld(f, r)))).expandByVector(new THREE.Vector3(1, Infinity, 1)))
+  }
   for (const camp of [0, 1]) {
     const center = routePoint(camp / 4)
     campBounds.push(new THREE.Box3(

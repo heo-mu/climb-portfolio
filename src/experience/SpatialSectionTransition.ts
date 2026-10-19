@@ -1,7 +1,7 @@
-import { PROJECTS_CHECKPOINT } from '../data/checkpoints'
+import { PROJECTS_CHECKPOINT, checkpointIndex } from '../data/checkpoints'
 import type { PerspectiveCamera } from 'three'
 import { campFog, homeFog, SpatialAnchorProjection } from './SpatialAnchorProjection'
-import { campZones, projectsPresentation, smoothstep } from './progress'
+import { campZones, showcasePresentation, smoothstep } from './progress'
 import type { CampZone, ExpeditionFrame } from './progress'
 
 const DOCK_TIME = .085 // s: reading-axis arrival
@@ -102,8 +102,8 @@ export class SpatialSectionTransition {
       if (index === PROJECTS_CHECKPOINT && frame.projectsReady === false) return this.apply(stage, 'hidden')
       const arrived = frame.sections[index].interactive
       const [entry, exit] = stage.zone.plateau
-      if (index === PROJECTS_CHECKPOINT && !frame.reducedMotion && !frame.returningHome && this.root.dataset.showcase === '3d') {
-        const { presence, departure } = projectsPresentation(frame.journeyProgress)
+      if ((index === PROJECTS_CHECKPOINT && this.root.dataset.showcase === '3d' || index === checkpointIndex('systems') && this.root.dataset.systemShowcase === '3d') && !frame.reducedMotion && !frame.returningHome) {
+        const { presence, departure } = showcasePresentation(frame.journeyProgress, index)
         if (arrived) return this.apply(stage, 'readable')
         if (!presence) return this.apply(stage, 'hidden')
         for (let i = 0; i < 16; i++) this.blend[i] = identity[i]

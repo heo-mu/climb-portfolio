@@ -151,7 +151,9 @@ const sweep = (page: Page, from: number, to: number, ms: number) => page.evaluat
       const presence = measured.getBoundingClientRect().width / measured.offsetWidth
       const name = section.querySelector('.panel-kicker span:last-child')?.textContent ?? 'Home'
       const at = `${Math.round(now - start)}ms scroll=${(scrollY / range).toFixed(4)}`
-      if (section.inert && visible > .5 && presence > .85 && !(section.id === 'high-camp' && visible < 1)) { seen.add(`ghost-${name}`); flag(`ghost-${name}`, `${at}: ${name} looks arrived (presence ${presence.toFixed(2)}, opacity ${visible.toFixed(2)}) but is inert`) }
+      const expedition = document.querySelector<HTMLElement>('.expedition')!
+      const fadingShowcase = visible < 1 && (section.id === 'high-camp' && expedition.dataset.showcase === '3d' || section.id === 'systems' && expedition.dataset.systemShowcase === '3d')
+      if (section.inert && visible > .5 && presence > .85 && !fadingShowcase) { seen.add(`ghost-${name}`); flag(`ghost-${name}`, `${at}: ${name} looks arrived (presence ${presence.toFixed(2)}, opacity ${visible.toFixed(2)}) but is inert`) }
       if (!section.inert && visible < .5) { seen.add(`blind-${name}`); flag(`blind-${name}`, `${at}: ${name} is interactive while invisible`) }
       if (!section.inert && header !== name) { seen.add(`hud-${name}`); flag(`hud-${name}`, `${at}: ${name} arrived but the location reads ${header}`) }
     })
@@ -282,7 +284,9 @@ try {
             const state = (await campStates(page))[camp.order]
             if (state.inert) {
               outside++
-              expect(state.visibility === 'hidden' || Number(state.opacity) < .5 || state.presence < .85 || (camp.id === 'high-camp' && Number(state.opacity) < 1), `${camp.navigation} ${direction < 0 ? 'approach' : 'departure'} +${k}: inert but presence ${state.presence.toFixed(2)}`).toBe(true)
+              const showcase = await page.locator('.expedition').getAttribute(camp.id === 'systems' ? 'data-system-showcase' : 'data-showcase')
+              const fadingShowcase = ['high-camp', 'systems'].includes(camp.id) && showcase === '3d' && Number(state.opacity) < 1
+              expect(state.visibility === 'hidden' || Number(state.opacity) < .5 || state.presence < .85 || fadingShowcase, `${camp.navigation} ${direction < 0 ? 'approach' : 'departure'} +${k}: inert but presence ${state.presence.toFixed(2)}`).toBe(true)
             } else {
               inside++
               expect(state, `${camp.navigation} docked at +${k}`).toMatchObject({ spatial: 'readable', transform: 'none', opacity: '1' })
@@ -375,7 +379,7 @@ try {
         for (let i = 0; i < 20 && !await page.evaluate(() => document.activeElement?.classList.contains('journey-home')); i++) await page.keyboard.press('Tab')
         await expect(page.locator('.journey-home')).toBeFocused()
         await page.keyboard.press(key)
-        await expectReturn(5)
+        await expectReturn(SUMMIT)
       }
     })
 
@@ -416,17 +420,22 @@ try {
       for (const [width, height] of sizes) {
         await page.setViewportSize({ width, height })
         await goToCamp(page, PROJECTS)
-        const headingStyles = await page.locator('.portfolio-heading').evaluateAll(elements => elements.map(element => {
+        const headingStyles = await page.locator('.portfolio-heading:not(#title-systems)').evaluateAll(elements => elements.map(element => {
           const style = getComputedStyle(element)
           return [style.fontSize, style.fontWeight, style.lineHeight, style.letterSpacing, style.color, style.opacity, style.transform]
         }))
         headingStyles.forEach(style => expect(style, `shared heading system @${width}`).toEqual(headingStyles[0]))
+        // Systems deliberately carries a slightly stronger title beside its display.
+        const systemsTitle = page.locator('#title-systems')
+        await expect(systemsTitle).toHaveCSS('font-weight', '600')
+        await expect(systemsTitle).toHaveCSS('color', headingStyles[0][4])
+        expect(await systemsTitle.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeLessThanOrEqual(50)
         let indexBox: { x: number; y: number; width: number; height: number } | null = null
         for (const [index, project] of projects.entries()) {
           await page.locator('#high-camp button[aria-selected]').nth(index).click()
           await expect(page.locator('#high-camp button[aria-selected=true] .project-name-full')).toHaveText(project.name)
           await expect(page.locator('#high-camp [role=tabpanel][aria-hidden=false] .project-tags li')).toHaveText(project.tags.map(tag => `#${tag}`))
-          expect(await layoutIssues(page, 4), `${width}: ${project.slug}`).toEqual([])
+          expect(await layoutIssues(page, PROJECTS), `${width}: ${project.slug}`).toEqual([])
           expect(await exhibitIssues(page, project.slug), `${width}: ${project.slug}`).toEqual([])
           await page.locator('.project-index').evaluate(element => Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {}))))
           const box = (await page.locator('.project-index').boundingBox())!
@@ -607,17 +616,39 @@ try {
 
   // ──────────────────────────── Keyboard and focus ────────────────────────────
   await step('Systems case: direct URL, retained journey, responsive diagrams, keyboard and history', async () => {
-    for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }, { width: 375, height: 667 }]) {
+    for (const [width, height] of [[1920, 1080], [1440, 900], [1280, 800], [1200, 800], [768, 1024], [430, 932], [390, 844], [375, 667], [1280, 600]]) {
+      const viewport = { width, height }
       const { context, page } = await open({ viewport, reducedMotion: 'reduce' })
       await page.goto(base! + '/#systems'); await ready(page); await expectArrived(page, SYSTEMS)
-      await expect(page.locator('.systems-foundations > li')).toHaveCount(3)
+      await expect(page.locator('#title-systems')).toHaveText('Design System.')
+      await expect(page.locator('.systems-structure h2')).toHaveText(['함께 쓰는 기준', '환경에 맞게 확장', '실제 서비스에서 사용'])
       const link = page.locator('.systems-case-link')
       const box = await link.boundingBox()
       expect(box!.y + box!.height).toBeLessThan(viewport.height - 30)
       await page.evaluate(() => { (window as unknown as { systemsCanvas: Element | null }).systemsCanvas = document.querySelector('.scene canvas') })
       await link.focus(); await page.keyboard.press('Enter')
       await expect(page).toHaveURL(/\/design-system$/)
-      await expect(page.locator('.system-section')).toHaveCount(11)
+      await expect(page.locator('.system-section')).toHaveCount(7)
+      await expect(page.locator('.system-section .case-label')).toHaveCount(0)
+      await expect(page.locator('.system-section-heading h2').nth(4)).toHaveText('AI와 검토하고 개발까지 연결해요')
+      await expect(page.locator('.glance-project > p')).toHaveText('Project')
+      await expect(page.locator('.token-meaning p')).toHaveText(['Primitive', 'Theme', 'Semantic', 'Component'])
+      await expect(page.locator('.token-reference code')).toHaveText(['#004A38', 'colors/emerald/900', 'colors/brand/900', 'colors/fill/primary/strong/default', 'colors/button/primary/solid/background/default'])
+      await expect(page.locator('.system-image-slot')).toHaveCount(0)
+      await expect(page.locator('.token-flow > li')).toHaveCount(4)
+      await expect(page.locator('.input-properties legend')).toHaveText(['Type', 'Size'])
+      await expect(page.locator('.system-product-output')).toHaveCount(0)
+      await expect(page.locator('.system-detail a[href*="figma.com"]')).toHaveCount(0)
+      await expect(page.locator('.system-operation')).toHaveCount(0)
+      await expect(page.locator('.system-detail')).not.toContainText(/Git|Repository|CI\/CD|Automated Release|Token Sync|기준 자료|참고 자료|실제 캡처|자료 기준|Evidence|Source/i)
+      await expect(page.locator('.system-detail')).not.toContainText(/기준 자료|Collection 캡처|\\d+ variables|Token Elements|Evidence to add/i)
+      await expect(page.locator('.ai-reference-flow > li')).toHaveCount(3)
+      await expect(page.locator('.ai-delivery-flow > li')).toHaveCount(3)
+      const diagramsFit = await page.locator('.system-detail').evaluate(root => Array.from(root.querySelectorAll('*')).every(element => {
+        const rect = element.getBoundingClientRect()
+        return !rect.width || (rect.left >= -1 && rect.right <= innerWidth + 1)
+      }))
+      expect(diagramsFit, 'system diagrams fit without page overflow').toBe(true)
       await expect(page.locator('.system-detail h1')).toBeFocused()
       await expect(page.locator('.project-route-gate')).toHaveCount(0)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -625,8 +656,12 @@ try {
       await expectArrived(page, SYSTEMS)
       expect(await page.evaluate(() => (window as unknown as { systemsCanvas: Element | null }).systemsCanvas === document.querySelector('.scene canvas'))).toBe(true)
       await expect(page.locator('#title-systems')).toBeFocused()
+      await link.click(); await expect(page.locator('.system-detail h1')).toBeFocused()
+      await page.evaluate(() => window.scrollTo({ top: 1800, behavior: 'instant' }))
+      await expect(page.locator('.detail-return-trail')).toHaveAttribute('data-visible', 'true')
+      await page.locator('.detail-return-trail').click(); await expectArrived(page, SYSTEMS)
       await page.goBack(); await expect(page).toHaveURL(/\/design-system$/)
-      await page.reload(); await expect(page.locator('.system-detail h1')).toBeVisible()
+      await page.reload(); await expect(page.locator('.system-detail h1')).toBeFocused()
       await page.locator('.system-detail .back-link').click(); await ready(page); await expectArrived(page, SYSTEMS)
       await page.reload(); await ready(page); await expectArrived(page, SYSTEMS)
       await context.close()
@@ -1650,7 +1685,10 @@ try {
 
   await step('Full ascent performance: cold captures across all journey legs and four desktop sizes', async () => {
     type JourneyProbe = { tasks: { at: number; duration: number }[]; gpu: { at: number; name: string }[] }
-    for (const [width, height] of [[1920, 1080], [1600, 900], [1440, 900], [1366, 768]]) {
+    const selectedWidths = process.env.ASCENT_PERFORMANCE_WIDTHS?.split(',').map(Number)
+    const performanceViewports = [[1920, 1080], [1600, 900], [1440, 900], [1366, 768]].filter(([width]) => !selectedWidths || selectedWidths.includes(width))
+    expect(performanceViewports.length, 'at least one supported performance viewport').toBeGreaterThan(0)
+    for (const [width, height] of performanceViewports) {
       const { context, page } = await open({ viewport: { width, height }, reducedMotion: 'no-preference' }, [], () => {
         const probe: JourneyProbe = { tasks: [], gpu: [] }
         Object.assign(window, { journeyProbe: probe })

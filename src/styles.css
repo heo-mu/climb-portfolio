@@ -262,7 +262,8 @@ dd { margin: 0; font-size: 12px; line-height: 1.6; color: #cfdbdf; }
 
   .checkpoint { width: 48vw; min-width: 380px; padding-right: 20px; --panel-reach: calc(max(48vw, 380px) - 20px); }
   .checkpoint { width: round(nearest, 48vw, 1px); }
-  .checkpoint-high-camp, .checkpoint-camp-two { width: calc(100vw - 160px); --panel-reach: calc(100vw - 180px); }
+  /* Reserve the full Trail lane: 160px navigation + 12px inset + safe-right. */
+  .checkpoint-high-camp, .checkpoint-camp-two { width: calc(100vw - var(--safe-right) - 172px); --panel-reach: calc(100vw - var(--safe-right) - 192px); }
   .inventory { gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .inventory-list li { gap: 14px; }
   .tool-name { font-size: 13px; }

@@ -22,6 +22,12 @@ afterAll(() => {
 })
 
 describe('checkpoint arrival dressing', () => {
+  it('reserves Systems for the shared showcase without the former camp props', () => {
+    expect(arrivalCamps.find(camp => camp.id === 'systems')!.marker).toBe(false)
+    expect(world.getObjectByName('arrival-systems')?.getObjectByName('checkpoint-cloth')).toBeUndefined()
+    expect(world.getObjectByName('arrival-system-field-board')).toBeUndefined()
+  })
+
   it('embeds the lower hull of rocks, ice and landforms in the rendered terrain', () => {
     const matrix = new THREE.Matrix4(), point = new THREE.Vector3()
     world.traverse(object => {
@@ -107,6 +113,7 @@ describe('checkpoint arrival dressing', () => {
     world.traverse(object => { if (object.name === 'camp-tent') tents.push(object) })
     expect(tents.filter(tent => tent.userData.checkpoint === 'about')).toHaveLength(1)
     expect(tents.filter(tent => tent.userData.checkpoint === 'camp-two')).toHaveLength(1)
+    expect(tents.filter(tent => tent.userData.checkpoint === 'systems')).toHaveLength(0)
     for (const tent of tents.filter(tent => tent.userData.checkpoint !== 'base-camp')) {
       for (const x of [-1.225, 1.225]) for (const z of [-1.84, 1.84]) {
         const p = new THREE.Vector3(x, -.13, z).applyMatrix4(tent.matrixWorld)
