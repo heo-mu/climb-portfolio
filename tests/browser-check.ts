@@ -515,13 +515,15 @@ try {
             file: new URL(img.currentSrc).pathname.split('/').at(-1)!.replace(/-[\da-z_-]{8,}(?=\.png$)/i, ''),
             sourceRatio: img.naturalWidth / img.naturalHeight,
             objectFit: getComputedStyle(img).objectFit,
-            frameRatio: frame.width / frame.height,
+            frameWidth: frame.width,
+            frameHeight: frame.height,
           }
         })
         expect(display.file, `${project.slug}: source image`).toBe(imageFiles[project.slug])
         expect(display.sourceRatio, `${project.slug}: original ratio`).toBe(16 / 9)
         expect(display.objectFit, `${project.slug}: full image visible`).toBe('contain')
-        expect(display.frameRatio, `${project.slug}: stable 16:9 frame`).toBe(16 / 9)
+        // Layout snaps box sizes to 1/64px, so a fractional-width 16:9 frame is exact only to one layout unit.
+        expect(Math.abs(display.frameHeight - display.frameWidth * 9 / 16), `${project.slug}: stable 16:9 frame`).toBeLessThanOrEqual(1 / 64)
       }
     })
 
@@ -625,6 +627,10 @@ try {
       const link = page.locator('.systems-case-link')
       const box = await link.boundingBox()
       expect(box!.y + box!.height).toBeLessThan(viewport.height - 30)
+      const storybook = page.locator('#systems .storybook-action')
+      await expect(storybook).toHaveAttribute('href', 'https://storybook-heo-mu.vercel.app/')
+      await expect(storybook).toHaveAttribute('target', '_blank')
+      await expect(storybook).toHaveAttribute('rel', 'noopener noreferrer')
       await page.evaluate(() => { (window as unknown as { systemsCanvas: Element | null }).systemsCanvas = document.querySelector('.scene canvas') })
       await link.focus(); await page.keyboard.press('Enter')
       await expect(page).toHaveURL(/\/design-system$/)
@@ -1709,9 +1715,12 @@ try {
       const metrics = async () => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map((m: { name: string; value: number }) => [m.name, m.value]))
       const before = await metrics()
       const timing = await page.evaluate(legCount => new Promise<{ start: number; frames: number[][] }>(resolve => {
-        const start = performance.now(), range = document.documentElement.scrollHeight - innerHeight, frames: number[][] = Array.from({ length: legCount }, () => [])
-        let last = start
+        const range = document.documentElement.scrollHeight - innerHeight, frames: number[][] = Array.from({ length: legCount }, () => [])
+        // A rAF timestamp is the frame's start time and can precede a performance.now() read just before the request,
+        // which made progress negative and frames[-1] throw, so the clock starts at the first frame.
+        let start = -1, last = 0
         const tick = (now: number) => {
+          if (start < 0) start = last = now
           const progress = Math.min(1, (now - start) / (legCount * 3000))
           frames[Math.min(legCount - 1, Math.floor(progress * legCount))].push(now - last)
           last = now

@@ -172,7 +172,8 @@
 .storybook-review { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--case-surface-rule); }
 .system-detail .storybook-review p { max-width: var(--system-text-width); margin: 0; font-size: 14px; line-height: 24px; color: var(--system-muted); }
 .system-detail .storybook-review p + p { margin-top: 12px; }
-.storybook-review .storybook-action { margin-top: 24px; }
+.storybook-review .storybook-action { gap: 16px; margin-top: 24px; padding: 9px 14px; border: 1px solid rgb(220 229 225 / 20%); background: rgb(255 255 255 / 2%); color: #dce5e1; font-size: 14px; font-weight: 500; }
+.storybook-review .storybook-action:hover { border-color: #71858a; background: rgb(255 255 255 / 5%); color: #edf0ee; }
 @media (max-width: 700px) {
  .storybook-flow { grid-template-columns: minmax(0, 1fr); gap: 24px; }
  .storybook-flow li { padding: 0 0 0 24px; }

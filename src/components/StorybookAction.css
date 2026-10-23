@@ -1,6 +1,9 @@
-.storybook-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 4px; background: rgb(210 225 222 / 4%); color: #bdccc6; font: inherit; font-size: 13px; line-height: 24px; text-decoration: none; }
-.storybook-action:disabled { cursor: default; opacity: 1; }
-.storybook-action small { font-size: 11px; color: #91a6a1; }
-.storybook-action svg { width: 16px; height: 16px; }
-a.storybook-action:hover { background: rgb(210 225 222 / 8%); }
-a.storybook-action:focus-visible { outline: 1px solid #c6dbd1; outline-offset: 3px; }
+.storybook-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 12px; border-radius: 4px; background: rgb(210 225 222 / 4%); color: #bdccc6; font-size: 13px; line-height: 24px; text-decoration: none; transition: background-color 160ms, border-color 160ms, color 160ms; }
+.storybook-action svg { flex: none; width: 16px; height: 16px; transition: transform 160ms; }
+.storybook-action:hover { background: rgb(210 225 222 / 8%); color: #e6eeeb; }
+.storybook-action:hover svg { transform: translate(2px, -2px); }
+.storybook-action:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .storybook-action, .storybook-action svg { transition: none; }
+  .storybook-action:hover svg { transform: none; }
+}

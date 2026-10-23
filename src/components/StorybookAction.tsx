@@ -1,11 +1,10 @@
 import { ArrowUpRight } from './ArrowUpRight'
 import './StorybookAction.css'
 
-// Set the public Storybook URL here after it is supplied by the project owner.
-export const STORYBOOK_URL: string | null = null
+export const STORYBOOK_URL = 'https://storybook-heo-mu.vercel.app/'
 
 export function StorybookAction() {
-  return STORYBOOK_URL
-    ? <a className="storybook-action" href={STORYBOOK_URL} target="_blank" rel="noopener noreferrer"><span>Storybook 보기</span><ArrowUpRight className="storybook-action-arrow" /></a>
-    : <button className="storybook-action" type="button" disabled><span>Storybook 보기</span><small>준비 중</small></button>
+  return <a className="storybook-action" href={STORYBOOK_URL} target="_blank" rel="noopener noreferrer" aria-label="Storybook 보기 (새 탭에서 열기)">
+    <span>Storybook 보기</span><ArrowUpRight className="storybook-action-arrow" />
+  </a>
 }
